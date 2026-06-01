@@ -1,9 +1,9 @@
 import { app, net, Notification, shell } from "electron";
 
 const RELEASES_URL =
-  "https://api.github.com/repos/minghinmatthewlam/pi-gui/releases?per_page=1";
+  "https://api.github.com/repos/jasonet/pi-deepseek/releases?per_page=1";
 const RELEASES_PAGE =
-  "https://github.com/minghinmatthewlam/pi-gui/releases/latest";
+  "https://github.com/jasonet/pi-deepseek/releases/latest";
 
 const CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000; // 4 hours
 const INITIAL_DELAY_MS = 15_000; // 15 seconds after launch
@@ -15,7 +15,7 @@ export type UpdateCheckResult =
 
 function showUpdateNotification(currentVersion: string, latestVersion: string): void {
   const notification = new Notification({
-    title: "pi-gui Release Available",
+    title: "Pi-Deepseek Release Available",
     body: `Version ${latestVersion} is available (you have ${currentVersion}). Click to view the release.`,
   });
   notification.on("click", () => {

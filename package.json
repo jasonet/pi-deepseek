@@ -1,7 +1,7 @@
 {
-  "name": "pi-gui",
+  "name": "pi-deepseek",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0-beta",
   "license": "MIT",
   "packageManager": "pnpm@10.25.0",
   "scripts": {
@@ -34,5 +34,8 @@
     "apps/*",
     "packages/*",
     "video"
-  ]
+  ],
+  "dependencies": {
+    "app-builder-bin": "^4.2.0"
+  }
 }

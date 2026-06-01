@@ -1,6 +1,6 @@
-appId: com.pi-gui.desktop
-productName: pi-gui
-copyright: Copyright 2026 Matthew Lam
+appId: com.pi-deepseek.desktop
+productName: Pi-Deepseek
+copyright: Copyright 2026 Yiding by HKEZ
 electronVersion: 34.5.8
 
 directories:
@@ -33,17 +33,21 @@ mac:
   notarize: true
   target:
     - target: dmg
-      arch: arm64
+      arch:
+        - arm64
+        - x64
     - target: zip
-      arch: arm64
+      arch:
+        - arm64
+        - x64
   darkModeSupport: true
   extraFiles:
     - from: build/native/pi-gui-notification-status-helper
-      to: MacOS/pi-gui-notification-status-helper
+      to: MacOS/pi-deepseek-notification-status-helper
 
 linux:
   category: Development
-  executableName: pi-gui
+  executableName: pi-deepseek
   target:
     - target: AppImage
 
@@ -64,5 +68,5 @@ dmg:
 
 publish:
   provider: github
-  owner: minghinmatthewlam
-  repo: pi-gui
+  owner: jasonet
+  repo: pi-deepseek

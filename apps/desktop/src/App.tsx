@@ -36,6 +36,7 @@ import { buildThreadGroups } from "./thread-groups";
 import { Sidebar } from "./sidebar";
 import { SidebarToggleButton } from "./sidebar-toggle-button";
 import { Topbar } from "./topbar";
+import { LocaleProvider } from "./i18n";
 import { TerminalPanel } from "./terminal-panel";
 import { ConversationTimeline, VIRTUALIZATION_THRESHOLD } from "./conversation-timeline";
 import { useSlashMenu } from "./hooks/use-slash-menu";
@@ -196,6 +197,7 @@ export default function App() {
   const previousActiveViewRef = useRef<AppView | null>(null);
   const hydratedComposerSessionKeyRef = useRef("");
   const handledComposerSyncNonceRef = useRef(0);
+  const firstLaunchAutoOpenRef = useRef(false);
   const [showJumpToLatest, setShowJumpToLatest] = useState(false);
   const [showDiffPanel, setShowDiffPanel] = useState(false);
   const [openTerminalSessionKey, setOpenTerminalSessionKey] = useState("");
@@ -1114,6 +1116,35 @@ export default function App() {
     previousActiveViewRef.current = snapshot.activeView;
   }, [schedulePinnedBottomRealignment, selectedSession, selectedWorkspace?.id, snapshot]);
 
+  // First-launch detection: if no providers are connected and no default model
+  // is set, auto-open Settings > Providers so the user can configure their API key.
+  useEffect(() => {
+    if (!snapshot || !api || firstLaunchAutoOpenRef.current) {
+      return;
+    }
+
+    // Wait until we have runtime data for at least one workspace.
+    const workspace = rootWorkspaceOptions[0];
+    if (!workspace) {
+      return;
+    }
+
+    const runtime = snapshot.runtimeByWorkspace[workspace.id];
+    if (!runtime) {
+      return;
+    }
+
+    const hasAnyAuth = runtime.providers.some((provider) => provider.hasAuth);
+    const hasSelectableModels = buildModelOptions(runtime).length > 0;
+
+    if (!hasAnyAuth && !hasSelectableModels) {
+      firstLaunchAutoOpenRef.current = true;
+      openSettings(workspace.id, "providers");
+    } else {
+      firstLaunchAutoOpenRef.current = true;
+    }
+  }, [api, snapshot, rootWorkspaceOptions]);
+
   useEffect(() => {
     if (!api || composerDraft === persistedComposerDraft) {
       return undefined;
@@ -1261,7 +1292,7 @@ export default function App() {
     return (
       <div className="shell shell--loading">
         <main className="loading-card">
-          <div className="loading-card__eyebrow">pi-gui</div>
+          <div className="loading-card__eyebrow">Pi-Deepseek</div>
           <h1>Loading sessions</h1>
           <p>The desktop shell is restoring folder and thread state from the main process.</p>
         </main>
@@ -1897,6 +1928,7 @@ export default function App() {
           integratedTerminalShell={snapshot.integratedTerminalShell}
           themeMode={themeMode}
           enableTransparency={snapshot.enableTransparency}
+          locale={snapshot.locale}
           onLoginProvider={handleLoginProvider}
           onLogoutProvider={handleLogoutProvider}
           onSetProviderApiKey={handleSetProviderApiKey}
@@ -1913,6 +1945,9 @@ export default function App() {
           onToggleSkillCommands={handleToggleSkillCommands}
           onSetEnableTransparency={(enabled) => {
             void updateSnapshot(api, setSnapshot, () => api.setEnableTransparency(enabled));
+          }}
+          onSetLocale={(value) => {
+            void updateSnapshot(api, setSnapshot, () => api.setLocale(value));
           }}
         />
       </SecondarySurface>
@@ -1998,6 +2033,7 @@ export default function App() {
   const shellClassName = `shell${snapshot.sidebarCollapsed ? " shell--sidebar-collapsed" : ""}`;
 
   return (
+    <LocaleProvider locale={snapshot.locale}>
     <div className={shellClassName}>
       {primarySidebarToggleVisible ? (
         <SidebarToggleButton
@@ -2255,6 +2291,7 @@ export default function App() {
         ) : null}
       </main>
     </div>
+    </LocaleProvider>
   );
 }
 

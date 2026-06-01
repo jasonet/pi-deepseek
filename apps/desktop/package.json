@@ -1,10 +1,10 @@
 {
   "name": "@pi-gui/desktop",
   "private": true,
-  "version": "0.1.0",
-  "author": "Matthew Lam",
+  "version": "0.2.0-beta",
+  "author": "Yiding by HKEZ",
   "license": "MIT",
-  "description": "Codex-style desktop shell for pi",
+  "description": "Deepseek GUI app for elegant pi coding agent",
   "main": "out/main/main.js",
   "scripts": {
     "build:deps": "pnpm --dir ../.. --filter @pi-gui/session-driver --filter @pi-gui/pi-sdk-driver --filter @pi-gui/catalogs run build",

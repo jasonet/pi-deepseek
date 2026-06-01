@@ -299,7 +299,7 @@ async function runManualUpdateCheck(): Promise<void> {
   if (result.status === "up-to-date") {
     const options: MessageBoxOptions = {
       type: "info",
-      title: "pi-gui",
+      title: "Pi-Deepseek",
       message: `You're up to date on version ${result.currentVersion}.`,
       buttons: ["OK"],
     };
@@ -313,7 +313,7 @@ async function runManualUpdateCheck(): Promise<void> {
 
   const options: MessageBoxOptions = {
     type: "warning",
-    title: "pi-gui",
+    title: "Pi-Deepseek",
     message: "Could not check for updates right now.",
     detail: result.message,
     buttons: ["OK"],
@@ -586,6 +586,12 @@ app.whenReady().then(async () => {
       }
     }
     return nextState;
+  });
+  ipcMain.handle(desktopIpc.setLocale, async (_event, locale: string) => {
+    return store.setLocale(locale);
+  });
+  ipcMain.handle(desktopIpc.getLocale, async () => {
+    return store.getLocale();
   });
   ipcMain.handle(desktopIpc.terminalEnsurePanel, (event, workspaceId: string, terminalScopeId: string, size) => {
     return getTerminalService().ensurePanel(event.sender, workspaceId, terminalScopeId, size);

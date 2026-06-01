@@ -21,6 +21,7 @@ interface SettingsViewProps {
   readonly integratedTerminalShell: string;
   readonly themeMode: "system" | "light" | "dark";
   readonly enableTransparency: boolean;
+  readonly locale: string;
   readonly onSetModelSettingsScopeMode: (mode: ModelSettingsScopeMode) => void;
   readonly onSetDefaultModel: (provider: string, modelId: string) => void;
   readonly onSetThinkingLevel: (thinkingLevel: RuntimeSettingsSnapshot["defaultThinkingLevel"]) => void;
@@ -36,6 +37,7 @@ interface SettingsViewProps {
   readonly onOpenSystemNotificationSettings: () => void;
   readonly onSetThemeMode: (mode: "system" | "light" | "dark") => void;
   readonly onSetEnableTransparency: (enabled: boolean) => void;
+  readonly onSetLocale: (locale: string) => void;
 }
 
 export function SettingsView({
@@ -49,6 +51,7 @@ export function SettingsView({
   integratedTerminalShell,
   themeMode,
   enableTransparency,
+  locale,
   onSetModelSettingsScopeMode,
   onSetDefaultModel,
   onSetThinkingLevel,
@@ -64,6 +67,7 @@ export function SettingsView({
   onOpenSystemNotificationSettings,
   onSetThemeMode,
   onSetEnableTransparency,
+  onSetLocale,
 }: SettingsViewProps) {
   if (!workspace && section !== "general" && section !== "notifications" && section !== "appearance") {
     return (
@@ -97,6 +101,8 @@ export function SettingsView({
               onSetThemeMode={onSetThemeMode}
               enableTransparency={enableTransparency}
               onSetEnableTransparency={onSetEnableTransparency}
+              locale={locale}
+              onSetLocale={onSetLocale}
             />
           ) : null}
 

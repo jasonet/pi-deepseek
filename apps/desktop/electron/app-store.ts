@@ -509,6 +509,26 @@ export class DesktopAppStore implements AppStoreInternals {
     return this.emit();
   }
 
+  async setLocale(locale: string): Promise<DesktopAppState> {
+    await this.initialize();
+    const normalized = parseLocale(locale);
+    if (this.state.locale === normalized) {
+      return structuredClone(this.state);
+    }
+    this.state = {
+      ...this.state,
+      locale: normalized,
+      lastError: undefined,
+      revision: this.state.revision + 1,
+    };
+    await this.persistUiState();
+    return this.emit();
+  }
+
+  getLocale(): string {
+    return this.state.locale;
+  }
+
   async setModelSettingsScopeMode(modelSettingsScopeMode: ModelSettingsScopeMode): Promise<DesktopAppState> {
     await this.initialize();
     if (this.state.modelSettingsScopeMode === modelSettingsScopeMode) {
@@ -763,6 +783,7 @@ export class DesktopAppStore implements AppStoreInternals {
         workspaceOrder: persisted.workspaceOrder ?? [],
         sidebarCollapsed: persisted.sidebarCollapsed ?? this.state.sidebarCollapsed,
         enableTransparency: persisted.enableTransparency ?? this.state.enableTransparency,
+        locale: parseLocale(persisted.locale),
       };
       await this.migrateLegacyPersistence(persisted);
       this.sessionState.lastViewedAtBySession.clear();
@@ -926,7 +947,7 @@ export class DesktopAppStore implements AppStoreInternals {
         }
         const failedWorkspace = secondaryWorkspacesToLoad[index];
         console.warn(
-          `[pi-gui] Failed to preload runtime for ${failedWorkspace?.path ?? "unknown workspace"}: ${
+          `[pi-deepseek] Failed to preload runtime for ${failedWorkspace?.path ?? "unknown workspace"}: ${
             result.reason instanceof Error ? result.reason.message : String(result.reason)
           }`,
         );
@@ -1199,7 +1220,7 @@ export class DesktopAppStore implements AppStoreInternals {
         commandName: pending.command.name,
         extensionPath: pending.command.sourceInfo.path,
         status: "supported",
-        message: "Observed working in pi-gui.",
+        message: "Observed working in Pi-Deepseek.",
         capability: "gui-safe",
         updatedAt: timestamp,
       });
@@ -1242,7 +1263,7 @@ export class DesktopAppStore implements AppStoreInternals {
     const key = sessionKey(sessionRef);
     const pending = this.pendingRuntimeCommandsBySession.get(key);
     if (pending) {
-      const message = `/${pending.command.name} requires terminal-only ${formatCapabilityLabel(issue.capability)} and is not supported in pi-gui yet. Use pi in the terminal for this command.`;
+      const message = `/${pending.command.name} requires terminal-only ${formatCapabilityLabel(issue.capability)} and is not supported in Pi-Deepseek yet. Use pi in the terminal for this command.`;
       pending.blockedMessage = message;
       recordLearnedCommandCompatibility(this.extensionCommandCompatibilityByWorkspace, sessionRef.workspaceId, {
         commandName: pending.command.name,
@@ -1713,6 +1734,7 @@ export class DesktopAppStore implements AppStoreInternals {
       appGlobalModelSettings: hasStoredModelSettings(this.state.globalModelSettings) ? this.state.globalModelSettings : undefined,
       sidebarCollapsed: this.state.sidebarCollapsed || undefined,
       enableTransparency: this.state.enableTransparency,
+      locale: this.state.locale !== "en" ? this.state.locale : undefined,
     };
 
     await writePersistedUiState(this.uiStateFilePath, payload);
@@ -2420,6 +2442,15 @@ function mergeEnabledModelPatterns(
     merged.push(pattern);
   }
   return merged;
+}
+
+const VALID_LOCALES = new Set(["en", "zh-CN", "ja"]);
+
+function parseLocale(value: unknown): "en" | "zh-CN" | "ja" {
+  if (typeof value === "string" && VALID_LOCALES.has(value)) {
+    return value as "en" | "zh-CN" | "ja";
+  }
+  return "en";
 }
 
 function formatCapabilityLabel(capability: string): string {

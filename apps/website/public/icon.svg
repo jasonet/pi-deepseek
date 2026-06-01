@@ -1,6 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
-  <title>pi-gui</title>
-  <rect width="64" height="64" rx="18" fill="#1f2638"/>
+  <title>Pi-Deepseek</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#4D6BFE"/>
+      <stop offset="100%" stop-color="#1a1f36"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="18" fill="url(#bg)"/>
+  <!-- DeepSeek accent ring -->
+  <rect x="2" y="2" width="60" height="60" rx="16" fill="none" stroke="#4D6BFE" stroke-width="2" stroke-opacity="0.6"/>
   <text
     x="50%"
     y="54%"

@@ -134,7 +134,7 @@ export function useWorkspaceMenu(params: UseWorkspaceMenuParams): WorkspaceMenuS
   };
 
   const removeWorkspace = (workspace: WorkspaceRecord) => {
-    const confirmed = window.confirm(`Remove ${workspace.name} from pi-gui? This will not delete any files.`);
+    const confirmed = window.confirm(`Remove ${workspace.name} from Pi-Deepseek? This will not delete any files.`);
     setWorkspaceMenuId(null);
     setWorkspaceRenameId(null);
     if (!confirmed || !api) {

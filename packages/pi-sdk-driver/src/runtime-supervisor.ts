@@ -115,6 +115,7 @@ export class RuntimeSupervisor implements RuntimeResourceDriver {
     this.modelRegistry.refresh();
     await context.resourceLoader.reload();
     await this.autoEnableModelsForAuthenticatedProviders(context, [providerId]);
+    await this.autoSetDefaultModelForFirstProvider(context, providerId);
     return this.buildSnapshot(context);
   }
 
@@ -411,7 +412,12 @@ export class RuntimeSupervisor implements RuntimeResourceDriver {
     ]);
 
     return [...providerIds]
-      .sort((left, right) => left.localeCompare(right))
+      .sort((left, right) => {
+        // Pin DeepSeek at the top for first-launch convenience.
+        if (left === "deepseek") return -1;
+        if (right === "deepseek") return 1;
+        return left.localeCompare(right);
+      })
       .map((providerId) => {
         const auth = this.authStorage.get(providerId);
         const oauthProvider = oauthProviders.get(providerId);
@@ -457,6 +463,32 @@ export class RuntimeSupervisor implements RuntimeResourceDriver {
           ? left.modelId.localeCompare(right.modelId)
           : left.providerId.localeCompare(right.providerId),
       );
+  }
+
+  private async autoSetDefaultModelForFirstProvider(
+    context: RuntimeContext,
+    providerId: string,
+  ): Promise<void> {
+    const currentDefault = context.settingsManager.getDefaultProvider();
+    if (currentDefault) {
+      return;
+    }
+
+    const models = this.modelRegistry.getAvailable();
+    const providerModels = models.filter((model) => model.provider === providerId);
+    if (providerModels.length === 0) {
+      return;
+    }
+
+    // Prefer V4 Pro for deepseek; otherwise use the first available model.
+    const preferredModel =
+      providerId === "deepseek"
+        ? providerModels.find((model) => model.id.startsWith("deepseek-v4-pro"))
+        : undefined;
+    const model = preferredModel ?? providerModels[0];
+
+    context.settingsManager.setDefaultModelAndProvider(providerId, model!.id);
+    await context.settingsManager.flush();
   }
 
   private async autoEnableModelsForAuthenticatedProviders(
@@ -789,6 +821,7 @@ async function readPackageDisplayName(packageRoot: string): Promise<string | und
 const DESKTOP_API_KEY_PROVIDER_IDS = new Set([
   "azure-openai-responses",
   "cerebras",
+  "deepseek",
   "google",
   "groq",
   "huggingface",

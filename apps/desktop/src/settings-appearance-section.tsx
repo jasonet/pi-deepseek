@@ -1,4 +1,5 @@
 import type { ThemeMode } from "./desktop-state";
+import { LOCALE_LABELS, type Locale } from "./i18n";
 import { SettingsGroup, SettingsRow } from "./settings-utils";
 
 interface SettingsAppearanceSectionProps {
@@ -6,6 +7,8 @@ interface SettingsAppearanceSectionProps {
   readonly onSetThemeMode: (mode: ThemeMode) => void;
   readonly enableTransparency: boolean;
   readonly onSetEnableTransparency: (enabled: boolean) => void;
+  readonly locale: string;
+  readonly onSetLocale: (locale: string) => void;
 }
 
 const THEME_OPTIONS: { mode: ThemeMode; label: string; description: string }[] = [
@@ -19,6 +22,8 @@ export function SettingsAppearanceSection({
   onSetThemeMode,
   enableTransparency,
   onSetEnableTransparency,
+  locale,
+  onSetLocale,
 }: SettingsAppearanceSectionProps) {
   return (
     <>
@@ -33,6 +38,26 @@ export function SettingsAppearanceSection({
             />
           </SettingsRow>
         ))}
+      </SettingsGroup>
+
+      <SettingsGroup title="Language">
+        <SettingsRow
+          title="Display language"
+          description="Choose the UI display language. Changes apply immediately."
+        >
+          <select
+            aria-label="UI display language"
+            className="settings-select"
+            value={locale}
+            onChange={(event) => onSetLocale(event.target.value)}
+          >
+            {(Object.entries(LOCALE_LABELS) as [Locale, string][]).map(([key, label]) => (
+              <option key={key} value={key}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </SettingsRow>
       </SettingsGroup>
 
       <SettingsGroup title="Visuals">

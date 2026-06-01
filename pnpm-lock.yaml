@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      app-builder-bin:
+        specifier: ^4.2.0
+        version: 4.2.0
     devDependencies:
       '@playwright/test':
         specifier: ^1.52.0
@@ -1454,11 +1458,6 @@ packages:
     cpu: [s390x]
     os: [linux]
 
-  '@rollup/rollup-linux-x64-gnu@4.59.0':
-    resolution: {integrity: sha512-3AHmtQq/ppNuUspKAlvA8HtLybkDflkMuLK4DPo77DfthRb71V84/c4MlWJXixZz4uruIH4uaa07IqoAkG64fg==}
-    cpu: [x64]
-    os: [linux]
-
   '@rollup/rollup-linux-x64-musl@4.59.0':
     resolution: {integrity: sha512-2UdiwS/9cTAx7qIUZB/fWtToJwvt0Vbo0zmnYt7ED35KPg13Q0ym1g442THLC7VyI6JfYTP4PiSOWyoMdV2/xg==}
     cpu: [x64]
@@ -2019,6 +2018,9 @@ packages:
 
   any-promise@1.3.0:
     resolution: {integrity: sha512-7UvmKalWRt1wgjL1RrGxoSJW/0QZFIegpeGvZG9kjp8vrRu55XTHbwnqq2GpXm9uLbcuhxm3IqX9OB4MZR1b2A==}
+
+  app-builder-bin@4.2.0:
+    resolution: {integrity: sha512-PGXlkukQnroTgAaDZnnppdLzsRJmab6Rh/rJ5fKyYaYhd+FfaORH59/ArkB5dr2cAeYQU5lCeHFEwURaoBO8BA==}
 
   app-builder-bin@5.0.0-alpha.12:
     resolution: {integrity: sha512-j87o0j6LqPL3QRr8yid6c+Tt5gC7xNfYo6uQIQkorAC6MpeayVMZrEDzKmJJ/Hlv7EnOQpaRm53k6ktDYZyB6w==}
@@ -5761,9 +5763,6 @@ snapshots:
   '@rollup/rollup-linux-s390x-gnu@4.59.0':
     optional: true
 
-  '@rollup/rollup-linux-x64-gnu@4.59.0':
-    optional: true
-
   '@rollup/rollup-linux-x64-musl@4.59.0':
     optional: true
 
@@ -6450,6 +6449,8 @@ snapshots:
   ansi-styles@6.2.3: {}
 
   any-promise@1.3.0: {}
+
+  app-builder-bin@4.2.0: {}
 
   app-builder-bin@5.0.0-alpha.12: {}
 
@@ -8572,7 +8573,6 @@ snapshots:
       '@rollup/rollup-linux-riscv64-gnu': 4.59.0
       '@rollup/rollup-linux-riscv64-musl': 4.59.0
       '@rollup/rollup-linux-s390x-gnu': 4.59.0
-      '@rollup/rollup-linux-x64-gnu': 4.59.0
       '@rollup/rollup-linux-x64-musl': 4.59.0
       '@rollup/rollup-openbsd-x64': 4.59.0
       '@rollup/rollup-openharmony-arm64': 4.59.0

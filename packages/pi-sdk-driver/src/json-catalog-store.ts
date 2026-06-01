@@ -278,7 +278,7 @@ export class JsonCatalogStore implements SessionFileCatalogStorage {
 }
 
 function defaultCatalogFilePath(): string {
-  return join(homedir(), ".pi-gui", "catalogs.json");
+  return join(homedir(), ".pi-deepseek", "catalogs.json");
 }
 
 function createEmptyState(): CatalogFileState {

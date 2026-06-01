@@ -316,7 +316,7 @@ export class RuntimeSupervisor implements RuntimeResourceDriver {
       }
 
       console.warn(
-        `[pi-gui] Falling back to runtime resource loading without npm package sources for ${workspace.path}: ${
+        `[pi-deepseek] Falling back to runtime resource loading without npm package sources for ${workspace.path}: ${
           error instanceof Error ? error.message : String(error)
         }`,
       );
@@ -389,7 +389,7 @@ export class RuntimeSupervisor implements RuntimeResourceDriver {
       }
 
       console.warn(
-        `[pi-gui] Falling back to runtime package resolution without npm package sources for ${context.workspace.path}: ${
+        `[pi-deepseek] Falling back to runtime package resolution without npm package sources for ${context.workspace.path}: ${
           error instanceof Error ? error.message : String(error)
         }`,
       );

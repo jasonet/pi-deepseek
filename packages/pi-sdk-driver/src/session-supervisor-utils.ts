@@ -12,8 +12,8 @@ import type {
 import type { SessionQueuedMessage } from "@pi-gui/session-driver/types";
 import type { SessionTranscriptAttachment, SessionTranscriptMessage } from "./transcript.js";
 
-const FILE_ATTACHMENT_BLOCK_START = "<pi-gui-file-attachments>";
-const FILE_ATTACHMENT_BLOCK_END = "</pi-gui-file-attachments>";
+const FILE_ATTACHMENT_BLOCK_START = "<pi-deepseek-file-attachments>";
+const FILE_ATTACHMENT_BLOCK_END = "</pi-deepseek-file-attachments>";
 
 export interface SnapshotSource {
   readonly ref: SessionRef;

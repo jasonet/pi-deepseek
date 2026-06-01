@@ -14,6 +14,8 @@ files:
 extraResources:
   - from: resources/icon.png
     to: icon.png
+  - from: resources/icon.ico
+    to: icon.ico
 
 asar: true
 asarUnpack:
@@ -22,7 +24,7 @@ asarUnpack:
   - "**/node_modules/node-pty/**/*"
   - "**/node_modules/.pnpm/node-pty*/node_modules/node-pty/**/*"
 
-artifactName: ${productName}-${version}-${arch}.${ext}
+artifactName: ${productName}-${version}-${os}-${arch}.${ext}
 
 mac:
   category: public.app-category.developer-tools
@@ -30,7 +32,7 @@ mac:
   gatekeeperAssess: false
   entitlements: resources/entitlements.mac.plist
   entitlementsInherit: resources/entitlements.mac.inherit.plist
-  notarize: true
+  notarize: false
   target:
     - target: dmg
       arch:
@@ -42,14 +44,36 @@ mac:
         - x64
   darkModeSupport: true
   extraFiles:
-    - from: build/native/pi-gui-notification-status-helper
+    - from: build/native/pi-deepseek-notification-status-helper
       to: MacOS/pi-deepseek-notification-status-helper
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+    - target: portable
+      arch:
+        - x64
+  artifactName: ${productName}-${version}-win-${arch}.${ext}
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+  artifactName: ${productName}-${version}-win-${arch}-setup.${ext}
+
+portable:
+  artifactName: ${productName}-${version}-win-${arch}-portable.${ext}
 
 linux:
   category: Development
   executableName: pi-deepseek
   target:
     - target: AppImage
+      arch:
+        - x64
 
 toolsets:
   appimage: "1.0.2"

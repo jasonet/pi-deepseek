@@ -9,7 +9,7 @@ const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const desktopDir = path.resolve(scriptDir, "..");
 const sourcePath = path.join(desktopDir, "resources", "notification-status-helper.swift");
 const outputDir = path.join(desktopDir, "build", "native");
-const outputPath = path.join(outputDir, "pi-gui-notification-status-helper");
+const outputPath = path.join(outputDir, "pi-deepseek-notification-status-helper");
 
 if (process.platform !== "darwin") {
   console.log("Skipping notification status helper build outside macOS.");

@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <strong>Deepseek GUI app for elegant pi coding agent</strong>
+  <strong>为 pi 编程智能体打造的 DeepSeek 桌面客户端</strong>
 </p>
 
 <p align="center">
@@ -16,7 +16,9 @@
 
 ---
 
-## ⬇️ 下载 / Download
+## 下载
+
+当前发布版本：`v0.2.0-beta`
 
 | 架构 | 格式 | 下载 |
 |------|------|------|
@@ -25,11 +27,9 @@
 | **Intel Mac** (x64) | DMG | [![Download DMG](https://img.shields.io/badge/Download-x64.dmg-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v0.2.0-beta/pi-deepseek-0.2.0-beta-x64.dmg) |
 | **Intel Mac** (x64) | ZIP | [![Download ZIP](https://img.shields.io/badge/Download-x64.zip-%234D6BFE)](https://github.com/jasonet/pi-deepseek/releases/download/v0.2.0-beta/pi-deepseek-0.2.0-beta-x64.zip) |
 
-> 💡 下载 `.dmg` 后双击挂载，将 `Pi-Deepseek.app` 拖入 `/Applications` 即可。首次启动自动引导配置 DeepSeek API Key。
->
-> 💡 Download the `.dmg`, double-click to mount, and drag `Pi-Deepseek.app` into `/Applications`. First launch auto-guides DeepSeek API key setup.
+> 下载 `.dmg` 后双击挂载，将 `Pi-Deepseek.app` 拖入 `/Applications` 即可。首次启动会自动引导配置 DeepSeek API Key。
 
-📦 [查看全部 Release & 校验文件 →](https://github.com/jasonet/pi-deepseek/releases/latest)
+[查看全部 Release 与校验文件](https://github.com/jasonet/pi-deepseek/releases/latest)
 
 ---
 

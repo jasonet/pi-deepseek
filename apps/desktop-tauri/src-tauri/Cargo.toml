@@ -1,0 +1,38 @@
+[package]
+name = "pi-deepseek"
+version = "0.2.2"
+description = "Deepseek GUI app for elegant pi coding agent"
+authors = ["Yiding by HKEZ"]
+edition = "2024"
+rust-version = "1.85"
+
+[lib]
+name = "pi_deepseek_lib"
+crate-type = ["lib", "cdylib", "staticlib"]
+path = "src/lib.rs"
+
+[[bin]]
+name = "pi-deepseek"
+path = "src/main.rs"
+
+[dependencies]
+tauri = { version = "2", features = ["devtools"] }
+tauri-plugin-shell = "2"
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[features]
+default = ["without-pi"]
+with-pi = []
+without-pi = []
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true

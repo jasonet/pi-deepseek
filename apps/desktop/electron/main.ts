@@ -120,19 +120,14 @@ function readClipboardImageAttachment(): ComposerImageAttachment | null {
 const PI_INSTALL_COMMAND = "curl -fsSL https://pi.dev/install.sh | sh";
 
 function isPiCliInstalled(): boolean {
-  // 1. Try global pi command
+  // Directly check if pi-coding-agent is available (it's a dependency of this app)
+  try {
+    require.resolve("@earendil-works/pi-coding-agent");
+    return true;
+  } catch {}
+  // Fallback: try global pi command
   try {
     execSync("pi --version", { stdio: "ignore", timeout: 5000 });
-    return true;
-  } catch {}
-  // 2. Try npx
-  try {
-    execSync("npx pi --version", { stdio: "ignore", timeout: 10000 });
-    return true;
-  } catch {}
-  // 3. Try node require
-  try {
-    execSync("node -e \"require('@earendil-works/pi-coding-agent')\"", { stdio: "ignore", timeout: 5000 });
     return true;
   } catch {}
   return false;

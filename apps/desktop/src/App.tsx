@@ -1893,6 +1893,7 @@ export default function App() {
 
   if (snapshot.activeView === "settings") {
     return (
+      <LocaleProvider locale={snapshot.locale}>
       <SecondarySurface
         activeNavId={settingsSection}
         navItems={settingsNav}
@@ -1952,6 +1953,7 @@ export default function App() {
           }}
         />
       </SecondarySurface>
+      </LocaleProvider>
     );
   }
 

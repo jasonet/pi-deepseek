@@ -109,7 +109,7 @@ export function SettingsProvidersSection({
       </SettingsGroup>
 
       <SettingsGroup title={t("settings.providers.allProviders")} description={t("settings.providers.allProvidersDesc")}>
-        <details className="settings-disclosure">
+        <details className="settings-disclosure" open>
           <summary className="settings-disclosure__summary">
             <span>{t("settings.providers.browseAll")}</span>
             <span>{filteredProviders.length}</span>

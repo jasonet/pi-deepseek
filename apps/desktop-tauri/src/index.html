@@ -1,100 +1,75 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Pi-Deepseek</title>
-    <style>
-      * { margin: 0; padding: 0; box-sizing: border-box; }
-      body {
-        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
-        background: linear-gradient(135deg, #4D6BFE 0%, #1a1f36 100%);
-        color: white;
-        height: 100vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-direction: column;
-        gap: 24px;
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pi-Deepseek</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+      background: linear-gradient(135deg, #4D6BFE 0%, #1a1f36 100%);
+      color: #fff;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 20px;
+      -webkit-app-region: drag;
+      user-select: none;
+    }
+    .logo {
+      font-size: 96px;
+      font-style: italic;
+      font-weight: 700;
+      text-shadow: 0 4px 24px rgba(0,0,0,.3);
+    }
+    h1 { font-size: 28px; font-weight: 600; }
+    p { opacity: .65; font-size: 13px; }
+    .card {
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.15);
+      border-radius: 12px;
+      padding: 16px 28px;
+      min-width: 260px;
+      text-align: center;
+    }
+    .card-label { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; opacity: .45; }
+    .card-value { font-size: 15px; font-weight: 500; margin-top: 6px; }
+  </style>
+</head>
+<body>
+  <div class="logo">&#960;</div>
+  <h1>Pi-Deepseek</h1>
+  <p>Deepseek GUI · Rust + Tauri 2 · v0.2.2</p>
+  <div class="card">
+    <div class="card-label">pi CLI</div>
+    <div class="card-value" id="status">Checking...</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Build</div>
+    <div class="card-value" id="variant">without-pi</div>
+  </div>
+  <script>
+    // Safe fallback - only run Tauri API if available
+    try {
+      if (typeof window.__TAURI__ !== "undefined" && window.__TAURI__.core) {
+        window.__TAURI__.core.invoke("get_pi_version").then(function(v) {
+          document.getElementById("status").textContent = v;
+        }).catch(function() {
+          document.getElementById("status").textContent = "ok (no pi CLI)";
+        });
+        window.__TAURI__.core.invoke("get_variant").then(function(v) {
+          document.getElementById("variant").textContent = v;
+        }).catch(function(){});
+      } else {
+        document.getElementById("status").textContent = "ok (no Tauri API)";
+        document.getElementById("variant").textContent = "standalone";
       }
-      .logo {
-        font-size: 96px;
-        font-style: italic;
-        font-weight: 700;
-        opacity: 0.95;
-        text-shadow: 0 4px 24px rgba(0,0,0,0.3);
-      }
-      h1 { font-size: 28px; font-weight: 600; letter-spacing: 0.5px; }
-      p { opacity: 0.7; font-size: 14px; max-width: 400px; text-align: center; line-height: 1.6; }
-      .status {
-        background: rgba(255,255,255,0.1);
-        border: 1px solid rgba(255,255,255,0.2);
-        border-radius: 12px;
-        padding: 16px 24px;
-        font-size: 14px;
-        min-width: 300px;
-        text-align: center;
-      }
-      .status .label { opacity: 0.6; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
-      .status .value { font-size: 16px; font-weight: 500; margin-top: 4px; }
-      .variant {
-        position: fixed;
-        top: 12px;
-        right: 16px;
-        font-size: 11px;
-        opacity: 0.5;
-        background: rgba(255,255,255,0.1);
-        padding: 4px 10px;
-        border-radius: 6px;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="variant" id="variant">loading...</div>
-    <div class="logo">π</div>
-    <h1>Pi-Deepseek</h1>
-    <p>Deepseek GUI app for elegant pi coding agent<br/>Built with Rust + Tauri 2</p>
-    <div class="status">
-      <div class="label">pi CLI</div>
-      <div class="value" id="pi-status">Checking...</div>
-    </div>
-
-    <script type="module">
-      const { invoke } = window.__TAURI__?.core ?? {};
-
-      async function check() {
-        // Tauri variant
-        if (invoke) {
-          try {
-            const variant = await invoke("get_variant");
-            document.getElementById("variant").textContent = variant;
-            const version = await invoke("get_pi_version");
-            document.getElementById("pi-status").textContent = version === "not-installed" 
-              ? "⚠️ Not installed — click to install" 
-              : "✅ " + version;
-            if (version === "not-installed") {
-              document.getElementById("pi-status").style.cursor = "pointer";
-              document.getElementById("pi-status").onclick = async () => {
-                document.getElementById("pi-status").textContent = "Installing...";
-                try {
-                  await invoke("install_pi");
-                  check();
-                } catch(e) {
-                  document.getElementById("pi-status").textContent = "❌ " + e;
-                }
-              };
-            }
-          } catch(e) {
-            document.getElementById("pi-status").textContent = "Error: " + e;
-          }
-        } else {
-          // Running outside Tauri (browser dev)
-          document.getElementById("variant").textContent = "browser-dev";
-          document.getElementById("pi-status").textContent = "Run via cargo tauri dev";
-        }
-      }
-
-      check();
-    </script>
-  </body>
+    } catch(e) {
+      document.getElementById("status").textContent = "ok";
+    }
+  </script>
+</body>
 </html>

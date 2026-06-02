@@ -122,7 +122,7 @@ export function SettingsProvidersSection({
               value={providerQuery}
               onChange={(event) => setProviderQuery(event.target.value)}
             />
-            <div className="settings-list">
+            <div className="settings-list" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
               {filteredProviders.map((provider) => (
                 <ProviderRow
                   key={provider.id}

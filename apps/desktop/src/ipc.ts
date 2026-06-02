@@ -73,6 +73,7 @@ export const desktopIpc = {
   setEnableTransparency: "pi-gui:set-enable-transparency",
   setLocale: "pi-gui:set-locale",
   getLocale: "pi-gui:get-locale",
+  getProviderBalance: "pi-gui:get-provider-balance",
   terminalEnsurePanel: "pi-gui:terminal-ensure-panel",
   terminalCreateSession: "pi-gui:terminal-create-session",
   terminalSetActiveSession: "pi-gui:terminal-set-active-session",
@@ -279,6 +280,7 @@ export interface PiDesktopApi {
   setEnableTransparency(enabled: boolean): Promise<DesktopAppState>;
   setLocale(locale: string): Promise<DesktopAppState>;
   getLocale(): Promise<string>;
+  getProviderBalance(providerId: string): Promise<{ balance: string } | { error: string }>;
   ensureTerminalPanel(
     workspaceId: string,
     terminalScopeId: string,

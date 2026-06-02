@@ -1,5 +1,7 @@
 import type { BrowserWindow } from "electron";
+import { readFileSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { homedir } from "node:os";
 import { join } from "node:path";
 import {
   applyHostUiRequestToExtensionUiState,
@@ -527,6 +529,18 @@ export class DesktopAppStore implements AppStoreInternals {
 
   getLocale(): string {
     return this.state.locale;
+  }
+
+  getProviderAuth(providerId: string): string | undefined {
+    try {
+      const authPath = join(homedir(), ".pi", "agent", "auth.json");
+      const raw = readFileSync(authPath, "utf8");
+      const data = JSON.parse(raw);
+      const entry = data[providerId];
+      if (entry?.type === "api_key") return entry.key;
+      if (entry?.type === "oauth" && entry?.accessToken) return entry.accessToken;
+    } catch {}
+    return undefined;
   }
 
   async setModelSettingsScopeMode(modelSettingsScopeMode: ModelSettingsScopeMode): Promise<DesktopAppState> {

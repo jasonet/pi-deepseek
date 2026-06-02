@@ -632,6 +632,21 @@ app.whenReady().then(async () => {
   ipcMain.handle(desktopIpc.getLocale, async () => {
     return store.getLocale();
   });
+  ipcMain.handle(desktopIpc.getProviderBalance, async (_event, providerId: string) => {
+    try {
+      const auth = store.getProviderAuth(providerId);
+      if (!auth) return { error: "No auth configured" };
+      const resp = await net.fetch(`https://api.deepseek.com/user/balance`, {
+        headers: { Authorization: `Bearer ${auth}` },
+      });
+      if (!resp.ok) return { error: `API error ${resp.status}` };
+      const data = await resp.json() as any;
+      const bal = data?.balance_infos?.[0]?.total_balance ?? data?.data?.balance ?? "?";
+      return { balance: String(bal) };
+    } catch (e: any) {
+      return { error: e.message };
+    }
+  });
   ipcMain.handle(desktopIpc.terminalEnsurePanel, (event, workspaceId: string, terminalScopeId: string, size) => {
     return getTerminalService().ensurePanel(event.sender, workspaceId, terminalScopeId, size);
   });

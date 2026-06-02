@@ -188,6 +188,8 @@ contextBridge.exposeInMainWorld("piApp", {
     ipcRenderer.invoke(desktopIpc.setLocale, locale) as Promise<DesktopAppState>,
   getLocale: () =>
     ipcRenderer.invoke(desktopIpc.getLocale) as Promise<string>,
+  getProviderBalance: (providerId: string) =>
+    ipcRenderer.invoke(desktopIpc.getProviderBalance, providerId) as Promise<{ balance: string } | { error: string }>,
   ensureTerminalPanel: (workspaceId: string, terminalScopeId: string, size?: Partial<TerminalSize>) =>
     ipcRenderer.invoke(desktopIpc.terminalEnsurePanel, workspaceId, terminalScopeId, size) as Promise<TerminalPanelSnapshot>,
   createTerminalSession: (workspaceId: string, terminalScopeId: string, size?: Partial<TerminalSize>) =>

@@ -11,6 +11,7 @@ import {
   type MessageBoxOptions,
 } from "electron";
 import { randomUUID } from "node:crypto";
+import { execSync } from "node:child_process";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -114,6 +115,42 @@ function readClipboardImageAttachment(): ComposerImageAttachment | null {
     mimeType: "image/png",
     data: png.toString("base64"),
   };
+}
+
+const PI_INSTALL_COMMAND = "curl -fsSL https://pi.dev/install.sh | sh";
+
+function isPiCliInstalled(): boolean {
+  try {
+    execSync("pi --version", { stdio: "ignore", timeout: 5000 });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function checkPiCliAndPrompt(): Promise<void> {
+  // Skip check in test mode
+  if (process.env.PI_APP_TEST_MODE) {
+    return;
+  }
+
+  if (isPiCliInstalled()) {
+    return;
+  }
+
+  const result = await dialog.showMessageBox({
+    type: "warning",
+    title: "pi CLI not found / pi CLI 未安装 / pi CLI が見つかりません",
+    message: "The `pi` command-line tool was not detected on your system.\n\npi is required for session management and agent execution.\n\n未检测到 `pi` 命令行工具。pi 是会话管理和智能体运行的必要依赖。\n\n`pi` コマンドが検出されませんでした。pi はセッション管理とエージェント実行に必要です。\n\nRun this command to install / 运行以下命令安装 / 以下のコマンドでインストール：",
+    detail: PI_INSTALL_COMMAND,
+    buttons: ["Copy Command / 复制命令 / コマンドをコピー", "OK"],
+    defaultId: 0,
+    cancelId: 1,
+  });
+
+  if (result.response === 0) {
+    clipboard.writeText(PI_INSTALL_COMMAND);
+  }
 }
 
 function createWindow(): BrowserWindow {
@@ -425,6 +462,10 @@ app.whenReady().then(async () => {
     generateThreadTitleOverride: async (workspace, options) => generateThreadTitleOverride?.(workspace, options),
   });
   await store.initialize();
+
+  // Check if pi CLI is installed; prompt user if not.
+  await checkPiCliAndPrompt();
+
   integratedTerminalShell = (await store.getState()).integratedTerminalShell;
   stopPruningTerminals = store.subscribe((state) => {
     integratedTerminalShell = state.integratedTerminalShell;

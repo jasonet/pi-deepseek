@@ -9,8 +9,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/jasonet/pi-deepseek/releases/latest"><img src="https://img.shields.io/github/v/release/jasonet/pi-deepseek?label=v0.2.1-beta&color=%234D6BFE" alt="Latest Release" /></a>
-  <a href="https://github.com/jasonet/pi-deepseek/releases/latest"><img src="https://img.shields.io/badge/platform-macOS_|_Windows-lightgrey" alt="Platform" /></a>
+  <a href="https://github.com/jasonet/pi-deepseek/releases/latest"><img src="https://img.shields.io/github/v/release/jasonet/pi-deepseek?label=v0.2.2&color=%234D6BFE" alt="Latest Release" /></a>
+  <a href="https://github.com/jasonet/pi-deepseek/releases/latest"><img src="https://img.shields.io/badge/platform-macOS_|_Windows_|_Linux-lightgrey" alt="Platform" /></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License" /></a>
 </p>
 
@@ -20,17 +20,21 @@
 
 | 平台 | 架构 | 格式 | 下载 |
 |------|------|------|------|
-| **macOS** | Apple Silicon (M1–M4) | DMG | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v0.2.1-beta/Pi-Deepseek-0.2.1-beta-mac-arm64.dmg) |
-| **macOS** | Intel (x64) | DMG | [![Download](https://img.shields.io/badge/Download-x64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v0.2.1-beta/Pi-Deepseek-0.2.1-beta-mac-x64.dmg) |
-| **Windows** | x64 | 安装版 | [![Download](https://img.shields.io/badge/Download-Setup-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v0.2.1-beta/Pi-Deepseek-0.2.1-beta-win-x64-setup.exe) |
-| **Windows** | x64 | 便携版 | [![Download](https://img.shields.io/badge/Download-Portable-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v0.2.1-beta/Pi-Deepseek-0.2.1-beta-win-x64-portable.exe) |
+| **macOS** | Apple Silicon (M1–M4) | DMG | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v0.2.2/Pi-Deepseek-0.2.2-mac-arm64.dmg) |
+| **macOS** | Intel (x64) | DMG | [![Download](https://img.shields.io/badge/Download-x64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v0.2.2/Pi-Deepseek-0.2.2-mac-x64.dmg) |
+| **Windows** | x64 | 安装版 | [![Download](https://img.shields.io/badge/Download-Setup-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v0.2.2/Pi-Deepseek-0.2.2-win-x64-setup.exe) |
+| **Windows** | x64 | 便携版 | [![Download](https://img.shields.io/badge/Download-Portable-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v0.2.2/Pi-Deepseek-0.2.2-win-x64-portable.exe) |
+| **Linux** | x64 | deb | [![Download](https://img.shields.io/badge/Download-.deb-%234D6BFE?logo=ubuntu)](https://github.com/jasonet/pi-deepseek/releases/download/v0.2.2/Pi-Deepseek-0.2.2-linux-amd64.deb) |
+| **Linux** | x64 | AppImage | [![Download](https://img.shields.io/badge/Download-AppImage-%234D6BFE?logo=linux)](https://github.com/jasonet/pi-deepseek/releases/download/v0.2.2/Pi-Deepseek-0.2.2-linux-x86_64.AppImage) |
 
 > 💡 **macOS**：下载 `.dmg` 双击挂载，将 `Pi-Deepseek.app` 拖入 `/Applications`。
 > **Windows**：`Setup.exe` 为安装版（推荐），`Portable.exe` 为绿色免安装版。
+> **Linux**：Ubuntu/Debian/Deepin/UOS 用 `sudo dpkg -i xxx.deb` 安装；其他发行版用 `chmod +x xxx.AppImage && ./xxx.AppImage` 运行。
 > 首次启动自动弹出设置引导，填入 DeepSeek API Key 即可开始。
 
 > 💡 **macOS**: Download `.dmg`, double-click, drag `Pi-Deepseek.app` to `/Applications`.
 > **Windows**: `Setup.exe` is the installer (recommended), `Portable.exe` runs directly.
+> **Linux**: `sudo dpkg -i xxx.deb` for Ubuntu/Debian; `chmod +x xxx.AppImage && ./xxx.AppImage` for other distros.
 > First launch auto-opens Settings for DeepSeek API key setup.
 
 📦 [查看全部 Release & 校验文件 →](https://github.com/jasonet/pi-deepseek/releases/latest)
@@ -39,7 +43,7 @@
 
 ## 简介
 
-`Pi-Deepseek` 利用Pi coding agent充分发挥v4 Pro的性价比（体验提升接近Opus 4.7，成本是CLaude的N分之一），一个面向本地 AI 编程工作流的桌面客户端，新增了Windows版本，为 `pi` 会话提供接近 深推理无提示的 Codex 的工程自动交互体验。
+`Pi-Deepseek` 利用 Pi coding agent 充分发挥 DeepSeek V4 Pro 的性价比（体验接近 Claude Opus 4.7，成本仅为其 N 分之一），一个面向本地 AI 编程工作流的桌面客户端。现已支持 macOS / Windows / Linux 三平台，为 `pi` 会话提供深推理、无提示词的 Codex 级工程自动交互体验。
 
 本项目在 [`pi-gui`](https://github.com/minghinmatthewlam/pi-gui) 的基础上持续开发，并通过 `@earendil-works/pi-coding-agent` 接入上游 `pi` 运行时。
 
@@ -47,13 +51,12 @@
 
 ## 功能
 
-- 在桌面客户端中打开本地工作区
-- 按工作区列出并恢复已有的 `pi` 会话
-- 创建新会话，并通过 `pi` 运行时发送提示词
-- 保存桌面端界面状态（工作区、会话、输入框草稿）
-- Codex 风格的时间线与会话交互方式
+- 桌面客户端中打开本地工作区，按工作区管理 `pi` 会话
+- 创建新会话，通过 `pi` 运行时发送提示词
+- 持久保存界面状态（工作区、会话、输入框草稿）
+- Codex 风格的时间线与会话交互
 - **内置 DeepSeek V4 Pro 1M / Flash 1M 模型**，一键配置 API Key
-- **中文 / 日文 UI**，Settings → Appearance 切换
+- **中文 / 日文 UI**，Settings → Appearance 即时切换
 
 ## 本地开发
 
@@ -72,7 +75,7 @@ pnpm --filter @pi-gui/desktop run package
 # Windows x64
 pnpm --filter @pi-gui/desktop run package:win
 
-# Linux AppImage
+# Linux x64 (AppImage + deb)
 pnpm --filter @pi-gui/desktop run package:linux
 ```
 

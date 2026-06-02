@@ -7,6 +7,7 @@ import { SettingsModelsSection } from "./settings-models-section";
 import { SettingsNotificationsSection } from "./settings-notifications-section";
 import { SettingsProvidersSection } from "./settings-providers-section";
 import { type SettingsSection, sectionTitle, sectionDescription } from "./settings-utils";
+import { useT } from "./i18n";
 
 export type { SettingsSection } from "./settings-utils";
 
@@ -69,12 +70,14 @@ export function SettingsView({
   onSetEnableTransparency,
   onSetLocale,
 }: SettingsViewProps) {
+  const t = useT();
+
   if (!workspace && section !== "general" && section !== "notifications" && section !== "appearance") {
     return (
       <section className="canvas canvas--empty">
         <div className="empty-panel">
-          <div className="session-header__eyebrow">Settings</div>
-          <h1>Select a workspace</h1>
+          <div className="session-header__eyebrow">{t("sidebar.settings")}</div>
+          <h1>{t("common.selectWorkspace")}</h1>
           <p>Provider and skill settings need a selected workspace.</p>
         </div>
       </section>
@@ -86,7 +89,7 @@ export function SettingsView({
       <div className="conversation settings-view">
         <header className="view-header">
           <div>
-            <div className="chat-header__eyebrow">Settings</div>
+            <div className="chat-header__eyebrow">{t("sidebar.settings")}</div>
             <h1 className="view-header__title">{sectionTitle(section)}</h1>
             <p className="view-header__body">
               {sectionDescription(section, workspace?.name ?? "this workspace")}

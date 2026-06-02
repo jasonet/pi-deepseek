@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { RuntimeSnapshot } from "@pi-gui/session-driver/runtime-types";
 import { filterProviders, ProviderRow, SettingsGroup } from "./settings-utils";
+import { useT } from "./i18n";
 
 interface SettingsProvidersSectionProps {
   readonly runtime?: RuntimeSnapshot;
@@ -17,6 +18,7 @@ export function SettingsProvidersSection({
   onSetProviderApiKey,
   onRemoveProviderApiKey,
 }: SettingsProvidersSectionProps) {
+  const t = useT();
   const [providerQuery, setProviderQuery] = useState("");
   const [apiKeyProviderId, setApiKeyProviderId] = useState<string | undefined>();
   const [apiKeyDraft, setApiKeyDraft] = useState("");
@@ -74,7 +76,7 @@ export function SettingsProvidersSection({
 
   return (
     <>
-      <SettingsGroup title="Connected" description="Connected providers are used first for picking models.">
+      <SettingsGroup title={t("settings.providers.connected")} description={t("settings.providers.connectedDesc")}>
         {connectedProviders.length > 0 ? (
           connectedProviders.map((provider) => (
             <ProviderRow
@@ -87,12 +89,12 @@ export function SettingsProvidersSection({
           ))
         ) : (
           <div className="settings-row">
-            <span className="settings-row__description">No providers connected yet.</span>
+            <span className="settings-row__description">{t("settings.providers.noProviders")}</span>
           </div>
         )}
       </SettingsGroup>
 
-      <SettingsGroup title="Sign in" description="OAuth-capable providers can sign in directly from the desktop app.">
+      <SettingsGroup title={t("settings.providers.signIn")} description={t("settings.providers.signInDesc")}>
         {oauthProviders.map((provider) => (
           <ProviderRow
             key={provider.id}
@@ -104,17 +106,17 @@ export function SettingsProvidersSection({
         ))}
       </SettingsGroup>
 
-      <SettingsGroup title="All providers" description="Browse the full provider inventory.">
+      <SettingsGroup title={t("settings.providers.allProviders")} description={t("settings.providers.allProvidersDesc")}>
         <details className="settings-disclosure">
           <summary className="settings-disclosure__summary">
-            <span>Browse all providers</span>
+            <span>{t("settings.providers.browseAll")}</span>
             <span>{filteredProviders.length}</span>
           </summary>
           <div className="settings-disclosure__body">
             <input
-              aria-label="Search providers"
+              aria-label={t("settings.providers.searchProviders")}
               className="settings-search"
-              placeholder="Search providers"
+              placeholder={t("settings.providers.searchProviders")}
               value={providerQuery}
               onChange={(event) => setProviderQuery(event.target.value)}
             />

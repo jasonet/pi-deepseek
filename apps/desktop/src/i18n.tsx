@@ -29,6 +29,12 @@ const translations: Record<Locale, Record<string, string>> = {
     "sidebar.extensions": "Extensions",
     "sidebar.settings": "Settings",
     "sidebar.searchThreads": "Search threads…",
+    "sidebar.openFolder": "Open folder",
+    "sidebar.createWorktree": "Create permanent worktree",
+    "sidebar.removeWorktree": "Remove worktree",
+    "sidebar.noFolders": "No folders yet",
+    "sidebar.noFoldersDesc": "Open a project folder to start building a workspace and session list.",
+    "sidebar.openFirstFolder": "Open first folder",
 
     // New Thread
     "newThread.title": "New Thread",
@@ -249,6 +255,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "common.loading": "Loading…",
     "common.error": "Error",
     "common.close": "Close",
+    "common.cancel": "Cancel",
     "common.save": "Save",
     "common.edit": "Edit",
     "common.delete": "Delete",
@@ -268,6 +275,12 @@ const translations: Record<Locale, Record<string, string>> = {
     "sidebar.extensions": "扩展",
     "sidebar.settings": "设置",
     "sidebar.searchThreads": "搜索会话…",
+    "sidebar.openFolder": "打开文件夹",
+    "sidebar.createWorktree": "创建永久工作树",
+    "sidebar.removeWorktree": "删除工作树",
+    "sidebar.noFolders": "暂无文件夹",
+    "sidebar.noFoldersDesc": "打开项目文件夹以构建工作区和会话列表。",
+    "sidebar.openFirstFolder": "打开首个文件夹",
 
     // New Thread
     "newThread.title": "新建会话",
@@ -488,6 +501,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "common.loading": "加载中…",
     "common.error": "错误",
     "common.close": "关闭",
+    "common.cancel": "取消",
     "common.save": "保存",
     "common.edit": "编辑",
     "common.delete": "删除",
@@ -507,6 +521,12 @@ const translations: Record<Locale, Record<string, string>> = {
     "sidebar.extensions": "拡張機能",
     "sidebar.settings": "設定",
     "sidebar.searchThreads": "スレッドを検索…",
+    "sidebar.openFolder": "フォルダを開く",
+    "sidebar.createWorktree": "永続ワークツリーを作成",
+    "sidebar.removeWorktree": "ワークツリーを削除",
+    "sidebar.noFolders": "フォルダがありません",
+    "sidebar.noFoldersDesc": "プロジェクトフォルダを開いてワークスペースとセッションリストを構築してください。",
+    "sidebar.openFirstFolder": "最初のフォルダを開く",
 
     // New Thread
     "newThread.title": "新規スレッド",
@@ -727,6 +747,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "common.loading": "読み込み中…",
     "common.error": "エラー",
     "common.close": "閉じる",
+    "common.cancel": "キャンセル",
     "common.save": "保存",
     "common.edit": "編集",
     "common.delete": "削除",

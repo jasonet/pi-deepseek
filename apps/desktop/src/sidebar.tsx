@@ -21,6 +21,7 @@ import type { WorkspaceMenuState } from "./hooks/use-workspace-menu";
 import type { ThreadGroup, ThreadListEntry } from "./thread-groups";
 import type { Dispatch, SetStateAction } from "react";
 import type { DesktopAppState } from "./desktop-state";
+import { useT } from "./i18n";
 
 interface SidebarProps {
   readonly activeView: AppView;
@@ -69,6 +70,7 @@ export function Sidebar(props: SidebarProps) {
     onUnarchiveSession,
   } = props;
 
+  const t = useT();
   const [activeId, setActiveId] = useState<string | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -127,7 +129,7 @@ export function Sidebar(props: SidebarProps) {
           onClick={onNewThread}
         >
           <PlusIcon />
-          <span>New thread</span>
+          <span>{t("sidebar.newThread")}</span>
         </button>
 
         <div className="sidebar__nav">
@@ -137,7 +139,7 @@ export function Sidebar(props: SidebarProps) {
             onClick={() => onSetActiveView("threads")}
           >
             <FolderIcon />
-            <span>Threads</span>
+            <span>{t("sidebar.threads")}</span>
           </button>
           <button
             className="sidebar__nav-item"
@@ -145,7 +147,7 @@ export function Sidebar(props: SidebarProps) {
             onClick={() => onOpenSkills(selectedWorkspace?.rootWorkspaceId ?? selectedWorkspace?.id)}
           >
             <SkillIcon />
-            <span>Skills</span>
+            <span>{t("sidebar.skills")}</span>
           </button>
           <button
             className="sidebar__nav-item"
@@ -153,7 +155,7 @@ export function Sidebar(props: SidebarProps) {
             onClick={() => onOpenExtensions(selectedWorkspace?.rootWorkspaceId ?? selectedWorkspace?.id)}
           >
             <ExtensionIcon />
-            <span>Extensions</span>
+            <span>{t("sidebar.extensions")}</span>
           </button>
           <button
             className="sidebar__nav-item"
@@ -161,14 +163,14 @@ export function Sidebar(props: SidebarProps) {
             onClick={() => onOpenSettings(selectedWorkspace?.rootWorkspaceId ?? selectedWorkspace?.id)}
           >
             <SettingsIcon />
-            <span>Settings</span>
+            <span>{t("sidebar.settings")}</span>
           </button>
         </div>
       </div>
 
       <div className="sidebar__section">
         <div className="section__head">
-          <span>Threads</span>
+          <span>{t("sidebar.threads")}</span>
           <div className="section__tools">
             <button
               aria-label="Open folder"
@@ -185,8 +187,8 @@ export function Sidebar(props: SidebarProps) {
 
         {visibleWorkspaces.length === 0 ? (
           <div className="empty-state" data-testid="empty-state">
-            <h2>No folders yet</h2>
-            <p>Open a project folder to start building a workspace and session list.</p>
+            <h2>{t("threads.noThreads")}</h2>
+            <p>{t("threads.noThreadsDesc")}</p>
             <button
               className="button button--primary"
               type="button"
@@ -194,7 +196,7 @@ export function Sidebar(props: SidebarProps) {
                 void updateSnapshot(api, setSnapshot, () => api.pickWorkspace());
               }}
             >
-              Open first folder
+              {t("sidebar.openFirstFolder")}
             </button>
           </div>
         ) : (
@@ -375,7 +377,7 @@ function WorkspaceGroupContent(
                   })
                 }
               >
-                Open folder
+                {t("sidebar.openFolder")}
               </button>
               {linkedWorktree ? (
                 <button
@@ -387,7 +389,7 @@ function WorkspaceGroupContent(
                     )
                   }
                 >
-                  Remove worktree
+                  {t("sidebar.removeWorktree")}
                 </button>
               ) : (
                 <button
@@ -397,7 +399,7 @@ function WorkspaceGroupContent(
                     wsMenu.runWorkspaceMenuAction(event, () => wsMenu.createWorktree(rootWorkspace.id))
                   }
                 >
-                  Create permanent worktree
+                  {t("sidebar.createWorktree")}
                 </button>
               )}
               <button
@@ -405,14 +407,14 @@ function WorkspaceGroupContent(
                 type="button"
                 onClick={(event) => wsMenu.runWorkspaceMenuAction(event, () => wsMenu.startRename(rootWorkspace))}
               >
-                Edit name
+                {t("common.edit")}
               </button>
               <button
                 className="workspace-menu__item workspace-menu__item--danger"
                 type="button"
                 onClick={(event) => wsMenu.runWorkspaceMenuAction(event, () => wsMenu.removeWorkspace(rootWorkspace))}
               >
-                Remove
+                {t("common.delete")}
               </button>
             </div>
           ) : null}
@@ -444,10 +446,10 @@ function WorkspaceGroupContent(
           />
           <div className="workspace-rename__actions">
             <button className="workspace-rename__button" type="button" onClick={wsMenu.cancelRename}>
-              Cancel
+              {t("common.cancel")}
             </button>
             <button className="workspace-rename__button workspace-rename__button--primary" type="submit">
-              Save
+              {t("common.save")}
             </button>
           </div>
         </form>
@@ -487,7 +489,7 @@ function WorkspaceGroupContent(
                 >
                   <ChevronDownIcon />
                 </span>
-                <span>Archived</span>
+                <span>{t("common.archive")}</span>
                 <span className="archived-thread-group__count">{archivedThreads.length}</span>
               </button>
               {archivedSectionOpen ? (

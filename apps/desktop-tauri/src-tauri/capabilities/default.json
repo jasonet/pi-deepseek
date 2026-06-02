@@ -1,0 +1,11 @@
+{
+  "identifier": "default",
+  "description": "Default capability for Pi-Deepseek",
+  "windows": ["*"],
+  "permissions": [
+    "core:default",
+    "shell:default",
+    "shell:allow-open",
+    "dialog:default"
+  ]
+}

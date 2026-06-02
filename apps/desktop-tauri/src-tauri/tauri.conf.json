@@ -4,10 +4,10 @@
   "version": "0.2.2",
   "identifier": "com.pi-deepseek.desktop",
   "build": {
-    "frontendDist": "../src",
-    "devUrl": "http://localhost:1420",
-    "beforeDevCommand": "",
-    "beforeBuildCommand": ""
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "bun run dev",
+    "beforeBuildCommand": "bun run build"
   },
   "app": {
     "windows": [

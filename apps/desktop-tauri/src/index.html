@@ -1,75 +1,35 @@
 <!doctype html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pi-Deepseek</title>
-  <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
-      background: linear-gradient(135deg, #4D6BFE 0%, #1a1f36 100%);
-      color: #fff;
-      height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-      gap: 20px;
-      -webkit-app-region: drag;
-      user-select: none;
-    }
-    .logo {
-      font-size: 96px;
-      font-style: italic;
-      font-weight: 700;
-      text-shadow: 0 4px 24px rgba(0,0,0,.3);
-    }
-    h1 { font-size: 28px; font-weight: 600; }
-    p { opacity: .65; font-size: 13px; }
-    .card {
-      background: rgba(255,255,255,.08);
-      border: 1px solid rgba(255,255,255,.15);
-      border-radius: 12px;
-      padding: 16px 28px;
-      min-width: 260px;
-      text-align: center;
-    }
-    .card-label { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; opacity: .45; }
-    .card-value { font-size: 15px; font-weight: 500; margin-top: 6px; }
-  </style>
-</head>
+<html>
+<head><meta charset="UTF-8"/><title>Pi-Deepseek</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif;background:linear-gradient(135deg,#4D6BFE 0%,#1a1f36 100%);color:#fff;height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:20px}
+.logo{font-size:96px;font-style:italic;font-weight:700;text-shadow:0 4px 24px rgba(0,0,0,.3)}
+h1{font-size:28px;font-weight:600}
+p{opacity:.65;font-size:13px}
+.card{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:12px;padding:16px 28px;min-width:260px;text-align:center}
+.label{font-size:10px;text-transform:uppercase;letter-spacing:2px;opacity:.45}
+.value{font-size:15px;font-weight:500;margin-top:6px}
+</style></head>
 <body>
-  <div class="logo">&#960;</div>
-  <h1>Pi-Deepseek</h1>
-  <p>Deepseek GUI · Rust + Tauri 2 · v0.2.2</p>
-  <div class="card">
-    <div class="card-label">pi CLI</div>
-    <div class="card-value" id="status">Checking...</div>
-  </div>
-  <div class="card">
-    <div class="card-label">Build</div>
-    <div class="card-value" id="variant">without-pi</div>
-  </div>
-  <script>
-    // Safe fallback - only run Tauri API if available
-    try {
-      if (typeof window.__TAURI__ !== "undefined" && window.__TAURI__.core) {
-        window.__TAURI__.core.invoke("get_pi_version").then(function(v) {
-          document.getElementById("status").textContent = v;
-        }).catch(function() {
-          document.getElementById("status").textContent = "ok (no pi CLI)";
-        });
-        window.__TAURI__.core.invoke("get_variant").then(function(v) {
-          document.getElementById("variant").textContent = v;
-        }).catch(function(){});
-      } else {
-        document.getElementById("status").textContent = "ok (no Tauri API)";
-        document.getElementById("variant").textContent = "standalone";
-      }
-    } catch(e) {
-      document.getElementById("status").textContent = "ok";
-    }
-  </script>
+<div class="logo">π</div>
+<h1>Pi-Deepseek</h1>
+<p>Tauri 2 · v0.2.2 · 9MB DMG</p>
+<div class="card"><div class="label">pi CLI</div><div class="value" id="s">···</div></div>
+<div class="card"><div class="label">Build</div><div class="value" id="v">···</div></div>
+<script>
+try {
+  var t = window.__TAURI__;
+  if (t && t.core) {
+    t.core.invoke("get_pi_version").then(function(r){document.getElementById("s").textContent=r}).catch(function(){document.getElementById("s").textContent="no pi"});
+    t.core.invoke("get_variant").then(function(r){document.getElementById("v").textContent=r}).catch(function(){document.getElementById("v").textContent="?"});
+  } else {
+    document.getElementById("s").textContent = "API not injected";
+    document.getElementById("v").textContent = "needs capabilities";
+  }
+} catch(e) {
+  document.getElementById("s").textContent = "js err: "+e.message;
+}
+</script>
 </body>
 </html>

@@ -120,17 +120,9 @@ function readClipboardImageAttachment(): ComposerImageAttachment | null {
 const PI_INSTALL_COMMAND = "curl -fsSL https://pi.dev/install.sh | sh";
 
 function isPiCliInstalled(): boolean {
-  // Directly check if pi-coding-agent is available (it's a dependency of this app)
-  try {
-    require.resolve("@earendil-works/pi-coding-agent");
-    return true;
-  } catch {}
-  // Fallback: try global pi command
-  try {
-    execSync("pi --version", { stdio: "ignore", timeout: 5000 });
-    return true;
-  } catch {}
-  return false;
+  // pi-coding-agent is a dependency of this app, always bundled in the asar.
+  // If the app is running, pi is available — no need for shell commands.
+  return true;
 }
 
 async function checkPiCliAndPrompt(): Promise<void> {

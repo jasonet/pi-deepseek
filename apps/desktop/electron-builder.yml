@@ -10,6 +10,13 @@ directories:
 files:
   - out/**/*
   - package.json
+  - "!node_modules/@earendil-works/pi-coding-agent/docs/**"
+  - "!node_modules/@earendil-works/pi-coding-agent/examples/**"
+  - "!node_modules/@earendil-works/pi-coding-agent/**/*.md"
+  - "!node_modules/**/CHANGELOG.md"
+  - "!node_modules/**/README.md"
+  - "!node_modules/**/LICENSE"
+  - "!node_modules/**/*.map"
 
 extraResources:
   - from: resources/icon.png
@@ -17,7 +24,10 @@ extraResources:
   - from: resources/icon.ico
     to: icon.ico
 
-asar: true
+asar:
+  smartUnpack: false
+  ordering: null
+
 asarUnpack:
   - "**/*.node"
   - "**/*.wasm"
@@ -25,6 +35,11 @@ asarUnpack:
   - "**/node_modules/.pnpm/node-pty*/node_modules/node-pty/**/*"
 
 artifactName: ${productName}-${version}-${os}-${arch}.${ext}
+
+electronLanguages:
+  - en-US
+  - zh-CN
+  - ja
 
 mac:
   category: public.app-category.developer-tools
@@ -56,6 +71,10 @@ win:
       arch:
         - x64
   artifactName: ${productName}-${version}-win-${arch}.${ext}
+  electronLanguages:
+    - en-US
+    - zh-CN
+    - ja
 
 nsis:
   oneClick: false
@@ -79,6 +98,10 @@ linux:
       arch:
         - x64
   icon: resources/icon.png
+  electronLanguages:
+    - en-US
+    - zh-CN
+    - ja
 
 deb:
   compression: gz
@@ -102,3 +125,5 @@ publish:
   provider: github
   owner: jasonet
   repo: pi-deepseek
+
+afterPack: scripts/after-pack-slim.mjs

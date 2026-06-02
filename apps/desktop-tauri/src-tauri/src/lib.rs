@@ -8,8 +8,9 @@ pub fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_clipboard_manager::init())
         .invoke_handler(tauri::generate_handler![
-            check_pi_installed,
+            check_pi_path,
             install_pi,
             get_pi_version,
             get_variant,
@@ -18,22 +19,27 @@ pub fn main() {
         .expect("error while running Pi-Deepseek");
 }
 
-/// Check if pi CLI is installed and return its version.
+/// Get pi CLI version string.
 #[tauri::command]
-fn check_pi_installed() -> Result<String, String> {
-    let output = Command::new("pi")
-        .arg("--version")
+fn check_pi_path() -> Result<String, String> {
+    let output = std::process::Command::new("which")
+        .arg("pi")
         .output()
-        .map_err(|e| format!("pi not found: {}", e))?;
+        .map_err(|e| format!("which failed: {}", e))?;
 
     if output.status.success() {
-        Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+        let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        if path.is_empty() {
+            Err("pi not found on PATH".into())
+        } else {
+            Ok(path)
+        }
     } else {
-        Err("pi command failed".into())
+        Err("pi not found on PATH".into())
     }
 }
 
-/// Get pi version string (or "not-installed").
+/// Get pi CLI version (or "not-installed").
 #[tauri::command]
 fn get_pi_version() -> String {
     Command::new("pi")

@@ -1,6 +1,6 @@
 [package]
 name = "pi-deepseek"
-version = "0.2.2"
+version = "0.2.3"
 description = "Deepseek GUI app for elegant pi coding agent"
 authors = ["Yiding by HKEZ"]
 edition = "2024"

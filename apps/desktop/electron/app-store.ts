@@ -2444,7 +2444,7 @@ function mergeEnabledModelPatterns(
   return merged;
 }
 
-const VALID_LOCALES = new Set(["en", "zh-CN", "ja"]);
+const VALID_LOCALES = new Set(["en", "zh-CN", "zh-TW", "ja"]);
 
 function parseLocale(value: unknown): "en" | "zh-CN" | "ja" {
   if (typeof value === "string" && VALID_LOCALES.has(value)) {

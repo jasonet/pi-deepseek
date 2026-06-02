@@ -10,7 +10,7 @@ export type WorktreeStatus = "ready" | "missing" | "error";
 export type NewThreadEnvironment = "local" | "worktree";
 export type ThemeMode = "system" | "light" | "dark";
 export type ModelSettingsScopeMode = "app-global" | "per-repo";
-export type Locale = "en" | "zh-CN" | "ja";
+export type Locale = "en" | "zh-CN" | "zh-TW" | "ja";
 export type ComposerDraftSyncSource =
   | "state"
   | "selection"

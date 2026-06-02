@@ -38,7 +38,10 @@ artifactName: ${productName}-${version}-${os}-${arch}.${ext}
 
 electronLanguages:
   - en-US
+  - en
   - zh-CN
+  - zh-HK
+  - zh-TW
   - ja
 
 mac:

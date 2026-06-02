@@ -39,7 +39,7 @@
 
 ## 简介
 
-`Pi-Deepseek` 是一个面向本地 AI 编程工作流的桌面客户端，为 `pi` 会话提供接近 Codex 的桌面交互体验。
+`Pi-Deepseek` 利用Pi coding agent充分发挥v4 Pro的性价比（体验提升接近Opus 4.7，成本是CLaude的N分之一），一个面向本地 AI 编程工作流的桌面客户端，新增了Windows版本，为 `pi` 会话提供接近 深推理无提示的 Codex 的工程自动交互体验。
 
 本项目在 [`pi-gui`](https://github.com/minghinmatthewlam/pi-gui) 的基础上持续开发，并通过 `@earendil-works/pi-coding-agent` 接入上游 `pi` 运行时。
 

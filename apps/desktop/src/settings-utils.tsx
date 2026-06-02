@@ -4,10 +4,7 @@ import type { RuntimeSettingsSnapshot, RuntimeSnapshot } from "@pi-gui/session-d
 export type SettingsSection = "appearance" | "general" | "providers" | "models" | "notifications";
 
 export const THINKING_LEVELS: NonNullable<RuntimeSettingsSnapshot["defaultThinkingLevel"]>[] = [
-  "low",
-  "medium",
-  "high",
-  "xhigh",
+  "low", "medium", "high", "xhigh",
 ];
 
 export function settingsPill(active: boolean): string {
@@ -15,173 +12,97 @@ export function settingsPill(active: boolean): string {
 }
 
 export function labelForThinking(level: NonNullable<RuntimeSettingsSnapshot["defaultThinkingLevel"]>): string {
-  if (level === "xhigh") {
-    return "Extra High";
-  }
+  if (level === "xhigh") return "Extra High";
   return level.charAt(0).toUpperCase() + level.slice(1);
 }
 
-export function sectionTitle(section: SettingsSection): string {
-  switch (section) {
-    case "appearance":
-      return "Appearance";
-    case "providers":
-      return "Providers";
-    case "models":
-      return "Models";
-    case "notifications":
-      return "Notifications";
-    default:
-      return "General";
-  }
+export function sectionTitle(t: (key: string) => string, section: SettingsSection): string {
+  const map: Record<SettingsSection, string> = {
+    appearance: "settings.appearance", providers: "settings.providers",
+    models: "settings.models", notifications: "settings.notifications", general: "settings.general",
+  };
+  return t(map[section]);
 }
 
-export function sectionDescription(section: SettingsSection, workspaceName: string): string {
-  switch (section) {
-    case "appearance":
-      return "Choose between light, dark, or automatic system theme.";
-    case "providers":
-      return `Connect providers and manage auth for ${workspaceName}.`;
-    case "models":
-      return "Choose the default model and which models appear in pickers.";
-    case "notifications":
-      return "Manage both macOS notification access and which background events should alert you.";
-    default:
-      return "Keep the high-value app and runtime controls close to hand.";
-  }
+export function sectionDescription(t: (key: string) => string, section: SettingsSection, workspaceName: string): string {
+  if (section === "providers") return t("settings.providers.description", { workspace: workspaceName });
+  const map: Record<SettingsSection, string> = {
+    appearance: "settings.appearance.description", providers: "settings.providers.description",
+    models: "settings.models.description", notifications: "settings.notifications.description",
+    general: "settings.general.description",
+  };
+  return t(map[section]);
 }
 
-export function filterProviders(
-  providers: readonly RuntimeSnapshot["providers"][number][],
-  query: string,
-): readonly RuntimeSnapshot["providers"][number][] {
-  const normalized = query.trim().toLowerCase();
-  if (!normalized) {
-    return providers;
-  }
-  return providers.filter((provider) =>
-    [provider.id, provider.name, provider.authType].some((value) => value.toLowerCase().includes(normalized)),
-  );
+export function filterProviders(providers: readonly RuntimeSnapshot["providers"][number][], query: string) {
+  const n = query.trim().toLowerCase();
+  if (!n) return providers;
+  return providers.filter((p) => [p.id, p.name, p.authType].some((v) => v.toLowerCase().includes(n)));
 }
 
-export function filterModels(
-  models: readonly RuntimeSnapshot["models"][number][],
-  query: string,
-): readonly RuntimeSnapshot["models"][number][] {
-  const normalized = query.trim().toLowerCase();
-  if (!normalized) {
-    return models;
-  }
-  return models.filter((model) =>
-    [model.providerId, model.providerName, model.modelId, model.label].some((value) =>
-      value.toLowerCase().includes(normalized),
-    ),
-  );
+export function filterModels(models: readonly RuntimeSnapshot["models"][number][], query: string) {
+  const n = query.trim().toLowerCase();
+  if (!n) return models;
+  return models.filter((m) => [m.providerId, m.providerName, m.modelId, m.label].some((v) => v.toLowerCase().includes(n)));
 }
 
-/* ── Layout components ────────────────────────────────── */
+export function SettingsGroup({ title, description, children }: { readonly title?: string; readonly description?: string; readonly children: ReactNode }) {
+  return <div className="settings-section">
+    {title ? <h3 className="settings-section__title">{title}</h3> : null}
+    {description ? <p className="settings-section__description">{description}</p> : null}
+    <div className="settings-group">{children}</div>
+  </div>;
+}
 
-export function SettingsGroup({
-  title,
-  description,
-  children,
-}: {
-  readonly title?: string;
-  readonly description?: string;
-  readonly children: ReactNode;
-}) {
-  return (
-    <div className="settings-section">
-      {title ? <h3 className="settings-section__title">{title}</h3> : null}
-      {description ? <p className="settings-section__description">{description}</p> : null}
-      <div className="settings-group">{children}</div>
+export function SettingsRow({ title, description, children }: { readonly title: string; readonly description?: string; readonly children?: ReactNode }) {
+  return <div className="settings-row">
+    <div className="settings-row__label">
+      <div className="settings-row__title">{title}</div>
+      {description ? <div className="settings-row__description">{description}</div> : null}
     </div>
-  );
-}
-
-export function SettingsRow({
-  title,
-  description,
-  children,
-}: {
-  readonly title: string;
-  readonly description?: string;
-  readonly children?: ReactNode;
-}) {
-  return (
-    <div className="settings-row">
-      <div className="settings-row__label">
-        <div className="settings-row__title">{title}</div>
-        {description ? <div className="settings-row__description">{description}</div> : null}
-      </div>
-      {children ? <div className="settings-row__control">{children}</div> : null}
-    </div>
-  );
+    {children ? <div className="settings-row__control">{children}</div> : null}
+  </div>;
 }
 
 export function SettingsInfoRow({ label, value }: { readonly label: string; readonly value: string }) {
-  return (
-    <div className="settings-row">
-      <div className="settings-row__label">
-        <div className="settings-row__title">{label}</div>
-      </div>
-      <div className="settings-row__control">
-        <span className="settings-row__value">{value}</span>
-      </div>
-    </div>
-  );
+  return <div className="settings-row">
+    <div className="settings-row__label"><div className="settings-row__title">{label}</div></div>
+    <div className="settings-row__control"><span className="settings-row__value">{value}</span></div>
+  </div>;
 }
 
-export function ProviderRow({
-  provider,
-  onLoginProvider,
-  onLogoutProvider,
-  onConfigureApiKey,
-}: {
+export function ProviderRow({ provider, onLoginProvider, onLogoutProvider, onConfigureApiKey, t: _t }: {
   readonly provider: RuntimeSnapshot["providers"][number];
   readonly onLoginProvider: (providerId: string) => void;
   readonly onLogoutProvider: (providerId: string) => void;
   readonly onConfigureApiKey: (provider: RuntimeSnapshot["providers"][number]) => void;
+  readonly t?: (key: string) => string;
 }) {
-  const action = resolveProviderAction(provider, onLoginProvider, onLogoutProvider, onConfigureApiKey);
-  return (
-    <div className="settings-row">
-      <div className="settings-row__label">
-        <div className="settings-row__title">{provider.name}</div>
-        <div className="settings-row__description">{describeProviderStatus(provider)}</div>
-      </div>
-      <div className="settings-row__control">
-        <button
-          className="button button--secondary"
-          disabled={action.disabled}
-          type="button"
-          onClick={action.onClick}
-        >
-          {action.label}
-        </button>
-      </div>
+  const _ = _t ?? ((s: string) => s);
+  const action = resolveProviderAction(provider, onLoginProvider, onLogoutProvider, onConfigureApiKey, _);
+  return <div className="settings-row">
+    <div className="settings-row__label">
+      <div className="settings-row__title">{provider.name}</div>
+      <div className="settings-row__description">{describeProviderStatus(provider, _)}</div>
     </div>
-  );
+    <div className="settings-row__control">
+      <button className="button button--secondary" disabled={action.disabled} type="button" onClick={action.onClick}>{action.label}</button>
+    </div>
+  </div>;
 }
 
-function describeProviderStatus(provider: RuntimeSnapshot["providers"][number]): string {
+function _(s: string) { return s; }
+function describeProviderStatus(provider: RuntimeSnapshot["providers"][number], _t: (key: string) => string = _): string {
+  const t = _t;
   switch (provider.authSource) {
-    case "oauth":
-      return "OAuth · connected";
-    case "auth_file":
-      return "API key · connected";
-    case "env":
-      return "Environment variable · connected";
-    case "external":
-      return provider.hasAuth ? "Configured externally · connected" : "Configure externally";
+    case "oauth": return t("settings.providers.oauthConnected");
+    case "auth_file": return t("settings.providers.apiKeyConnected");
+    case "env": return t("settings.providers.envConnected");
+    case "external": return provider.hasAuth ? t("settings.providers.externalConnected") : t("settings.providers.configureExternally");
     default:
-      if (provider.oauthSupported) {
-        return "OAuth";
-      }
-      if (provider.apiKeySetupSupported) {
-        return "API key";
-      }
-      return provider.authType === "api_key" ? "API key" : "Built in";
+      if (provider.oauthSupported) return t("settings.providers.oauthAvailable");
+      if (provider.apiKeySetupSupported) return t("settings.providers.needsApiKey");
+      return provider.authType === "api_key" ? t("settings.providers.apiKeyAvailable") : t("settings.providers.builtIn");
   }
 }
 
@@ -190,37 +111,11 @@ function resolveProviderAction(
   onLoginProvider: (providerId: string) => void,
   onLogoutProvider: (providerId: string) => void,
   onConfigureApiKey: (provider: RuntimeSnapshot["providers"][number]) => void,
-): {
-  readonly disabled: boolean;
-  readonly label: string;
-  readonly onClick?: () => void;
-} {
-  if (provider.authSource === "oauth") {
-    return {
-      disabled: false,
-      label: "Logout",
-      onClick: () => onLogoutProvider(provider.id),
-    };
-  }
-
-  if (provider.oauthSupported && provider.authSource === "none") {
-    return {
-      disabled: false,
-      label: "Login",
-      onClick: () => onLoginProvider(provider.id),
-    };
-  }
-
-  if (provider.apiKeySetupSupported && (provider.authSource === "none" || provider.authSource === "auth_file")) {
-    return {
-      disabled: false,
-      label: provider.authSource === "auth_file" ? "Manage" : "Set API key",
-      onClick: () => onConfigureApiKey(provider),
-    };
-  }
-
-  return {
-    disabled: true,
-    label: provider.authSource === "env" || provider.authSource === "external" ? "Managed externally" : "Configure externally",
-  };
+  t: (key: string) => string = _,
+) {
+  if (provider.authSource === "oauth") return { disabled: false, label: t("settings.providers.logout"), onClick: () => onLogoutProvider(provider.id) };
+  if (provider.oauthSupported && provider.authSource === "none") return { disabled: false, label: t("settings.providers.login"), onClick: () => onLoginProvider(provider.id) };
+  if (provider.apiKeySetupSupported && (provider.authSource === "none" || provider.authSource === "auth_file"))
+    return { disabled: false, label: provider.authSource === "auth_file" ? t("settings.providers.manage") : t("settings.providers.setApiKey"), onClick: () => onConfigureApiKey(provider) };
+  return { disabled: true, label: provider.authSource === "env" || provider.authSource === "external" ? t("settings.providers.managedExternally") : t("settings.providers.configureExternally") };
 }

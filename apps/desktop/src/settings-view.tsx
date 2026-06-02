@@ -90,9 +90,9 @@ export function SettingsView({
         <header className="view-header">
           <div>
             <div className="chat-header__eyebrow">{t("sidebar.settings")}</div>
-            <h1 className="view-header__title">{sectionTitle(section)}</h1>
+            <h1 className="view-header__title">{sectionTitle(t, section)}</h1>
             <p className="view-header__body">
-              {sectionDescription(section, workspace?.name ?? "this workspace")}
+              {sectionDescription(t, section, workspace?.name ?? "this workspace")}
             </p>
           </div>
         </header>

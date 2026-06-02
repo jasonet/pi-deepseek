@@ -82,6 +82,7 @@ export function SettingsProvidersSection({
             <ProviderRow
               key={provider.id}
               provider={provider}
+              t={t}
               onLoginProvider={onLoginProvider}
               onLogoutProvider={onLogoutProvider}
               onConfigureApiKey={(entry) => setApiKeyProviderId(entry.id)}
@@ -99,6 +100,7 @@ export function SettingsProvidersSection({
           <ProviderRow
             key={provider.id}
             provider={provider}
+            t={t}
             onLoginProvider={onLoginProvider}
             onLogoutProvider={onLogoutProvider}
             onConfigureApiKey={(entry) => setApiKeyProviderId(entry.id)}
@@ -125,6 +127,7 @@ export function SettingsProvidersSection({
                 <ProviderRow
                   key={provider.id}
                   provider={provider}
+                  t={t}
                   onLoginProvider={onLoginProvider}
                   onLogoutProvider={onLogoutProvider}
                   onConfigureApiKey={(entry) => setApiKeyProviderId(entry.id)}

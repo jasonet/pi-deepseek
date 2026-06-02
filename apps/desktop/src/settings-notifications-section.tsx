@@ -1,6 +1,7 @@
 import type { DesktopNotificationPermissionStatus } from "./ipc";
 import type { NotificationPreferences } from "./desktop-state";
 import { SettingsGroup, SettingsRow } from "./settings-utils";
+import { useT } from "./i18n";
 
 interface SettingsNotificationsSectionProps {
   readonly notificationPreferences: NotificationPreferences;
@@ -19,46 +20,35 @@ export function SettingsNotificationsSection({
   onRequestNotificationPermission,
   onOpenSystemNotificationSettings,
 }: SettingsNotificationsSectionProps) {
-  const statusLabel = labelForPermissionStatus(notificationPermissionStatus);
-  const statusDescription = descriptionForPermissionStatus(notificationPermissionStatus);
+  const t = useT();
   const showAskMacOs = notificationPermissionStatus === "default";
   const showOpenSystemSettings = notificationPermissionStatus === "denied";
   const showRecoveryActions = showAskMacOs || showOpenSystemSettings;
 
   return (
     <>
-      <SettingsGroup title="System" description="macOS decides whether Pi-Deepseek can show desktop notifications at all.">
-        <SettingsRow title="macOS notification access" description={statusDescription}>
-          <span className="settings-row__value">{statusLabel}</span>
+      <SettingsGroup title={t("settings.notifications.permission")} description={t("settings.notifications.permissionDesc")}>
+        <SettingsRow title={t("settings.notifications.permission")} description={descForPermissionStatus(notificationPermissionStatus)}>
+          <span className="settings-row__value">{labelForPermissionStatus(notificationPermissionStatus)}</span>
         </SettingsRow>
         {showRecoveryActions ? (
           <SettingsRow
-            title="Turn on notifications"
+            title={t("settings.notifications.grantPermission")}
             description={
               showAskMacOs
-                ? "Pi-Deepseek asks macOS when active work first moves into the background. You can also ask now."
-                : "macOS notifications are already turned off for Pi-Deepseek. Open System Settings to enable them again."
+                ? t("settings.notifications.permissionDefault")
+                : t("settings.notifications.permissionDenied")
             }
           >
             <div className="settings-row__actions">
               {showAskMacOs ? (
-                <button
-                  className="button button--secondary"
-                  disabled={notificationPermissionPending}
-                  type="button"
-                  onClick={onRequestNotificationPermission}
-                >
-                  Ask macOS
+                <button className="button button--secondary" disabled={notificationPermissionPending} type="button" onClick={onRequestNotificationPermission}>
+                  {notificationPermissionPending ? t("settings.notifications.granting") : t("settings.notifications.grantPermission")}
                 </button>
               ) : null}
               {showOpenSystemSettings ? (
-                <button
-                  className="button button--secondary"
-                  disabled={notificationPermissionPending}
-                  type="button"
-                  onClick={onOpenSystemNotificationSettings}
-                >
-                  Open System Settings
+                <button className="button button--secondary" disabled={notificationPermissionPending} type="button" onClick={onOpenSystemNotificationSettings}>
+                  {t("settings.notifications.openSystemSettings")}
                 </button>
               ) : null}
             </div>
@@ -66,30 +56,18 @@ export function SettingsNotificationsSection({
         ) : null}
       </SettingsGroup>
 
-      <SettingsGroup title="In-app alerts" description="Choose which background events should try to notify once macOS access is enabled.">
-        <SettingsRow title="Background completion" description="Notify when a background session finishes.">
-          <input
-            aria-label="Background completion"
-            checked={notificationPreferences.backgroundCompletion}
-            type="checkbox"
-            onChange={(event) => onSetNotificationPreferences({ backgroundCompletion: event.target.checked })}
-          />
+      <SettingsGroup title={t("settings.notifications.backgroundEvents")} description={t("settings.notifications.backgroundEventsDesc")}>
+        <SettingsRow title={t("settings.notifications.backgroundCompletion")} description={t("settings.notifications.backgroundCompletionDesc")}>
+          <input aria-label={t("settings.notifications.backgroundCompletion")} checked={notificationPreferences.backgroundCompletion} type="checkbox"
+            onChange={(event) => onSetNotificationPreferences({ backgroundCompletion: event.target.checked })} />
         </SettingsRow>
-        <SettingsRow title="Background failures" description="Notify when a background session fails.">
-          <input
-            aria-label="Background failures"
-            checked={notificationPreferences.backgroundFailure}
-            type="checkbox"
-            onChange={(event) => onSetNotificationPreferences({ backgroundFailure: event.target.checked })}
-          />
+        <SettingsRow title={t("settings.notifications.backgroundFailure")} description={t("settings.notifications.backgroundFailureDesc")}>
+          <input aria-label={t("settings.notifications.backgroundFailure")} checked={notificationPreferences.backgroundFailure} type="checkbox"
+            onChange={(event) => onSetNotificationPreferences({ backgroundFailure: event.target.checked })} />
         </SettingsRow>
-        <SettingsRow title="Needs input or approval" description="Notify when input is needed to continue.">
-          <input
-            aria-label="Needs input or approval"
-            checked={notificationPreferences.attentionNeeded}
-            type="checkbox"
-            onChange={(event) => onSetNotificationPreferences({ attentionNeeded: event.target.checked })}
-          />
+        <SettingsRow title={t("settings.notifications.attentionNeeded")} description={t("settings.notifications.attentionNeededDesc")}>
+          <input aria-label={t("settings.notifications.attentionNeeded")} checked={notificationPreferences.attentionNeeded} type="checkbox"
+            onChange={(event) => onSetNotificationPreferences({ attentionNeeded: event.target.checked })} />
         </SettingsRow>
       </SettingsGroup>
     </>
@@ -98,30 +76,20 @@ export function SettingsNotificationsSection({
 
 function labelForPermissionStatus(status: DesktopNotificationPermissionStatus): string {
   switch (status) {
-    case "granted":
-      return "Enabled";
-    case "denied":
-      return "Turned off";
-    case "default":
-      return "Not enabled yet";
-    case "unsupported":
-      return "Unavailable";
-    default:
-      return "Checking…";
+    case "granted": return "Enabled";
+    case "denied": return "Turned off";
+    case "default": return "Not enabled yet";
+    case "unsupported": return "Unavailable";
+    default: return "Checking…";
   }
 }
 
-function descriptionForPermissionStatus(status: DesktopNotificationPermissionStatus): string {
+function descForPermissionStatus(status: DesktopNotificationPermissionStatus): string {
   switch (status) {
-    case "granted":
-      return "macOS will allow Pi-Deepseek to show desktop notifications for background thread updates.";
-    case "denied":
-      return "macOS notifications are turned off for Pi-Deepseek. Enable them in System Settings to receive background completion alerts.";
-    case "default":
-      return "Pi-Deepseek has not asked macOS for desktop notification access yet.";
-    case "unsupported":
-      return "Desktop notifications are unavailable on this system.";
-    default:
-      return "Checking whether macOS notifications are available for Pi-Deepseek.";
+    case "granted": return "Pi-Deepseek has notification access.";
+    case "denied": return "Notifications are blocked in System Settings.";
+    case "default": return "Pi-Deepseek has not asked for notification access yet.";
+    case "unsupported": return "Notifications are not supported on this system.";
+    default: return "Checking notification status…";
   }
 }

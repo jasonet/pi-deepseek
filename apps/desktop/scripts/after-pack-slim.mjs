@@ -20,11 +20,10 @@ export default async function afterPack(context) {
     "Electron Framework.framework", "Versions", "A"
   );
 
+  // Only SwiftShader is safe to remove — it's a software GPU fallback
+  // GLESv2/EGL are required by Electron's rendering pipeline
   const toRemove = [
     "Libraries/libvk_swiftshader.dylib",
-    "Libraries/libGLESv2.dylib",
-    "Libraries/libpdfium.dylib",
-    "Libraries/libEGL.dylib",
   ];
 
   let removed = 0;

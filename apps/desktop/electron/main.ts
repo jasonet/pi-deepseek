@@ -120,12 +120,22 @@ function readClipboardImageAttachment(): ComposerImageAttachment | null {
 const PI_INSTALL_COMMAND = "curl -fsSL https://pi.dev/install.sh | sh";
 
 function isPiCliInstalled(): boolean {
+  // 1. Try global pi command
   try {
     execSync("pi --version", { stdio: "ignore", timeout: 5000 });
     return true;
-  } catch {
-    return false;
-  }
+  } catch {}
+  // 2. Try npx
+  try {
+    execSync("npx pi --version", { stdio: "ignore", timeout: 10000 });
+    return true;
+  } catch {}
+  // 3. Try node require
+  try {
+    execSync("node -e \"require('@earendil-works/pi-coding-agent')\"", { stdio: "ignore", timeout: 5000 });
+    return true;
+  } catch {}
+  return false;
 }
 
 async function checkPiCliAndPrompt(): Promise<void> {
@@ -415,11 +425,12 @@ function installApplicationMenu(): void {
 
 app.setName("pi");
 
-const configuredUserDataDir = process.env.PI_APP_USER_DATA_DIR?.trim() || app.getPath("userData");
+const configuredUserDataDir = process.env.PI_APP_USER_DATA_DIR?.trim() || app.getPath("userData").replace(/\/pi$/, "/pi-deepseek");
 app.setPath("userData", configuredUserDataDir);
 
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
 if (!hasSingleInstanceLock) {
+  console.error(`[Pi-Deepseek] Single instance lock failed. userData: ${configuredUserDataDir}`);
   app.quit();
 }
 

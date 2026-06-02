@@ -5,6 +5,7 @@
   "author": "Yiding by HKEZ",
   "license": "MIT",
   "description": "Deepseek GUI app for elegant pi coding agent",
+  "homepage": "https://github.com/jasonet/pi-deepseek",
   "main": "out/main/main.js",
   "scripts": {
     "build:deps": "pnpm --dir ../.. --filter @pi-gui/session-driver --filter @pi-gui/pi-sdk-driver --filter @pi-gui/catalogs run build",

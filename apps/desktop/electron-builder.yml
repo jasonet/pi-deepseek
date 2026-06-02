@@ -70,10 +70,18 @@ portable:
 linux:
   category: Development
   executableName: pi-deepseek
+  maintainer: Yiding by HKEZ
   target:
     - target: AppImage
       arch:
         - x64
+    - target: deb
+      arch:
+        - x64
+  icon: resources/icon.png
+
+deb:
+  compression: gz
 
 toolsets:
   appimage: "1.0.2"

@@ -36,7 +36,7 @@ import { buildThreadGroups } from "./thread-groups";
 import { Sidebar } from "./sidebar";
 import { SidebarToggleButton } from "./sidebar-toggle-button";
 import { Topbar } from "./topbar";
-import { LocaleProvider } from "./i18n";
+import { LocaleProvider, useT } from "./i18n";
 import { TerminalPanel } from "./terminal-panel";
 import { ConversationTimeline, VIRTUALIZATION_THRESHOLD } from "./conversation-timeline";
 import { useSlashMenu } from "./hooks/use-slash-menu";
@@ -1882,12 +1882,13 @@ export default function App() {
     handleStartThread();
   };
 
+  const t = useT();
   const settingsNav = [
-    { id: "appearance", label: "Appearance" },
-    { id: "general", label: "General" },
-    { id: "providers", label: "Providers" },
-    { id: "models", label: "Models" },
-    { id: "notifications", label: "Notifications" },
+    { id: "appearance", label: t("settings.appearance") },
+    { id: "general", label: t("settings.general") },
+    { id: "providers", label: t("settings.providers") },
+    { id: "models", label: t("settings.models") },
+    { id: "notifications", label: t("settings.notifications") },
   ] as const;
 
   if (snapshot.activeView === "settings") {
@@ -1898,12 +1899,12 @@ export default function App() {
         onBack={() => setActiveView("threads")}
         onSelectNav={(section) => setSettingsSection(section as SettingsSection)}
         testId="settings-surface"
-        title="Settings"
+        title={t("sidebar.settings")}
       >
         {settingsSection === "providers" || (settingsSection === "models" && snapshot.modelSettingsScopeMode === "per-repo") ? (
           <div className="surface-toolbar">
             <label className="surface-toolbar__field">
-              <span>Workspace</span>
+              <span>{t("common.selectWorkspace")}</span>
               <select
                 value={settingsWorkspace?.id ?? ""}
                 onChange={(event) => setSettingsWorkspaceId(event.target.value)}

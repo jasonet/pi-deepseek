@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { RuntimeSettingsSnapshot, RuntimeSnapshot } from "@pi-gui/session-driver/runtime-types";
+import { ProviderIcon } from "./provider-icons";
 
 export type SettingsSection = "appearance" | "general" | "providers" | "models" | "notifications";
 
@@ -81,9 +82,12 @@ export function ProviderRow({ provider, onLoginProvider, onLogoutProvider, onCon
   const _ = _t ?? ((s: string) => s);
   const action = resolveProviderAction(provider, onLoginProvider, onLogoutProvider, onConfigureApiKey, _);
   return <div className="settings-row">
-    <div className="settings-row__label">
-      <div className="settings-row__title">{provider.name}</div>
-      <div className="settings-row__description">{describeProviderStatus(provider, _)}</div>
+    <div className="settings-row__label" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      <ProviderIcon provider={provider} size={28} />
+      <div>
+        <div className="settings-row__title">{provider.name}</div>
+        <div className="settings-row__description">{describeProviderStatus(provider, _)}</div>
+      </div>
     </div>
     <div className="settings-row__control">
       <button className="button button--secondary" disabled={action.disabled} type="button" onClick={action.onClick}>{action.label}</button>

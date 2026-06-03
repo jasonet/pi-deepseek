@@ -98,7 +98,7 @@ export function ProviderRow({ provider, onLoginProvider, onLogoutProvider, onCon
       </div>
     </div>
     <div className="settings-row__control" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      {provider.oauthSupported && provider.authSource === "none" ? (
+      {provider.oauthSupported ? (
         <ProviderIcon provider={provider} size={20} />
       ) : null}
       <button className="button button--secondary" disabled={action.disabled} type="button" onClick={action.onClick}>{action.label}</button>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { RuntimeSnapshot } from "@pi-gui/session-driver/runtime-types";
-import { filterProviders, ProviderRow, SettingsGroup } from "./settings-utils";
+import { filterProviders, ProviderRow, SettingsGroup, ProviderExternalConfigDialog } from "./settings-utils";
 import { useT } from "./i18n";
 
 interface SettingsProvidersSectionProps {
@@ -149,7 +149,12 @@ export function SettingsProvidersSection({
         </details>
       </SettingsGroup>
 
-      {apiKeyProvider ? (
+      {apiKeyProvider && (apiKeyProvider.authSource === "env" || apiKeyProvider.authSource === "external") ? (
+        <ProviderExternalConfigDialog
+          provider={apiKeyProvider}
+          onClose={closeApiKeyDialog}
+        />
+      ) : apiKeyProvider ? (
         <ProviderApiKeyDialog
           provider={apiKeyProvider}
           draft={apiKeyDraft}

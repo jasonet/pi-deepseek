@@ -1625,6 +1625,7 @@
   padding: 56px 18px 20px;
   border-right: 1px solid var(--line);
   background: var(--sidebar);
+  -webkit-app-region: drag;
 }
 
 .secondary-surface__back {

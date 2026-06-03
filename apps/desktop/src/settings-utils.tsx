@@ -99,6 +99,46 @@ export function ProviderRow({ provider, onLoginProvider, onLogoutProvider, onCon
   </div>;
 }
 
+export function ProviderExternalConfigDialog({ provider, onClose }: { provider: RuntimeSnapshot["providers"][number]; onClose: () => void }) {
+  const envVar = providerNameToEnvVar(provider.id);
+  return (
+    <div className="extension-dialog-backdrop">
+      <div className="extension-dialog">
+        <div className="extension-dialog__title">External Configuration — {provider.name}</div>
+        <p className="extension-dialog__body">
+          {provider.name} is configured outside the app. To connect, set your API key as an environment variable:
+        </p>
+        <div className="install-box" style={{ background: "#161b22", padding: 12, borderRadius: 6, marginBottom: 12 }}>
+          <code style={{ fontSize: 13, color: "#7ee787" }}>export {envVar}="sk-your-key-here"</code>
+        </div>
+        <p className="extension-dialog__body" style={{ fontSize: 12, opacity: 0.7 }}>
+          Add this to ~/.zshrc or ~/.bashrc for permanent configuration. Restart Pi-Deepseek after setting.
+        </p>
+        <div className="extension-dialog__actions">
+          <button className="button button--secondary" type="button" onClick={onClose}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function providerNameToEnvVar(id: string): string {
+  const map: Record<string, string> = {
+    openai: "OPENAI_API_KEY",
+    anthropic: "ANTHROPIC_API_KEY",
+    google: "GOOGLE_API_KEY",
+    deepseek: "DEEPSEEK_API_KEY",
+    groq: "GROQ_API_KEY",
+    mistral: "MISTRAL_API_KEY",
+    openrouter: "OPENROUTER_API_KEY",
+    cerebras: "CEREBRAS_API_KEY",
+    xai: "XAI_API_KEY",
+    zai: "ZAI_API_KEY",
+    huggingface: "HF_TOKEN",
+  };
+  return map[id] ?? `${id.toUpperCase().replace(/-/g, "_")}_API_KEY`;
+}
+
 function _(s: string) { return s; }
 function describeProviderStatus(provider: RuntimeSnapshot["providers"][number], _t: (key: string) => string = _): string {
   const t = _t;
@@ -125,5 +165,8 @@ function resolveProviderAction(
   if (provider.oauthSupported && provider.authSource === "none") return { disabled: false, label: t("settings.providers.login"), onClick: () => onLoginProvider(provider.id) };
   if (provider.apiKeySetupSupported && (provider.authSource === "none" || provider.authSource === "auth_file"))
     return { disabled: false, label: provider.authSource === "auth_file" ? t("settings.providers.manage") : t("settings.providers.setApiKey"), onClick: () => onConfigureApiKey(provider) };
-  return { disabled: true, label: provider.authSource === "env" || provider.authSource === "external" ? t("settings.providers.managedExternally") : t("settings.providers.configureExternally") };
+  // External/env providers: show help instead of disabled button
+  if (provider.authSource === "env" || provider.authSource === "external")
+    return { disabled: false, label: t("settings.providers.configure"), onClick: () => onConfigureApiKey(provider) };
+  return { disabled: true, label: t("settings.providers.configureExternally") };
 }

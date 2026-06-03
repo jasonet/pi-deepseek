@@ -4,6 +4,7 @@ import type { RuntimeSnapshot } from "@pi-gui/session-driver/runtime-types";
 // Local bundled provider icons
 import anthropicPng from "../resources/providers/claude.png";
 import anthropicLogoPng from "../resources/providers/anthropic.png";
+import claudeColorPng from "../resources/providers/claude-color.png";
 import azurePng from "../resources/providers/azureai.png";
 import baichuanPng from "../resources/providers/baichuan.png";
 import bedrockPng from "../resources/providers/bedrock.png";
@@ -21,7 +22,6 @@ import groqPng from "../resources/providers/groq.png";
 import huggingfacePng from "../resources/providers/huggingface.png";
 import kimiPng from "../resources/providers/kimi.png";
 import metaPng from "../resources/providers/meta.png";
-import microsoftPng from "../resources/providers/microsoft.png";
 import microsoftPng from "../resources/providers/microsoft.png";
 import minimaxPng from "../resources/providers/minimax.png";
 import mistralPng from "../resources/providers/mistral.png";
@@ -96,6 +96,16 @@ export function providerColor(providerId: string): string {
     google: "#4285F4", groq: "#F55036", mistral: "#FF6F00",
   };
   return colors[providerId] ?? "#6b7280";
+}
+
+const PROVIDER_LOGIN_PNG: Record<string, string> = {
+  anthropic: claudeColorPng,
+  "github-copilot": githubCopilotPng,
+  "openai-codex": openaiPng,
+};
+
+export function providerLoginIconUrl(providerId: string): string | undefined {
+  return PROVIDER_LOGIN_PNG[providerId];
 }
 
 export function ProviderIcon({ provider, size = 32 }: {

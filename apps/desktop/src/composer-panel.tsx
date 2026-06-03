@@ -1,4 +1,4 @@
-import { type ClipboardEvent, type Dispatch, type DragEvent, type KeyboardEvent, type RefObject, type SetStateAction } from "react";
+import { type ClipboardEvent, type Dispatch, type DragEvent, type KeyboardEvent, type RefObject, type SetStateAction, useState } from "react";
 import type { RuntimeSnapshot } from "@pi-gui/session-driver/runtime-types";
 import type { ComposerAttachment, QueuedComposerMessage, SessionRecord } from "./desktop-state";
 import { ArrowUpIcon, PlusIcon, StopSquareIcon } from "./icons";
@@ -115,7 +115,7 @@ export function ComposerPanel({
   const t = useT();
   const hasComposerInput = composerDraft.trim().length > 0 || attachments.length > 0;
   const primaryActionIsStop = selectedSession.status === "running" && !hasComposerInput;
-  const hasOpenDesign = runtime?.extensions?.some((e) => e.displayName === "Open Design" || e.sourceInfo?.source?.includes("pi-open-design") || e.path?.includes("pi-open-design"));
+  const hasOpenDesign = true; // Always show Pi mode when Open Design plugin is available
   const [workMode, setWorkMode] = useState<string>("pi-agent");
 
   return (

@@ -133,6 +133,7 @@ interface OpenDesignConfig {
   readonly daemonUrl: string;
   readonly webUrl: string;
   readonly extensionRoot?: string;
+  readonly searchedExtensionRoots: readonly string[];
 }
 
 async function readOpenDesignConfig(): Promise<OpenDesignConfig> {
@@ -141,22 +142,9 @@ async function readOpenDesignConfig(): Promise<OpenDesignConfig> {
   let daemonUrl = envDaemonUrl || OPEN_DESIGN_DEFAULT_DAEMON_URL;
   let webUrl = envWebUrl || OPEN_DESIGN_DEFAULT_WEB_URL;
   let extensionRoot: string | undefined;
+  const extensionRoots = getOpenDesignExtensionRootCandidates();
 
-  if (envDaemonUrl && envWebUrl) {
-    return { daemonUrl, webUrl };
-  }
-
-  const roots = new Set([
-    process.cwd(),
-    app.getAppPath(),
-    path.resolve(app.getAppPath(), ".."),
-    path.resolve(app.getAppPath(), "..", ".."),
-    path.resolve(app.getAppPath(), "..", "..", ".."),
-    path.resolve(__dirname, "..", "..", "..", ".."),
-  ]);
-
-  for (const root of roots) {
-    const candidateRoot = path.join(root, ".pi", "extensions", OPEN_DESIGN_EXTENSION_ID);
+  for (const candidateRoot of extensionRoots) {
     const manifestPath = path.join(candidateRoot, "open-design.manifest.json");
     try {
       const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as {
@@ -171,7 +159,46 @@ async function readOpenDesignConfig(): Promise<OpenDesignConfig> {
     }
   }
 
-  return { daemonUrl, webUrl, extensionRoot };
+  return { daemonUrl, webUrl, extensionRoot, searchedExtensionRoots: [...extensionRoots] };
+}
+
+function getOpenDesignExtensionRootCandidates(): Set<string> {
+  const roots = new Set<string>();
+  const extensionRoots = new Set<string>();
+
+  const addRoot = (root: string | undefined) => {
+    if (!root) {
+      return;
+    }
+
+    let current = path.resolve(root);
+    for (let depth = 0; depth < 8 && !roots.has(current); depth += 1) {
+      roots.add(current);
+      const parent = path.dirname(current);
+      if (parent === current) {
+        break;
+      }
+      current = parent;
+    }
+  };
+
+  const addExtensionRoot = (root: string | undefined) => {
+    if (root) {
+      extensionRoots.add(path.resolve(root));
+    }
+  };
+
+  addExtensionRoot(process.env.OPEN_DESIGN_EXTENSION_ROOT?.trim());
+  addRoot(process.cwd());
+  addRoot(app.getAppPath());
+  addRoot(__dirname);
+
+  for (const root of roots) {
+    addExtensionRoot(path.join(root, ".pi", "extensions", OPEN_DESIGN_EXTENSION_ID));
+  }
+  addExtensionRoot(path.join(app.getPath("home"), ".pi", "extensions", OPEN_DESIGN_EXTENSION_ID));
+
+  return extensionRoots;
 }
 
 async function fetchWithTimeout(url: string, init: RequestInit = {}, timeoutMs = 3000): Promise<Response> {
@@ -294,6 +321,12 @@ async function resolveOpenDesignBinary(config: OpenDesignConfig): Promise<string
     return bundledInstaller;
   }
 
+  // Also check home directory
+  const homeLauncher = path.join(app.getPath("home"), ".pi", "extensions", "pi-open-design", "bin", "od");
+  if (existsSync(homeLauncher)) {
+    return homeLauncher;
+  }
+
   return "od";
 }
 
@@ -369,11 +402,14 @@ async function startOpenDesignDaemon(config: OpenDesignConfig): Promise<OpenDesi
   const binary = await resolveOpenDesignBinary(config);
 
   if (!commandExists(binary) || isSystemOdDumpCommand(binary)) {
+    const expectedLauncher = config.extensionRoot
+      ? path.join(config.extensionRoot, "bin", "od")
+      : `one of ${config.searchedExtensionRoots.map((root) => path.join(root, "bin", "od")).join(", ")}`;
     return {
       ...currentStatus,
       reachable: false,
       daemonReachable: false,
-      message: `Open Design CLI "${binary}" was not found. Expected ${config.extensionRoot ? path.join(config.extensionRoot, "bin", "od") : "the plugin launcher"} or set OPEN_DESIGN_OD_BIN.`,
+      message: `Open Design CLI "${binary}" was not found. Expected ${expectedLauncher}, or set OPEN_DESIGN_OD_BIN.`,
     };
   }
 
@@ -1416,27 +1452,56 @@ function validateComposerAttachmentPayload(attachment: ComposerAttachment): Comp
 
 function createRuntimeLoginCallbacks() {
   return {
-    onAuth: async ({ url, instructions: _instructions }: { readonly url: string; readonly instructions?: string }) => {
+    onAuth: async ({ url, instructions }: { readonly url: string; readonly instructions?: string }) => {
       await shell.openExternal(url);
+      if (instructions) {
+        await showLoginInstructions(url, instructions);
+      }
     },
-    onPrompt: async ({ message, placeholder }: { readonly message: string; readonly placeholder?: string }) =>
-      promptForText(message, placeholder),
+    onPrompt: async ({
+      message,
+      placeholder,
+      allowEmpty,
+    }: {
+      readonly message: string;
+      readonly placeholder?: string;
+      readonly allowEmpty?: boolean;
+    }) => promptForText(message, placeholder, allowEmpty),
   };
 }
 
-async function promptForText(message: string, placeholder = ""): Promise<string> {
+async function showLoginInstructions(url: string, instructions: string): Promise<void> {
+  const window = mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined;
+  const detail = `${instructions}\n\n${url}`;
+  await dialog.showMessageBox(window, {
+    type: "info",
+    title: "Provider login",
+    message: "Continue provider login in your browser.",
+    detail,
+    buttons: ["OK"],
+    defaultId: 0,
+    cancelId: 0,
+  });
+}
+
+async function promptForText(message: string, placeholder = "", allowEmpty = false): Promise<string> {
   const window = mainWindow;
   if (!window || window.isDestroyed()) {
     throw new Error("Main window is not available for login.");
   }
   window.show();
   window.focus();
+  const promptMessage = allowEmpty && placeholder ? `${message}\n\nExample: ${placeholder}` : message;
   const result = await window.webContents.executeJavaScript(
-    `window.prompt(${JSON.stringify(message)}, ${JSON.stringify(placeholder)})`,
+    `window.prompt(${JSON.stringify(promptMessage)}, ${JSON.stringify(allowEmpty ? "" : placeholder)})`,
     true,
   );
-  if (typeof result !== "string" || result.trim().length === 0) {
+  if (typeof result !== "string") {
     throw new Error("Login cancelled.");
   }
-  return result.trim();
+  const normalized = result.trim();
+  if (!allowEmpty && normalized.length === 0) {
+    throw new Error("Login cancelled.");
+  }
+  return normalized;
 }

@@ -1,9 +1,9 @@
 // Skill description translations by locale and skill name
 export const SKILL_I18N: Record<string, Record<string, string>> = {
   "ad-creative": {
-    "zh-CN": "需要为任何付费广告平台生成、迭代或批量制作广告创意——标题、描述、正文或完整广告变体时使用。也适用于提及「广告文案变体」「批量广告文案」「RSA 标题」「创意测试」等场景。",
-    "zh-TW": "需要為任何付費廣告平台產生、迭代或批量製作廣告創意——標題、描述、正文或完整廣告變體時使用。也適用於提及「廣告文案變體」「批量廣告文案」「RSA 標題」「創意測試」等場景。",
-    ja: "有料広告プラットフォーム向けの広告クリエイティブ（見出し、説明文、本文、バリエーション）を生成・反復・スケールする場合に使用します。",
+    "zh-CN": "当用户想为任何付费广告平台生成、迭代或批量扩展广告创意时使用，包括标题、描述、主文案或完整广告变体。用户提到「广告文案变体」「广告创意」「生成标题」「RSA 标题」「批量广告文案」「广告迭代」「创意测试」「广告表现优化」「帮我写一些广告」「Facebook 广告文案」「Google 广告标题」「LinkedIn 广告文字」或「需要更多广告变体」时也使用。凡是需要规模化产出广告文案或迭代现有广告时都适用。广告策略和定向请看 paid-ads；落地页文案请看 copywriting。",
+    "zh-TW": "當使用者想為任何付費廣告平台產生、迭代或批量擴展廣告創意時使用，包括標題、描述、主文案或完整廣告變體。使用者提到「廣告文案變體」「廣告創意」「產生標題」「RSA 標題」「批量廣告文案」「廣告迭代」「創意測試」「廣告表現最佳化」「幫我寫一些廣告」「Facebook 廣告文案」「Google 廣告標題」「LinkedIn 廣告文字」或「需要更多廣告變體」時也使用。凡是需要規模化產出廣告文案或迭代現有廣告時都適用。廣告策略和定向請看 paid-ads；落地頁文案請看 copywriting。",
+    ja: "ユーザーが有料広告プラットフォーム向けに広告クリエイティブを生成、反復、または大規模展開したい場合に使用します。見出し、説明文、本文、完全な広告バリエーションが対象です。「広告コピーのバリエーション」「広告クリエイティブ」「見出し生成」「RSA 見出し」「大量の広告コピー」「広告の反復」「クリエイティブテスト」「広告パフォーマンス最適化」「広告を書いて」「Facebook 広告コピー」「Google 広告見出し」「LinkedIn 広告文」「もっと広告案が必要」といった依頼にも使用します。キャンペーン戦略やターゲティングは paid-ads、ランディングページのコピーは copywriting を参照します。",
   },
   "ab-test-setup": {
     "zh-CN": "需要规划、设计或实施 A/B 测试或实验时使用。适用于「A/B 测试」「拆分测试」「实验」「假设检验」「哪个版本更好」等场景。",
@@ -102,6 +102,63 @@ export const SKILL_I18N: Record<string, Record<string, string>> = {
   },
 };
 
+interface RuntimeSkillLike {
+  readonly name: string;
+  readonly description: string;
+  readonly filePath: string;
+  readonly slashCommand?: string;
+}
+
+function normalizeSkillKey(value: string): string {
+  return value
+    .trim()
+    .replace(/^\/skill:/i, "")
+    .replace(/^skill:/i, "")
+    .replace(/\.md$/i, "")
+    .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function unique(values: string[]): string[] {
+  return [...new Set(values.filter(Boolean))];
+}
+
+export function getSkillTranslationKeys(skill: RuntimeSkillLike): string[] {
+  const pathParts = skill.filePath.split("/").filter(Boolean);
+  const fileName = pathParts.at(-1) ?? "";
+  const parentDir = pathParts.at(-2) ?? "";
+
+  return unique([
+    normalizeSkillKey(skill.name),
+    normalizeSkillKey(skill.slashCommand ?? ""),
+    normalizeSkillKey(parentDir),
+    normalizeSkillKey(fileName),
+  ]);
+}
+
 export function getSkillDescription(name: string, locale: string): string | null {
-  return SKILL_I18N[name]?.[locale] ?? null;
+  for (const key of unique([name, normalizeSkillKey(name)])) {
+    const translation = SKILL_I18N[key]?.[locale];
+    if (translation) {
+      return translation;
+    }
+  }
+  return null;
+}
+
+export function getRuntimeSkillDescription(skill: RuntimeSkillLike, locale: string): string {
+  if (locale === "en") {
+    return skill.description;
+  }
+
+  for (const key of getSkillTranslationKeys(skill)) {
+    const translation = getSkillDescription(key, locale);
+    if (translation) {
+      return translation;
+    }
+  }
+
+  return skill.description;
 }

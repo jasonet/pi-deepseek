@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { RuntimeSettingsSnapshot, RuntimeSnapshot } from "@pi-gui/session-driver/runtime-types";
-import { ProviderIcon } from "./provider-icons";
+import { ProviderIcon, providerLoginIconUrl } from "./provider-icons";
 import { ProviderBalance } from "./provider-balance";
 
 export type SettingsSection = "appearance" | "general" | "providers" | "models" | "notifications";
@@ -53,7 +53,7 @@ export function SettingsGroup({ title, description, children }: { readonly title
     {(title || description) ? (
       <div className="settings-section__header">
         {title ? <h3 className="settings-section__title">{title}</h3> : null}
-        {description ? <p className="settings-section__description">{description}</p> : null}
+        {description ? <span className="settings-section__description">{description}</span> : null}
       </div>
     ) : null}
     <div className="settings-group">{children}</div>
@@ -86,6 +86,7 @@ export function ProviderRow({ provider, onLoginProvider, onLogoutProvider, onCon
 }) {
   const _ = _t ?? ((s: string) => s);
   const action = resolveProviderAction(provider, onLoginProvider, onLogoutProvider, onConfigureApiKey, _);
+  const loginIconUrl = provider.oauthSupported ? providerLoginIconUrl(provider.id) : undefined;
   return <div className="settings-row">
     <div className="settings-row__label" style={{ display: "flex", alignItems: "center", gap: 12 }}>
       <ProviderIcon provider={provider} size={28} />
@@ -98,10 +99,10 @@ export function ProviderRow({ provider, onLoginProvider, onLogoutProvider, onCon
       </div>
     </div>
     <div className="settings-row__control" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      {provider.oauthSupported ? (
-        <ProviderIcon provider={provider} size={20} />
-      ) : null}
-      <button className="button button--secondary" disabled={action.disabled} type="button" onClick={action.onClick}>{action.label}</button>
+      <button className="button button--secondary provider-login-button" disabled={action.disabled} type="button" onClick={action.onClick}>
+        <span>{action.label}</span>
+        {loginIconUrl ? <img className="provider-login-button__icon" src={loginIconUrl} alt="" aria-hidden="true" /> : null}
+      </button>
     </div>
   </div>;
 }

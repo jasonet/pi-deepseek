@@ -5,7 +5,7 @@ import { RefreshIcon } from "./icons";
 import { titleCase } from "./string-utils";
 import { useT } from "./i18n";
 import { useLocale } from "./i18n";
-import { getSkillDescription } from "./skill-translations";
+import { getRuntimeSkillDescription } from "./skill-translations";
 
 interface SkillsViewProps {
   readonly workspace?: WorkspaceRecord;
@@ -23,25 +23,13 @@ export function SkillsView({ workspace, runtime, onRefresh, onOpenSkillFolder, o
   const [query, setQuery] = useState("");
   const [selectedSkillPath, setSelectedSkillPath] = useState<string | undefined>();
   const skills = runtime?.skills ?? [];
-  const desc = (skill: RuntimeSkillRecord) => {
-    // Try multiple key formats: name, slug, file path
-    const keys = [
-      skill.name,
-      skill.name.toLowerCase().replace(/\s+/g, "-"),
-      skill.filePath.split("/").slice(-2, -1)[0], // parent dir name
-    ].filter(Boolean);
-    for (const key of keys) {
-      const t = getSkillDescription(key, locale);
-      if (t) return t;
-    }
-    return skill.description;
-  };
+  const desc = (skill: RuntimeSkillRecord) => getRuntimeSkillDescription(skill, locale);
 
   const filteredSkills = useMemo(() => {
     const n = query.trim().toLowerCase();
     if (!n) return skills;
-    return skills.filter((s) => [s.name, s.description, s.source, s.slashCommand].some((v) => v.toLowerCase().includes(n)));
-  }, [query, skills]);
+    return skills.filter((s) => [s.name, desc(s), s.source, s.slashCommand].some((v) => v.toLowerCase().includes(n)));
+  }, [query, skills, locale]);
   const selectedSkill = filteredSkills.find((s) => s.filePath === selectedSkillPath) ?? filteredSkills[0];
 
   if (!workspace) {

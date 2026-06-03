@@ -85,6 +85,11 @@ export function providerColor(providerId: string): string {
 }
 
 function providerIconUrl(providerId: string): string | null {
+  // Special cases with direct PNG URLs
+  const pngMap: Record<string, string> = {
+    xiaomi: "https://raw.githubusercontent.com/lobehub/lobe-icons/refs/heads/master/packages/static-png/light/xiaomimimo.png",
+  };
+  if (pngMap[providerId]) return pngMap[providerId];
   // 1. Exact match
   if (PROVIDER_ICON_NAMES[providerId]) return `${LOBEHUB_CDN_BASE}/${PROVIDER_ICON_NAMES[providerId]}.svg`;
   // 2. Try prefix before first dash

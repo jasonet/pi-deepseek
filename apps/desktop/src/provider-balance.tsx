@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import type { RuntimeSnapshot } from "@pi-gui/session-driver/runtime-types";
+import { useT } from "./i18n";
 
 export function ProviderBalance({ providerId, hasAuth }: { providerId: string; hasAuth: boolean }) {
+  const t = useT();
   const [balance, setBalance] = useState<string | null>(null);
   const [error, setError] = useState(false);
 
@@ -23,11 +24,11 @@ export function ProviderBalance({ providerId, hasAuth }: { providerId: string; h
   if (error) return null;
 
   const num = parseFloat(balance);
-  const display = isNaN(num) ? balance : (num >= 1 ? `${num.toFixed(1)} CNY` : `${num.toFixed(4)} CNY`);
+  const display = isNaN(num) ? balance : `${num.toFixed(1)} CNY`;
 
   return (
-    <span style={{ fontSize: 12, color: "#3fb950", fontWeight: 500, whiteSpace: "nowrap" }}>
-      ¥{display.replace(" CNY", "")}
+    <span style={{ fontSize: 12, color: "#3fb950", fontWeight: 500, marginLeft: 6 }}>
+      · {t("settings.providers.balance")} ¥{display.replace(" CNY", "")}
     </span>
   );
 }

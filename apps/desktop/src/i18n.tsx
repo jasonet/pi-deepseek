@@ -139,6 +139,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "settings.providers.apiKeyAvailable": "API key",
     "settings.providers.builtIn": "Built in",
     "settings.providers.needsApiKey": "Needs API key",
+    "settings.providers.balance": "Balance",
 
     // Settings → Models
     "settings.models": "Models",
@@ -443,6 +444,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "settings.providers.apiKeyAvailable": "API 密钥",
     "settings.providers.builtIn": "内置",
     "settings.providers.needsApiKey": "需要 API 密钥",
+    "settings.providers.balance": "余额",
 
     // Settings → Models
     "settings.models": "模型",
@@ -975,6 +977,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "settings.providers.apiKeyAvailable": "API キー",
     "settings.providers.builtIn": "内蔵",
     "settings.providers.needsApiKey": "API キーが必要",
+    "settings.providers.balance": "残高",
 
     // Settings → Models
     "settings.models": "モデル",

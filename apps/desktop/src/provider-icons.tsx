@@ -3,6 +3,7 @@ import type { RuntimeSnapshot } from "@pi-gui/session-driver/runtime-types";
 
 // Local bundled provider icons
 import anthropicPng from "../resources/providers/claude.png";
+import anthropicLogoPng from "../resources/providers/anthropic.png";
 import azurePng from "../resources/providers/azureai.png";
 import baichuanPng from "../resources/providers/baichuan.png";
 import bedrockPng from "../resources/providers/bedrock.png";
@@ -40,7 +41,7 @@ import zaiPng from "../resources/providers/zai.png";
 import zhipuPng from "../resources/providers/zhipu.png";
 
 const PROVIDER_PNG: Record<string, string> = {
-  anthropic: anthropicPng,
+  anthropic: anthropicLogoPng,
   azure: azurePng,
   "azure-openai-responses": azurePng,
   baichuan: baichuanPng,

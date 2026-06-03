@@ -2264,19 +2264,27 @@
 }
 
 .settings-section {
-  display: grid;
-  gap: 8px;
+  gap: 4px;
+}
+
+.settings-section__header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 0;
 }
 
 .settings-section__title {
-  font-size: 16px;
-  font-weight: 600;
-  color: inherit;
+  font-size: 15px;
+  font-weight: 680;
+  color: var(--text-strong);
+  white-space: nowrap;
 }
 
 .settings-section__description {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--muted-soft);
+  line-height: 1.4;
 }
 
 .settings-group {

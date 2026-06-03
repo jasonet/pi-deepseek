@@ -50,8 +50,12 @@ export function filterModels(models: readonly RuntimeSnapshot["models"][number][
 
 export function SettingsGroup({ title, description, children }: { readonly title?: string; readonly description?: string; readonly children: ReactNode }) {
   return <div className="settings-section">
-    {title ? <h3 className="settings-section__title">{title}</h3> : null}
-    {description ? <p className="settings-section__description">{description}</p> : null}
+    {(title || description) ? (
+      <div className="settings-section__header">
+        {title ? <h3 className="settings-section__title">{title}</h3> : null}
+        {description ? <p className="settings-section__description">{description}</p> : null}
+      </div>
+    ) : null}
     <div className="settings-group">{children}</div>
   </div>;
 }

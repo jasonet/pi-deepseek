@@ -9,18 +9,22 @@ import bedrockPng from "../resources/providers/bedrock.png";
 import cerebrasPng from "../resources/providers/cerebras.png";
 import cloudflarePng from "../resources/providers/cloudflare.png";
 import codexPng from "../resources/providers/codex.png";
+import codexColorPng from "../resources/providers/codex-color.png";
 import coherePng from "../resources/providers/cohere.png";
 import deepseekPng from "../resources/providers/deepseek.png";
 import fireworksPng from "../resources/providers/fireworks.png";
 import githubPng from "../resources/providers/github.png";
+import githubCopilotPng from "../resources/providers/githubcopilot.png";
 import googlePng from "../resources/providers/google.png";
 import groqPng from "../resources/providers/groq.png";
 import huggingfacePng from "../resources/providers/huggingface.png";
 import kimiPng from "../resources/providers/kimi.png";
 import metaPng from "../resources/providers/meta.png";
 import microsoftPng from "../resources/providers/microsoft.png";
+import microsoftPng from "../resources/providers/microsoft.png";
 import minimaxPng from "../resources/providers/minimax.png";
 import mistralPng from "../resources/providers/mistral.png";
+import moonshotPng from "../resources/providers/moonshot.png";
 import novitaPng from "../resources/providers/novita.png";
 import openaiPng from "../resources/providers/openai.png";
 import opencodePng from "../resources/providers/opencode.png";
@@ -46,19 +50,20 @@ const PROVIDER_PNG: Record<string, string> = {
   cloudflare: cloudflarePng,
   "cloudflare-ai-gateway": cloudflarePng,
   "cloudflare-workers-ai": cloudflarePng,
-  codex: codexPng,
+  codex: codexColorPng,
   cohere: coherePng,
   deepseek: deepseekPng,
   fireworks: fireworksPng,
   github: githubPng,
-  "github-copilot": githubPng,
+  "github-copilot": githubCopilotPng,
   google: googlePng,
   "google-vertex": googlePng,
   groq: groqPng,
   huggingface: huggingfacePng,
   kimi: kimiPng,
   "kimi-coding": kimiPng,
-  moonshotai: kimiPng,
+  moonshotai: moonshotPng,
+  moonshot: moonshotPng,
   meta: metaPng,
   microsoft: microsoftPng,
   minimax: minimaxPng,
@@ -66,6 +71,7 @@ const PROVIDER_PNG: Record<string, string> = {
   mistral: mistralPng,
   novita: novitaPng,
   openai: openaiPng,
+  "openai-codex": codexColorPng,
   opencode: opencodePng,
   "opencode-go": opencodePng,
   openrouter: openrouterPng,

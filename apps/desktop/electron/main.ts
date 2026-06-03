@@ -449,7 +449,13 @@ async function startOpenDesignWeb(config: OpenDesignConfig): Promise<OpenDesignS
   const webUrl = new URL(config.webUrl);
   const webPort = webUrl.port || "3000";
   const daemonPort = new URL(config.daemonUrl).port || "7456";
-  const pnpmBinary = process.env.OPEN_DESIGN_PNPM_BIN?.trim() || "pnpm";
+  const pnpmBinary = process.env.OPEN_DESIGN_PNPM_BIN?.trim()
+    || (() => {
+      for (const candidate of ["/opt/homebrew/bin/pnpm", path.join(app.getPath("home"), ".bun/bin/pnpm"), "/usr/local/bin/pnpm"]) {
+        if (existsSync(candidate)) return candidate;
+      }
+      return "pnpm";
+    })();
   if (!commandExists(pnpmBinary)) {
     return {
       ...currentStatus,
@@ -460,15 +466,22 @@ async function startOpenDesignWeb(config: OpenDesignConfig): Promise<OpenDesignS
   }
 
   // Auto-install dependencies and build required packages if missing
+  const pnpmBinary2 = process.env.OPEN_DESIGN_PNPM_BIN?.trim()
+    || (() => {
+      for (const candidate of ["/opt/homebrew/bin/pnpm", path.join(app.getPath("home"), ".bun/bin/pnpm"), "/usr/local/bin/pnpm"]) {
+        if (existsSync(candidate)) return candidate;
+      }
+      return "pnpm";
+    })();
   const pnpmDir = path.join(root, "node_modules", ".pnpm");
   if (!existsSync(pnpmDir)) {
     console.log("[Open Design] Installing dependencies...");
-    spawnSync(pnpmBinary, ["install"], { cwd: root, stdio: "pipe", timeout: 180_000 });
+    spawnSync(pnpmBinary2, ["install"], { cwd: root, stdio: "pipe", timeout: 300_000 });
   }
   const componentsDist = path.join(root, "packages", "components", "dist");
   if (existsSync(path.join(root, "packages", "components", "package.json")) && !existsSync(componentsDist)) {
     console.log("[Open Design] Building components...");
-    spawnSync(pnpmBinary, ["--filter", "@open-design/components", "build"], { cwd: root, stdio: "pipe", timeout: 60_000 });
+    spawnSync(pnpmBinary2, ["--filter", "@open-design/components", "build"], { cwd: root, stdio: "pipe", timeout: 120_000 });
   }
 
   spawnDetached(pnpmBinary, ["--filter", "@open-design/web", "dev", "--hostname", webUrl.hostname, "--port", webPort], {

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { RuntimeExtensionRecord, RuntimeSnapshot } from "@pi-gui/session-driver/runtime-types";
 import type { ExtensionCommandCompatibilityRecord, WorkspaceRecord } from "./desktop-state";
 import { RefreshIcon } from "./icons";
@@ -18,6 +18,7 @@ export function ExtensionsView({
   onRefresh, onOpenExtensionFolder, onToggleExtension,
 }: ExtensionsViewProps) {
   const t = useT();
+  useEffect(() => { onRefresh(); }, []); // Auto-refresh on first open
   const [query, setQuery] = useState("");
   const [selectedExtensionPath, setSelectedExtensionPath] = useState<string | undefined>();
   const extensions = runtime?.extensions ?? [];

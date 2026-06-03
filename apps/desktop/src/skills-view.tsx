@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { RuntimeSkillRecord, RuntimeSnapshot } from "@pi-gui/session-driver/runtime-types";
 import type { WorkspaceRecord } from "./desktop-state";
 import { RefreshIcon } from "./icons";
@@ -16,6 +16,7 @@ interface SkillsViewProps {
 
 export function SkillsView({ workspace, runtime, onRefresh, onOpenSkillFolder, onToggleSkill, onTrySkill }: SkillsViewProps) {
   const t = useT();
+  useEffect(() => { onRefresh(); }, []); // Auto-refresh on first open
   const [query, setQuery] = useState("");
   const [selectedSkillPath, setSelectedSkillPath] = useState<string | undefined>();
   const skills = runtime?.skills ?? [];

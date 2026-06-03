@@ -301,17 +301,18 @@ async function checkPiCliAndPrompt(): Promise<void> {
 }
 
 async function registerBuiltInPlugins(): Promise<void> {
-  // Auto-register Pi-OpenDesign plugin if present in the app bundle
+  // Auto-register Pi-OpenDesign plugin
   const pluginRoots = [
-    path.join(app.getAppPath(), "..", "..", "..", "..", ".pi", "extensions", "pi-open-design"),
-    path.join(process.cwd(), ".pi", "extensions", "pi-open-design"),
     path.join(require("os").homedir(), ".pi", "extensions", "pi-open-design"),
+    path.join(process.cwd(), ".pi", "extensions", "pi-open-design"),
+    path.join(path.dirname(app.getAppPath()), "..", "..", "..", ".pi", "extensions", "pi-open-design"),
   ];
 
   let pluginPath = "";
   for (const root of pluginRoots) {
-    if (existsSync(path.join(root, "package.json"))) {
-      pluginPath = root;
+    const normalized = path.resolve(root);
+    if (existsSync(path.join(normalized, "package.json"))) {
+      pluginPath = normalized;
       break;
     }
   }
@@ -322,15 +323,14 @@ async function registerBuiltInPlugins(): Promise<void> {
   try {
     const raw = existsSync(settingsPath) ? await readFile(settingsPath, "utf8") : "{}";
     const settings = JSON.parse(raw) as Record<string, unknown>;
-    const packages = Array.isArray(settings.packages) ? [...settings.packages] : [];
-    const pluginSource = pluginPath;
-    if (!packages.some((p: unknown) => typeof p === "string" && (p === pluginSource || p.endsWith("/pi-open-design")))) {
-      packages.push(pluginSource);
+    const packages: string[] = Array.isArray(settings.packages) ? [...settings.packages] : [];
+    if (!packages.some((p: string) => p.includes("pi-open-design"))) {
+      packages.push(pluginPath);
       settings.packages = packages;
       await writeFile(settingsPath, JSON.stringify(settings, null, 2) + "\n");
-      console.log(`[Pi-Deepseek] Auto-registered plugin: ${pluginSource}`);
+      console.log(`[Pi-Deepseek] Auto-registered plugin: ${pluginPath}`);
     }
-  } catch { /* silently skip if can't register */ }
+  } catch { /* silently skip */ }
 }
 
 function startAutoUpdateChecker(): void {

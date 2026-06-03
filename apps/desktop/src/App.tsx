@@ -154,7 +154,7 @@ function formatRunningLabel(startedAt: string | undefined): string {
 export default function App() {
   const [snapshot, setSnapshot, selectedTranscript] = useDesktopAppState();
   const [composerDraft, setComposerDraft] = useState("");
-  const [settingsSection, setSettingsSection] = useState<SettingsSection>("general");
+  const [settingsSection, setSettingsSection] = useState<SettingsSection>("providers");
   const [settingsWorkspaceId, setSettingsWorkspaceId] = useState("");
   const [skillsWorkspaceId, setSkillsWorkspaceId] = useState("");
   const [extensionsWorkspaceId, setExtensionsWorkspaceId] = useState("");

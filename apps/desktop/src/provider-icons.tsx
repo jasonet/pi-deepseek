@@ -41,7 +41,7 @@ import zaiPng from "../resources/providers/zai.png";
 import zhipuPng from "../resources/providers/zhipu.png";
 
 const PROVIDER_PNG: Record<string, string> = {
-  anthropic: anthropicLogoPng,
+  anthropic: claudeColorPng,
   azure: azurePng,
   "azure-openai-responses": azurePng,
   baichuan: baichuanPng,
@@ -56,7 +56,7 @@ const PROVIDER_PNG: Record<string, string> = {
   deepseek: deepseekPng,
   fireworks: fireworksPng,
   github: githubPng,
-  "github-copilot": githubCopilotPng,
+  "github-copilot": githubPng,
   google: googlePng,
   "google-vertex": googlePng,
   groq: groqPng,
@@ -100,7 +100,7 @@ export function providerColor(providerId: string): string {
 
 const PROVIDER_LOGIN_PNG: Record<string, string> = {
   anthropic: claudeColorPng,
-  "github-copilot": githubCopilotPng,
+  "github-copilot": githubPng,
   "openai-codex": openaiPng,
 };
 

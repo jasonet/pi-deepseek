@@ -209,6 +209,10 @@ contextBridge.exposeInMainWorld("piApp", {
     ipcRenderer.invoke(desktopIpc.startOpenDesign) as Promise<OpenDesignStatus>,
   openOpenDesignExternal: () =>
     ipcRenderer.invoke(desktopIpc.openOpenDesignExternal) as Promise<void>,
+  setComposerWorkMode: (mode: string) =>
+    ipcRenderer.invoke(desktopIpc.setComposerWorkMode, mode) as Promise<DesktopAppState>,
+  getComposerWorkMode: () =>
+    ipcRenderer.invoke(desktopIpc.getComposerWorkMode) as Promise<string>,
   ensureTerminalPanel: (workspaceId: string, terminalScopeId: string, size?: Partial<TerminalSize>) =>
     ipcRenderer.invoke(desktopIpc.terminalEnsurePanel, workspaceId, terminalScopeId, size) as Promise<TerminalPanelSnapshot>,
   createTerminalSession: (workspaceId: string, terminalScopeId: string, size?: Partial<TerminalSize>) =>

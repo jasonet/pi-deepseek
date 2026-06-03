@@ -83,6 +83,8 @@ export const desktopIpc = {
   getOpenDesignStatus: "pi-gui:get-open-design-status",
   startOpenDesign: "pi-gui:start-open-design",
   openOpenDesignExternal: "pi-gui:open-open-design-external",
+  setComposerWorkMode: "pi-gui:set-composer-work-mode",
+  getComposerWorkMode: "pi-gui:get-composer-work-mode",
   terminalEnsurePanel: "pi-gui:terminal-ensure-panel",
   terminalCreateSession: "pi-gui:terminal-create-session",
   terminalSetActiveSession: "pi-gui:terminal-set-active-session",
@@ -186,6 +188,8 @@ export interface OpenDesignStatus {
   readonly daemonUrl: string;
   readonly webUrl: string;
   readonly reachable: boolean;
+  readonly daemonReachable?: boolean;
+  readonly webReachable?: boolean;
   readonly version?: string;
   readonly message?: string;
 }
@@ -307,6 +311,8 @@ export interface PiDesktopApi {
   getOpenDesignStatus(): Promise<OpenDesignStatus>;
   startOpenDesign(): Promise<OpenDesignStatus>;
   openOpenDesignExternal(): Promise<void>;
+  setComposerWorkMode(mode: string): Promise<DesktopAppState>;
+  getComposerWorkMode(): Promise<string>;
   ensureTerminalPanel(
     workspaceId: string,
     terminalScopeId: string,

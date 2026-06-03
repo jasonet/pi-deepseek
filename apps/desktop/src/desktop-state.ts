@@ -11,6 +11,7 @@ export type NewThreadEnvironment = "local" | "worktree";
 export type ThemeMode = "system" | "light" | "dark";
 export type ModelSettingsScopeMode = "app-global" | "per-repo";
 export type Locale = "en" | "zh-CN" | "zh-TW" | "ja";
+export type ComposerWorkMode = "pi-agent" | "open-design";
 export type ComposerDraftSyncSource =
   | "state"
   | "selection"
@@ -179,6 +180,7 @@ export interface DesktopAppState {
   readonly locale: Locale;
   readonly autoUpdateEnabled: boolean;
   readonly skipAutoTitle: boolean;
+  readonly composerWorkMode: ComposerWorkMode;
   readonly revision: number;
   readonly lastError?: string;
 }
@@ -226,6 +228,7 @@ export function createEmptyDesktopAppState(): DesktopAppState {
     locale: "en",
     autoUpdateEnabled: true,
     skipAutoTitle: false,
+    composerWorkMode: "pi-agent",
     revision: 0,
   };
 }

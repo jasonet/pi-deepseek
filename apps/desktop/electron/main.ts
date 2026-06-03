@@ -50,6 +50,7 @@ const isDev = Boolean(process.env.ELECTRON_RENDERER_URL);
 let autoUpdateEnabled = true;
 let autoUpdateInterval: ReturnType<typeof setInterval> | undefined;
 let skipAutoTitle = false;
+let composerWorkMode: string = "pi-agent";
 const windowTestMode = resolveWindowTestMode();
 const devReloadMarkersEnabled = process.env.PI_APP_DEV_RELOAD_MARKERS === "1";
 let store: DesktopAppStore;
@@ -131,6 +132,7 @@ const OPEN_DESIGN_DEFAULT_WEB_URL = "http://127.0.0.1:3000";
 interface OpenDesignConfig {
   readonly daemonUrl: string;
   readonly webUrl: string;
+  readonly extensionRoot?: string;
 }
 
 async function readOpenDesignConfig(): Promise<OpenDesignConfig> {
@@ -138,6 +140,7 @@ async function readOpenDesignConfig(): Promise<OpenDesignConfig> {
   const envWebUrl = process.env.OPEN_DESIGN_WEB_URL?.trim();
   let daemonUrl = envDaemonUrl || OPEN_DESIGN_DEFAULT_DAEMON_URL;
   let webUrl = envWebUrl || OPEN_DESIGN_DEFAULT_WEB_URL;
+  let extensionRoot: string | undefined;
 
   if (envDaemonUrl && envWebUrl) {
     return { daemonUrl, webUrl };
@@ -153,119 +156,307 @@ async function readOpenDesignConfig(): Promise<OpenDesignConfig> {
   ]);
 
   for (const root of roots) {
-    const manifestPath = path.join(root, ".pi", "extensions", OPEN_DESIGN_EXTENSION_ID, "open-design.manifest.json");
+    const candidateRoot = path.join(root, ".pi", "extensions", OPEN_DESIGN_EXTENSION_ID);
+    const manifestPath = path.join(candidateRoot, "open-design.manifest.json");
     try {
       const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as {
         daemon?: { defaultUrl?: string; defaultWebUrl?: string };
       };
       daemonUrl = envDaemonUrl || manifest.daemon?.defaultUrl || daemonUrl;
       webUrl = envWebUrl || manifest.daemon?.defaultWebUrl || webUrl;
+      extensionRoot = candidateRoot;
       break;
     } catch {
       // Keep scanning plausible dev/package roots.
     }
   }
 
-  return { daemonUrl, webUrl };
+  return { daemonUrl, webUrl, extensionRoot };
+}
+
+async function fetchWithTimeout(url: string, init: RequestInit = {}, timeoutMs = 3000): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await net.fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 async function fetchOpenDesignJson(url: string): Promise<unknown> {
-  const response = await net.fetch(url);
+  const response = await fetchWithTimeout(url);
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}`);
   }
   return response.json();
 }
 
-async function getOpenDesignStatus(): Promise<OpenDesignStatus> {
-  const config = await readOpenDesignConfig();
+async function isOpenDesignWebReachable(url: string): Promise<boolean> {
   try {
-    await fetchOpenDesignJson(`${config.daemonUrl}/api/health`);
-    let version: string | undefined;
+    const response = await fetchWithTimeout(url, { method: "HEAD" }, 5000);
+    return response.status >= 200 && response.status < 400;
+  } catch {
     try {
-      const versionResponse = await fetchOpenDesignJson(`${config.daemonUrl}/api/version`) as { version?: unknown; openDesignVersion?: unknown };
-      version = typeof versionResponse.version === "string"
-        ? versionResponse.version
-        : typeof versionResponse.openDesignVersion === "string"
-          ? versionResponse.openDesignVersion
-          : undefined;
+      const response = await fetchWithTimeout(url, { method: "GET" }, 5000);
+      return response.status >= 200 && response.status < 400;
     } catch {
-      version = undefined;
+      return false;
     }
-    return { ...config, reachable: true, version };
-  } catch (error) {
-    return {
-      ...config,
-      reachable: false,
-      message: error instanceof Error ? error.message : String(error),
-    };
   }
 }
 
-async function startOpenDesign(): Promise<OpenDesignStatus> {
-  const currentStatus = await getOpenDesignStatus();
-  if (currentStatus.reachable) {
-    return currentStatus;
+async function getOpenDesignStatus(): Promise<OpenDesignStatus> {
+  const config = await readOpenDesignConfig();
+  let daemonReachable = false;
+  let daemonMessage = "";
+  let version: string | undefined;
+
+  try {
+    await fetchOpenDesignJson(`${config.daemonUrl}/api/health`);
+    daemonReachable = true;
+    try {
+      const versionResponse = await fetchOpenDesignJson(`${config.daemonUrl}/api/version`) as {
+        version?: unknown;
+        openDesignVersion?: unknown;
+      };
+      const nestedVersion = typeof versionResponse.version === "object" && versionResponse.version !== null
+        ? (versionResponse.version as { version?: unknown }).version
+        : undefined;
+      version = typeof versionResponse.version === "string"
+        ? versionResponse.version
+        : typeof nestedVersion === "string"
+          ? nestedVersion
+          : typeof versionResponse.openDesignVersion === "string"
+            ? versionResponse.openDesignVersion
+            : undefined;
+    } catch {
+      version = undefined;
+    }
+  } catch (error) {
+    daemonMessage = error instanceof Error ? error.message : String(error);
   }
 
-  const daemonUrl = new URL(currentStatus.daemonUrl);
-  const port = daemonUrl.port || "7456";
-  // Default: use the bundled plugin launcher (auto-installs on first run)
-  if (!envDaemonUrl && !envWebUrl) {
-    const installScript = path.join(__dirname, "..", "..", "..", "..", ".pi", "extensions", OPEN_DESIGN_EXTENSION_ID, "bin", "od-install");
-    if (existsSync(installScript)) {
-      process.env.OPEN_DESIGN_OD_BIN = installScript;
+  const webReachable = await isOpenDesignWebReachable(config.webUrl);
+  const reachable = daemonReachable && webReachable;
+  return {
+    daemonUrl: config.daemonUrl,
+    webUrl: config.webUrl,
+    reachable,
+    daemonReachable,
+    webReachable,
+    version,
+    message: reachable
+      ? undefined
+      : daemonReachable
+        ? `Open Design daemon is ready, but web UI is not reachable at ${config.webUrl}.`
+        : daemonMessage,
+  };
+}
+
+function commandExists(command: string): boolean {
+  if (existsSync(command)) {
+    return true;
+  }
+  try {
+    const which = spawnSync("which", [command], { timeout: 3000 });
+    return which.status === 0 && which.stdout.toString().trim().length > 0;
+  } catch {
+    return false;
+  }
+}
+
+function isSystemOdDumpCommand(command: string): boolean {
+  if (command !== "od") {
+    return false;
+  }
+  try {
+    const which = spawnSync("which", [command], { timeout: 3000 });
+    return which.stdout.toString().trim() === "/usr/bin/od";
+  } catch {
+    return false;
+  }
+}
+
+async function resolveOpenDesignBinary(config: OpenDesignConfig): Promise<string> {
+  const envBinary = process.env.OPEN_DESIGN_OD_BIN?.trim();
+  if (envBinary) {
+    return envBinary;
+  }
+
+  const bundledLauncher = config.extensionRoot ? path.join(config.extensionRoot, "bin", "od") : "";
+  if (bundledLauncher && existsSync(bundledLauncher)) {
+    return bundledLauncher;
+  }
+
+  const bundledInstaller = config.extensionRoot ? path.join(config.extensionRoot, "bin", "od-install") : "";
+  if (bundledInstaller && existsSync(bundledInstaller)) {
+    return bundledInstaller;
+  }
+
+  return "od";
+}
+
+function resolveOpenDesignRoot(config: OpenDesignConfig): string | undefined {
+  const envRoot = process.env.OPEN_DESIGN_ROOT?.trim();
+  const candidates = [
+    envRoot,
+    path.join(app.getPath("home"), "Sites", "Github", "open-design"),
+    path.join(app.getPath("home"), ".pi", "open-design", "repo"),
+  ].filter((candidate): candidate is string => Boolean(candidate));
+
+  for (const candidate of candidates) {
+    if (existsSync(path.join(candidate, "apps", "web", "package.json"))) {
+      return candidate;
     }
   }
 
-  const binary = process.env.OPEN_DESIGN_OD_BIN?.trim() || "od";
-
-  // Validate the binary exists
-  const binaryExists = existsSync(binary) || (() => {
-    try {
-      const which = spawnSync("which", [binary], { timeout: 3000 });
-      return which.status === 0 && which.stdout.toString().trim().length > 0;
-    } catch { return false; }
-  })();
-  if (!binaryExists) {
-    return { ...currentStatus, reachable: false, message: `Open Design binary "${binary}" not found. Install it or set OPEN_DESIGN_OD_BIN.` };
+  const installScript = config.extensionRoot ? path.join(config.extensionRoot, "bin", "od-install") : "";
+  if (installScript && existsSync(installScript)) {
+    return path.join(app.getPath("home"), ".pi", "open-design", "repo");
   }
 
-  const child = spawn(binary, ["--port", port, "--no-open"], {
-    detached: true,
-    env: { ...process.env, OD_PORT: port },
-    stdio: ["ignore", "pipe", "pipe"],
-  });
+  return undefined;
+}
 
-  // Check for immediate startup failure
-  const startupResult = await Promise.race([
-    new Promise<string | null>((resolve) => {
-      child.stderr?.on("data", (data: Buffer) => resolve(data.toString()));
-      child.stdout?.on("data", (data: Buffer) => resolve(data.toString()));
-    }),
-    new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000)),
-  ]);
-
-  if (startupResult && !startupResult.includes("listening") && !startupResult.includes("started")) {
-    child.kill();
-    return { ...currentStatus, reachable: false, message: `Open Design failed to start: ${startupResult.slice(0, 200)}` };
-  }
-
-  child.unref();
-
-  const deadline = Date.now() + 12_000;
-  let latestStatus = currentStatus;
+async function waitForOpenDesignDaemon(timeoutMs = 15_000): Promise<OpenDesignStatus> {
+  const deadline = Date.now() + timeoutMs;
+  let latestStatus = await getOpenDesignStatus();
   while (Date.now() < deadline) {
+    if (latestStatus.daemonReachable) {
+      return latestStatus;
+    }
     await new Promise((resolve) => setTimeout(resolve, 500));
     latestStatus = await getOpenDesignStatus();
+  }
+  return latestStatus;
+}
+
+async function waitForOpenDesignReady(timeoutMs = 25_000): Promise<OpenDesignStatus> {
+  const deadline = Date.now() + timeoutMs;
+  let latestStatus = await getOpenDesignStatus();
+  while (Date.now() < deadline) {
     if (latestStatus.reachable) {
       return latestStatus;
     }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    latestStatus = await getOpenDesignStatus();
+  }
+  return latestStatus;
+}
+
+function spawnDetached(command: string, args: readonly string[], options: { cwd?: string; env?: NodeJS.ProcessEnv } = {}): void {
+  const child = spawn(command, [...args], {
+    cwd: options.cwd,
+    detached: true,
+    env: {
+      ...process.env,
+      ...options.env,
+    },
+    stdio: "ignore",
+  });
+  child.unref();
+}
+
+async function startOpenDesignDaemon(config: OpenDesignConfig): Promise<OpenDesignStatus> {
+  const currentStatus = await getOpenDesignStatus();
+  if (currentStatus.daemonReachable) {
+    return currentStatus;
+  }
+
+  const daemonUrl = new URL(config.daemonUrl);
+  const port = daemonUrl.port || "7456";
+  const binary = await resolveOpenDesignBinary(config);
+
+  if (!commandExists(binary) || isSystemOdDumpCommand(binary)) {
+    return {
+      ...currentStatus,
+      reachable: false,
+      daemonReachable: false,
+      message: `Open Design CLI "${binary}" was not found. Expected ${config.extensionRoot ? path.join(config.extensionRoot, "bin", "od") : "the plugin launcher"} or set OPEN_DESIGN_OD_BIN.`,
+    };
+  }
+
+  spawnDetached(binary, ["--port", port, "--no-open"], {
+    env: {
+      OD_PORT: port,
+      OPEN_DESIGN_ROOT: process.env.OPEN_DESIGN_ROOT || path.join(app.getPath("home"), "Sites", "Github", "open-design"),
+    },
+  });
+
+  const nextStatus = await waitForOpenDesignDaemon();
+  if (!nextStatus.daemonReachable) {
+    return {
+      ...nextStatus,
+      message: nextStatus.message || `Started ${binary}, but ${config.daemonUrl} did not become reachable.`,
+    };
+  }
+  return nextStatus;
+}
+
+async function startOpenDesignWeb(config: OpenDesignConfig): Promise<OpenDesignStatus> {
+  const currentStatus = await getOpenDesignStatus();
+  if (currentStatus.webReachable) {
+    return currentStatus;
+  }
+
+  const root = resolveOpenDesignRoot(config);
+  if (!root) {
+    return {
+      ...currentStatus,
+      reachable: false,
+      webReachable: false,
+      message: "Open Design web root was not found. Set OPEN_DESIGN_ROOT to the open-design repo path.",
+    };
+  }
+
+  const webUrl = new URL(config.webUrl);
+  const webPort = webUrl.port || "3000";
+  const daemonPort = new URL(config.daemonUrl).port || "7456";
+  const pnpmBinary = process.env.OPEN_DESIGN_PNPM_BIN?.trim() || "pnpm";
+  if (!commandExists(pnpmBinary)) {
+    return {
+      ...currentStatus,
+      reachable: false,
+      webReachable: false,
+      message: `pnpm binary "${pnpmBinary}" was not found. Install pnpm or set OPEN_DESIGN_PNPM_BIN.`,
+    };
+  }
+
+  spawnDetached(pnpmBinary, ["--filter", "@open-design/web", "dev", "--hostname", webUrl.hostname, "--port", webPort], {
+    cwd: root,
+    env: {
+      OD_PORT: daemonPort,
+      OPEN_DESIGN_ROOT: root,
+      OD_WORKSPACE_ROOT: root,
+    },
+  });
+
+  const nextStatus = await waitForOpenDesignReady();
+  if (!nextStatus.webReachable) {
+    return {
+      ...nextStatus,
+      message: nextStatus.message || `Started Open Design web server, but ${config.webUrl} did not become reachable.`,
+    };
+  }
+  return nextStatus;
+}
+
+async function startOpenDesign(): Promise<OpenDesignStatus> {
+  const config = await readOpenDesignConfig();
+  const daemonStatus = await startOpenDesignDaemon(config);
+  if (!daemonStatus.daemonReachable) {
+    return daemonStatus;
+  }
+
+  const webStatus = await startOpenDesignWeb(config);
+  if (webStatus.reachable) {
+    return webStatus;
   }
 
   return {
-    ...latestStatus,
-    message: latestStatus.message || `Started ${binary}, but ${currentStatus.daemonUrl} did not become reachable in time.`,
+    ...webStatus,
+    message: webStatus.message || "Open Design daemon started, but the web UI did not become reachable.",
   };
 }
 
@@ -919,6 +1110,13 @@ app.whenReady().then(async () => {
   ipcMain.handle(desktopIpc.setSkipAutoTitle, async (_event, skip: boolean) => {
     skipAutoTitle = skip;
     return skip;
+  });
+  ipcMain.handle(desktopIpc.setComposerWorkMode, async (_event, mode: string) => {
+    composerWorkMode = mode === "open-design" ? "open-design" : "pi-agent";
+    return store.emit();
+  });
+  ipcMain.handle(desktopIpc.getComposerWorkMode, async () => {
+    return composerWorkMode;
   });
   ipcMain.handle(desktopIpc.terminalEnsurePanel, (event, workspaceId: string, terminalScopeId: string, size) => {
     return getTerminalService().ensurePanel(event.sender, workspaceId, terminalScopeId, size);

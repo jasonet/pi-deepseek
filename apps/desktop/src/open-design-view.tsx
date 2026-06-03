@@ -17,6 +17,13 @@ export function OpenDesignView({ api }: OpenDesignViewProps) {
     setLoading(true);
     try {
       setStatus(await api.getOpenDesignStatus());
+    } catch (error) {
+      setStatus({
+        daemonUrl: "",
+        webUrl: "",
+        reachable: false,
+        message: error instanceof Error ? error.message : String(error),
+      });
     } finally {
       setLoading(false);
     }
@@ -30,18 +37,30 @@ export function OpenDesignView({ api }: OpenDesignViewProps) {
       if (nextStatus.reachable) {
         setFrameKey((current) => current + 1);
       }
+    } catch (error) {
+      setStatus((current) => ({
+        daemonUrl: current?.daemonUrl ?? "",
+        webUrl: current?.webUrl ?? "",
+        reachable: false,
+        daemonReachable: current?.daemonReachable,
+        webReachable: current?.webReachable,
+        message: error instanceof Error ? error.message : String(error),
+      }));
     } finally {
       setStarting(false);
+      setLoading(false);
     }
   }
 
   useEffect(() => {
-    void refresh();
+    void start();
   }, []);
 
   const reachable = Boolean(status?.reachable);
   const statusText = loading
     ? t("common.loading")
+    : starting
+      ? t("openDesign.starting")
     : reachable
       ? t("openDesign.statusReady")
       : t("openDesign.statusStopped");
@@ -69,6 +88,12 @@ export function OpenDesignView({ api }: OpenDesignViewProps) {
 
       <div className={`open-design-status ${reachable ? "open-design-status--ready" : ""}`}>
         <span>{statusText}</span>
+        {status?.daemonReachable != null ? (
+          <span>{status.daemonReachable ? t("openDesign.daemonReady") : t("openDesign.daemonStopped")}</span>
+        ) : null}
+        {status?.webReachable != null ? (
+          <span>{status.webReachable ? t("openDesign.webReady") : t("openDesign.webStopped")}</span>
+        ) : null}
         {status?.version ? <span>Open Design {status.version}</span> : null}
         {status?.message && !reachable ? <span>{status.message}</span> : null}
         {status?.webUrl ? <span>{status.webUrl}</span> : null}

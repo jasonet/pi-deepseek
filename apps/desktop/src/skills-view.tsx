@@ -23,7 +23,19 @@ export function SkillsView({ workspace, runtime, onRefresh, onOpenSkillFolder, o
   const [query, setQuery] = useState("");
   const [selectedSkillPath, setSelectedSkillPath] = useState<string | undefined>();
   const skills = runtime?.skills ?? [];
-  const desc = (skill: RuntimeSkillRecord) => getSkillDescription(skill.name, locale) ?? getSkillDescription(skill.name.toLowerCase().replace(/\s+/g, "-"), locale) ?? skill.description;
+  const desc = (skill: RuntimeSkillRecord) => {
+    // Try multiple key formats: name, slug, file path
+    const keys = [
+      skill.name,
+      skill.name.toLowerCase().replace(/\s+/g, "-"),
+      skill.filePath.split("/").slice(-2, -1)[0], // parent dir name
+    ].filter(Boolean);
+    for (const key of keys) {
+      const t = getSkillDescription(key, locale);
+      if (t) return t;
+    }
+    return skill.description;
+  };
 
   const filteredSkills = useMemo(() => {
     const n = query.trim().toLowerCase();

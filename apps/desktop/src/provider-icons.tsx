@@ -90,6 +90,8 @@ function providerIconUrl(providerId: string): string | null {
     xiaomi: "https://raw.githubusercontent.com/lobehub/lobe-icons/refs/heads/master/packages/static-png/light/xiaomimimo.png",
     bedrock: "https://raw.githubusercontent.com/lobehub/lobe-icons/refs/heads/master/packages/static-png/light/bedrock-color.png",
     "amazon-bedrock": "https://raw.githubusercontent.com/lobehub/lobe-icons/refs/heads/master/packages/static-png/light/bedrock-color.png",
+    azure: "https://raw.githubusercontent.com/lobehub/lobe-icons/refs/heads/master/packages/static-png/light/azureai-color.png",
+    "azure-openai-responses": "https://raw.githubusercontent.com/lobehub/lobe-icons/refs/heads/master/packages/static-png/light/azureai-color.png",
   };
   if (pngMap[providerId]) return pngMap[providerId];
   // 1. Exact match

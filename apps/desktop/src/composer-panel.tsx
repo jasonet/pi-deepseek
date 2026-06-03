@@ -115,8 +115,6 @@ export function ComposerPanel({
   const t = useT();
   const hasComposerInput = composerDraft.trim().length > 0 || attachments.length > 0;
   const primaryActionIsStop = selectedSession.status === "running" && !hasComposerInput;
-  const hasOpenDesign = true; // Always show Pi mode when Open Design plugin is available
-  const [workMode, setWorkMode] = useState<string>("pi-agent");
 
   return (
     <footer className="composer">
@@ -166,12 +164,6 @@ export function ComposerPanel({
             <div className="composer__footer">
               <div className="composer__footer-row">
                 <div className="composer__hint">
-                  {hasOpenDesign ? (
-                    <label className="composer__mode-toggle" style={{ marginRight: 10, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, color: "var(--muted-soft)" }}>
-                      <input type="checkbox" checked={workMode === "pi-agent"} onChange={(e) => setWorkMode(e.target.checked ? "pi-agent" : "open-design")} />
-                      Pi
-                    </label>
-                  ) : null}
                   {selectedSession.status === "running"
                     ? `${runningLabel} · Enter to queue · Cmd+Enter to steer`
                     : "Enter to send · Shift+Enter for newline"}

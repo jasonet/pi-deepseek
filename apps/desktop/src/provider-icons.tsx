@@ -41,7 +41,7 @@ import zaiPng from "../resources/providers/zai.png";
 import zhipuPng from "../resources/providers/zhipu.png";
 
 const PROVIDER_PNG: Record<string, string> = {
-  anthropic: claudeColorPng,
+  anthropic: anthropicLogoPng,
   azure: azurePng,
   "azure-openai-responses": azurePng,
   baichuan: baichuanPng,

@@ -11,6 +11,6 @@
   ],
   "daemon": {
     "defaultUrl": "http://127.0.0.1:7456",
-    "defaultWebUrl": "http://127.0.0.1:3000"
+    "defaultWebUrl": "http://127.0.0.1:7456"
   }
 }

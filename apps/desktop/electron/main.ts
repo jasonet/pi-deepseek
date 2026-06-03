@@ -127,7 +127,7 @@ function readClipboardImageAttachment(): ComposerImageAttachment | null {
 const PI_INSTALL_COMMAND = "curl -fsSL https://pi.dev/install.sh | sh";
 const OPEN_DESIGN_EXTENSION_ID = "pi-open-design";
 const OPEN_DESIGN_DEFAULT_DAEMON_URL = "http://127.0.0.1:7456";
-const OPEN_DESIGN_DEFAULT_WEB_URL = "http://127.0.0.1:3000";
+const OPEN_DESIGN_DEFAULT_WEB_URL = "http://127.0.0.1:7456";
 
 interface OpenDesignConfig {
   readonly daemonUrl: string;

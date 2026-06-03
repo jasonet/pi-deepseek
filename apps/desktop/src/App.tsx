@@ -1883,12 +1883,19 @@ export default function App() {
   };
 
   const t = useT();
+  const L = snapshot.locale ?? "en";
+  const nav = (en: string, zh: string, tw: string, ja: string) => {
+    if (L === "zh-CN") return zh;
+    if (L === "zh-TW") return tw;
+    if (L === "ja") return ja;
+    return en;
+  };
   const settingsNav = [
-    { id: "appearance", label: t("settings.appearance") },
-    { id: "general", label: t("settings.general") },
-    { id: "providers", label: t("settings.providers") },
-    { id: "models", label: t("settings.models") },
-    { id: "notifications", label: t("settings.notifications") },
+    { id: "appearance", label: nav("Appearance", "外观", "外觀", "外観") },
+    { id: "general", label: nav("General", "通用", "一般", "一般") },
+    { id: "providers", label: nav("Providers", "提供商", "提供者", "プロバイダー") },
+    { id: "models", label: nav("Models", "模型", "模型", "モデル") },
+    { id: "notifications", label: nav("Notifications", "通知", "通知", "通知") },
   ] as const;
 
   if (snapshot.activeView === "settings") {

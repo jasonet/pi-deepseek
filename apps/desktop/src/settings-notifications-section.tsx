@@ -7,9 +7,11 @@ interface SettingsNotificationsSectionProps {
   readonly notificationPreferences: NotificationPreferences;
   readonly notificationPermissionStatus: DesktopNotificationPermissionStatus;
   readonly notificationPermissionPending: boolean;
+  readonly autoUpdateEnabled: boolean;
   readonly onSetNotificationPreferences: (preferences: Partial<NotificationPreferences>) => void;
   readonly onRequestNotificationPermission: () => void;
   readonly onOpenSystemNotificationSettings: () => void;
+  readonly onSetAutoUpdateEnabled: (enabled: boolean) => void;
 }
 
 export function SettingsNotificationsSection({
@@ -19,6 +21,8 @@ export function SettingsNotificationsSection({
   onSetNotificationPreferences,
   onRequestNotificationPermission,
   onOpenSystemNotificationSettings,
+  autoUpdateEnabled,
+  onSetAutoUpdateEnabled,
 }: SettingsNotificationsSectionProps) {
   const t = useT();
   const showAskMacOs = notificationPermissionStatus === "default";
@@ -68,6 +72,13 @@ export function SettingsNotificationsSection({
         <SettingsRow title={t("settings.notifications.attentionNeeded")} description={t("settings.notifications.attentionNeededDesc")}>
           <input aria-label={t("settings.notifications.attentionNeeded")} checked={notificationPreferences.attentionNeeded} type="checkbox"
             onChange={(event) => onSetNotificationPreferences({ attentionNeeded: event.target.checked })} />
+        </SettingsRow>
+      </SettingsGroup>
+
+      <SettingsGroup title={t("settings.notifications.update")} description={t("settings.notifications.updateDesc")}>
+        <SettingsRow title={t("settings.notifications.autoUpdate")} description={t("settings.notifications.autoUpdateDesc")}>
+          <input aria-label={t("settings.notifications.autoUpdate")} checked={autoUpdateEnabled} type="checkbox"
+            onChange={(event) => onSetAutoUpdateEnabled(event.target.checked)} />
         </SettingsRow>
       </SettingsGroup>
     </>

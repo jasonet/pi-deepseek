@@ -177,6 +177,7 @@ export interface DesktopAppState {
   readonly sidebarCollapsed: boolean;
   readonly enableTransparency: boolean;
   readonly locale: Locale;
+  readonly autoUpdateEnabled: boolean;
   readonly revision: number;
   readonly lastError?: string;
 }
@@ -222,6 +223,7 @@ export function createEmptyDesktopAppState(): DesktopAppState {
     sidebarCollapsed: false,
     enableTransparency: false,
     locale: "en",
+    autoUpdateEnabled: true,
     revision: 0,
   };
 }

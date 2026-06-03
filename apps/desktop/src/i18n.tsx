@@ -179,6 +179,10 @@ const translations: Record<Locale, Record<string, string>> = {
     "settings.notifications.attentionNeeded": "Attention needed",
     "settings.notifications.attentionNeededDesc": "Notify when an active session needs user input.",
     "settings.notifications.unsupported": "Notifications are not supported on this system.",
+    "settings.notifications.update": "Auto Update",
+    "settings.notifications.updateDesc": "Manage automatic updates from GitHub releases.",
+    "settings.notifications.autoUpdate": "Enable auto update",
+    "settings.notifications.autoUpdateDesc": "Check GitHub releases every 4 hours and auto-install new versions.",
 
     // Settings → Skills
     "settings.skills": "Skills",

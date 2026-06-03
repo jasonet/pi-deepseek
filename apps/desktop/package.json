@@ -1,7 +1,7 @@
 {
   "name": "@pi-gui/desktop",
   "private": true,
-  "version": "0.2.3",
+  "version": "0.2.4",
   "author": "Yiding by HKEZ",
   "license": "MIT",
   "description": "Deepseek GUI app for elegant pi coding agent",
@@ -92,6 +92,7 @@
     "brace-expansion": "^5.0.2",
     "chalk": "^5.5.0",
     "data-uri-to-buffer": "^4.0.1",
+    "electron-updater": "^6.8.3",
     "glob": "^13.0.1",
     "highlight.js": "^11.11.1",
     "hosted-git-info": "^9.0.2",

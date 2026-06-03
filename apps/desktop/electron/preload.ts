@@ -190,6 +190,16 @@ contextBridge.exposeInMainWorld("piApp", {
     ipcRenderer.invoke(desktopIpc.getLocale) as Promise<string>,
   getProviderBalance: (providerId: string) =>
     ipcRenderer.invoke(desktopIpc.getProviderBalance, providerId) as Promise<{ balance: string } | { error: string }>,
+  checkForUpdate: () =>
+    ipcRenderer.invoke(desktopIpc.checkForUpdate),
+  downloadUpdate: () =>
+    ipcRenderer.invoke(desktopIpc.downloadUpdate),
+  installUpdate: () =>
+    ipcRenderer.invoke(desktopIpc.installUpdate),
+  setAutoUpdateEnabled: (enabled: boolean) =>
+    ipcRenderer.invoke(desktopIpc.setAutoUpdateEnabled, enabled),
+  getAutoUpdateEnabled: () =>
+    ipcRenderer.invoke(desktopIpc.getAutoUpdateEnabled),
   ensureTerminalPanel: (workspaceId: string, terminalScopeId: string, size?: Partial<TerminalSize>) =>
     ipcRenderer.invoke(desktopIpc.terminalEnsurePanel, workspaceId, terminalScopeId, size) as Promise<TerminalPanelSnapshot>,
   createTerminalSession: (workspaceId: string, terminalScopeId: string, size?: Partial<TerminalSize>) =>

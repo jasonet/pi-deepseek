@@ -74,6 +74,11 @@ export const desktopIpc = {
   setLocale: "pi-gui:set-locale",
   getLocale: "pi-gui:get-locale",
   getProviderBalance: "pi-gui:get-provider-balance",
+  checkForUpdate: "pi-gui:check-for-update",
+  downloadUpdate: "pi-gui:download-update",
+  installUpdate: "pi-gui:install-update",
+  setAutoUpdateEnabled: "pi-gui:set-auto-update-enabled",
+  getAutoUpdateEnabled: "pi-gui:get-auto-update-enabled",
   terminalEnsurePanel: "pi-gui:terminal-ensure-panel",
   terminalCreateSession: "pi-gui:terminal-create-session",
   terminalSetActiveSession: "pi-gui:terminal-set-active-session",
@@ -281,6 +286,11 @@ export interface PiDesktopApi {
   setLocale(locale: string): Promise<DesktopAppState>;
   getLocale(): Promise<string>;
   getProviderBalance(providerId: string): Promise<{ balance: string } | { error: string }>;
+  checkForUpdate(): Promise<{ status: string; current?: string; latest?: string; message?: string }>;
+  downloadUpdate(): Promise<{ status: string; message?: string }>;
+  installUpdate(): Promise<void>;
+  setAutoUpdateEnabled(enabled: boolean): Promise<boolean>;
+  getAutoUpdateEnabled(): Promise<boolean>;
   ensureTerminalPanel(
     workspaceId: string,
     terminalScopeId: string,

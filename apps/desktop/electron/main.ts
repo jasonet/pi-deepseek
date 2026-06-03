@@ -42,8 +42,11 @@ import type {
 import type { SessionDriverEvent } from "@pi-gui/session-driver";
 import type { GenerateThreadTitleOptions } from "@pi-gui/pi-sdk-driver";
 import type { WorkspaceRef } from "@pi-gui/session-driver";
+import { autoUpdater } from "electron-updater";
 
 const isDev = Boolean(process.env.ELECTRON_RENDERER_URL);
+let autoUpdateEnabled = true;
+let autoUpdateInterval: ReturnType<typeof setInterval> | undefined;
 const windowTestMode = resolveWindowTestMode();
 const devReloadMarkersEnabled = process.env.PI_APP_DEV_RELOAD_MARKERS === "1";
 let store: DesktopAppStore;
@@ -147,6 +150,40 @@ async function checkPiCliAndPrompt(): Promise<void> {
 
   if (result.response === 0) {
     clipboard.writeText(PI_INSTALL_COMMAND);
+  }
+}
+
+function startAutoUpdateChecker(): void {
+  if (isDev || autoUpdateInterval) return;
+  autoUpdateInterval = setInterval(async () => {
+    try {
+      const result = await autoUpdater.checkForUpdates();
+      if (result?.updateInfo?.version) {
+        const latest = result.updateInfo.version;
+        if (latest !== app.getVersion()) {
+          await autoUpdater.downloadUpdate();
+        }
+      }
+    } catch {}
+  }, 4 * 60 * 60 * 1000); // Check every 4 hours
+  // Also check immediately on first start
+  setTimeout(async () => {
+    try {
+      const result = await autoUpdater.checkForUpdates();
+      if (result?.updateInfo?.version) {
+        const latest = result.updateInfo.version;
+        if (latest !== app.getVersion()) {
+          await autoUpdater.downloadUpdate();
+        }
+      }
+    } catch {}
+  }, 30000); // Wait 30s after startup
+}
+
+function stopAutoUpdateChecker(): void {
+  if (autoUpdateInterval) {
+    clearInterval(autoUpdateInterval);
+    autoUpdateInterval = undefined;
   }
 }
 
@@ -475,6 +512,7 @@ app.whenReady().then(async () => {
     }
   });
   installApplicationMenu();
+  startAutoUpdateChecker();
   if (process.env.PI_APP_TEST_MODE) {
     Object.assign(globalThis, {
       __PI_APP_TEST_HOOKS: {
@@ -647,6 +685,45 @@ app.whenReady().then(async () => {
       return { error: e.message };
     }
   });
+  ipcMain.handle(desktopIpc.checkForUpdate, async () => {
+    if (isDev) return { status: "dev" };
+    try {
+      const result = await autoUpdater.checkForUpdates();
+      if (result?.updateInfo?.version) {
+        const latest = result.updateInfo.version;
+        const current = app.getVersion();
+        if (latest !== current) {
+          return { status: "available", current, latest };
+        }
+        return { status: "up-to-date", current };
+      }
+      return { status: "error", message: "No update info" };
+    } catch (e: any) {
+      return { status: "error", message: e.message };
+    }
+  });
+  ipcMain.handle(desktopIpc.downloadUpdate, async () => {
+    if (isDev) return { status: "dev" };
+    try {
+      await autoUpdater.downloadUpdate();
+      return { status: "downloaded" };
+    } catch (e: any) {
+      return { status: "error", message: e.message };
+    }
+  });
+  ipcMain.handle(desktopIpc.installUpdate, async () => {
+    autoUpdater.quitAndInstall();
+  });
+  ipcMain.handle(desktopIpc.setAutoUpdateEnabled, async (_event, enabled: boolean) => {
+    autoUpdateEnabled = enabled;
+    if (enabled) {
+      startAutoUpdateChecker();
+    } else {
+      stopAutoUpdateChecker();
+    }
+    return enabled;
+  });
+  ipcMain.handle(desktopIpc.getAutoUpdateEnabled, async () => autoUpdateEnabled);
   ipcMain.handle(desktopIpc.terminalEnsurePanel, (event, workspaceId: string, terminalScopeId: string, size) => {
     return getTerminalService().ensurePanel(event.sender, workspaceId, terminalScopeId, size);
   });

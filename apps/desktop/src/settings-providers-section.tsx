@@ -29,6 +29,17 @@ export function SettingsProvidersSection({
   const connectedProviders = providers.filter((p) => p.hasAuth);
   const oauthProviders = providers.filter((p) => p.oauthSupported);
   const filteredProviders = filterProviders(providers, providerQuery);
+  // Sorted all-providers list: API key first (connected → available), external last, hide OAuth
+  const sortedAllProviders = filterProviders(
+    providers.filter((p) => !p.oauthSupported),
+    providerQuery,
+  ).sort((a, b) => {
+    const rank = (p: typeof a) => {
+      if (p.apiKeySetupSupported) return p.hasAuth ? 0 : 1;
+      return 2;
+    };
+    return rank(a) - rank(b) || a.name.localeCompare(b.name);
+  });
   const apiKeyProvider = apiKeyProviderId ? providers.find((provider) => provider.id === apiKeyProviderId) : undefined;
 
   useEffect(() => {
@@ -112,7 +123,7 @@ export function SettingsProvidersSection({
         <details className="settings-disclosure" open>
           <summary className="settings-disclosure__summary">
             <span>{t("settings.providers.browseAll")}</span>
-            <span>{filteredProviders.length}</span>
+            <span>{sortedAllProviders.length}</span>
           </summary>
           <div className="settings-disclosure__body">
             <input
@@ -123,7 +134,7 @@ export function SettingsProvidersSection({
               onChange={(event) => setProviderQuery(event.target.value)}
             />
             <div className="settings-list" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
-              {filteredProviders.map((provider) => (
+              {sortedAllProviders.map((provider) => (
                 <ProviderRow
                   key={provider.id}
                   provider={provider}

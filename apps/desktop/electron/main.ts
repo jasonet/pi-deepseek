@@ -459,6 +459,18 @@ async function startOpenDesignWeb(config: OpenDesignConfig): Promise<OpenDesignS
     };
   }
 
+  // Auto-install dependencies and build required packages if missing
+  const pnpmDir = path.join(root, "node_modules", ".pnpm");
+  if (!existsSync(pnpmDir)) {
+    console.log("[Open Design] Installing dependencies...");
+    spawnSync(pnpmBinary, ["install"], { cwd: root, stdio: "pipe", timeout: 180_000 });
+  }
+  const componentsDist = path.join(root, "packages", "components", "dist");
+  if (existsSync(path.join(root, "packages", "components", "package.json")) && !existsSync(componentsDist)) {
+    console.log("[Open Design] Building components...");
+    spawnSync(pnpmBinary, ["--filter", "@open-design/components", "build"], { cwd: root, stdio: "pipe", timeout: 60_000 });
+  }
+
   spawnDetached(pnpmBinary, ["--filter", "@open-design/web", "dev", "--hostname", webUrl.hostname, "--port", webPort], {
     cwd: root,
     env: {

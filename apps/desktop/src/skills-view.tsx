@@ -23,7 +23,7 @@ export function SkillsView({ workspace, runtime, onRefresh, onOpenSkillFolder, o
   const [query, setQuery] = useState("");
   const [selectedSkillPath, setSelectedSkillPath] = useState<string | undefined>();
   const skills = runtime?.skills ?? [];
-  const desc = (skill: RuntimeSkillRecord) => getSkillDescription(skill.name, locale) ?? skill.description;
+  const desc = (skill: RuntimeSkillRecord) => getSkillDescription(skill.name, locale) ?? getSkillDescription(skill.name.toLowerCase().replace(/\s+/g, "-"), locale) ?? skill.description;
 
   const filteredSkills = useMemo(() => {
     const n = query.trim().toLowerCase();

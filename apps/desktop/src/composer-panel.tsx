@@ -8,6 +8,7 @@ import type {
   ComposerSlashOption,
   ComposerSlashOptionEmptyState,
 } from "./composer-commands";
+import { useT } from "./i18n";
 import { ComposerSurface } from "./composer-surface";
 import { ModelOnboardingNoticeBanner } from "./model-onboarding-notice";
 import type { ModelOnboardingState, ModelOnboardingSettingsSection } from "./model-onboarding";
@@ -111,6 +112,7 @@ export function ComposerPanel({
   extensionDockExpanded,
   onToggleExtensionDock,
 }: ComposerPanelProps) {
+  const t = useT();
   const hasComposerInput = composerDraft.trim().length > 0 || attachments.length > 0;
   const primaryActionIsStop = selectedSession.status === "running" && !hasComposerInput;
 
@@ -154,7 +156,7 @@ export function ComposerPanel({
           onSelectMention={onSelectMention}
           textareaLabel="Composer"
           textareaTestId="composer"
-          textareaPlaceholder="Ask pi to inspect the repo, run a fix, or continue the current thread..."
+          textareaPlaceholder={t("composer.placeholder")}
           extensionDock={extensionDock}
           extensionDockExpanded={extensionDockExpanded}
           onToggleExtensionDock={onToggleExtensionDock}

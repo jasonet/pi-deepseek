@@ -11,6 +11,7 @@ import {
 } from "./composer-commands";
 import { ComposerSurface } from "./composer-surface";
 import { ModelOnboardingNoticeBanner } from "./model-onboarding-notice";
+import { useT } from "./i18n";
 import type { ModelOnboardingState, ModelOnboardingSettingsSection } from "./model-onboarding";
 import { ModelSelector } from "./model-selector";
 
@@ -99,6 +100,7 @@ export function NewThreadView({
   onRemoveAttachment,
   onSubmit,
 }: NewThreadViewProps) {
+  const t = useT();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const workspace = workspaces.find((entry) => entry.id === selectedWorkspaceId);
 
@@ -192,7 +194,7 @@ export function NewThreadView({
               textareaLabel="New thread prompt"
               textareaTestId="new-thread-composer"
               textareaClassName="new-thread__textarea"
-              textareaPlaceholder="Ask pi anything, use / for commands and skills"
+              textareaPlaceholder={t("composer.placeholder")}
               footer={(
                 <NewThreadComposerFooter
                   runtime={runtime}

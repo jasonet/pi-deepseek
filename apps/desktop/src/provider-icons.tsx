@@ -77,8 +77,14 @@ export function providerColor(providerId: string): string {
 }
 
 function providerIconUrl(providerId: string): string | null {
-  const name = PROVIDER_ICON_NAMES[providerId];
-  return name ? `${LOBEHUB_CDN_BASE}/${name}.svg` : null;
+  // 1. Exact match
+  if (PROVIDER_ICON_NAMES[providerId]) return `${LOBEHUB_CDN_BASE}/${PROVIDER_ICON_NAMES[providerId]}.svg`;
+  // 2. Try prefix before first dash (e.g., azure-openai-responses → azure)
+  const prefix = providerId.split("-")[0];
+  const prefixName = PROVIDER_ICON_NAMES[prefix];
+  if (prefixName) return `${LOBEHUB_CDN_BASE}/${prefixName}.svg`;
+  // 3. Try the provider ID itself as a direct icon name
+  return `${LOBEHUB_CDN_BASE}/${providerId}.svg`;
 }
 
 export function ProviderIcon({ provider, size = 32 }: {

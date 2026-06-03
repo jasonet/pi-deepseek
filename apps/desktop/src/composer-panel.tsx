@@ -115,8 +115,8 @@ export function ComposerPanel({
   const t = useT();
   const hasComposerInput = composerDraft.trim().length > 0 || attachments.length > 0;
   const primaryActionIsStop = selectedSession.status === "running" && !hasComposerInput;
-  const hasOpenDesign = runtime?.extensions?.some((e) => e.displayName === "Open Design" || e.sourceInfo?.source?.includes("pi-open-design"));
-  const [workMode, setWorkMode] = useState<string>(hasOpenDesign ? "pi-agent" : "pi-agent");
+  const hasOpenDesign = runtime?.extensions?.some((e) => e.displayName === "Open Design" || e.sourceInfo?.source?.includes("pi-open-design") || e.path?.includes("pi-open-design"));
+  const [workMode, setWorkMode] = useState<string>("pi-agent");
 
   return (
     <footer className="composer">

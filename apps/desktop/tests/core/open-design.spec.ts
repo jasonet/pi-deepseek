@@ -24,7 +24,7 @@ test("opens the Open Design workspace from the sidebar", async () => {
 
     await expect(window.getByRole("heading", { name: "Open Design" })).toBeVisible();
     await expect(window.getByText("Run the Open Design 0.9 environment inside Pi GUI.")).toBeVisible();
-    await expect(window.getByRole("button", { name: "Start Open Design" })).toBeVisible();
+    await expect(window.locator(".open-design-status")).toBeVisible();
   } finally {
     await harness.close();
   }

@@ -16,17 +16,21 @@ const PROVIDER_ICON_NAMES: Record<string, string> = {
   zai: "zai",
   huggingface: "huggingface",
   fireworks: "fireworks",
-  moonshotai: "moonshotai",
+  moonshotai: "kimi",
   minimax: "minimax",
   opencode: "opencode",
-  "opencode-go": "opencode-go",
+  "opencode-go": "opencode",
   "vercel-ai-gateway": "vercel",
-  "amazon-bedrock": "amazon-bedrock",
-  "azure-openai-responses": "azure-openai",
+  "amazon-bedrock": "aws",
+  aws: "aws",
+  "azure-openai-responses": "azure",
+  azure: "azure",
   "kimi-coding": "kimi",
-  "google-vertex": "google-vertex",
+  kimi: "kimi",
+  "google-vertex": "google",
   "cloudflare-ai-gateway": "cloudflare",
-  "cloudflare-workers-ai": "cloudflare-workers",
+  "cloudflare-workers-ai": "cloudflare",
+  cloudflare: "cloudflare",
   xiaomi: "xiaomi",
   github: "github",
   codex: "codex",
@@ -40,9 +44,13 @@ const PROVIDER_ICON_NAMES: Record<string, string> = {
   baichuan: "baichuan",
   deepbricks: "deepbricks",
   zhipu: "zhipu",
-  moonshot: "moonshotai",
+  moonshot: "kimi",
   stepfun: "stepfun",
   qwen: "qwen",
+  gemini: "google",
+  claude: "anthropic",
+  meta: "meta",
+  microsoft: "microsoft",
 };
 
 const PROVIDER_COLORS: Record<string, string> = {
@@ -79,11 +87,14 @@ export function providerColor(providerId: string): string {
 function providerIconUrl(providerId: string): string | null {
   // 1. Exact match
   if (PROVIDER_ICON_NAMES[providerId]) return `${LOBEHUB_CDN_BASE}/${PROVIDER_ICON_NAMES[providerId]}.svg`;
-  // 2. Try prefix before first dash (e.g., azure-openai-responses → azure)
+  // 2. Try prefix before first dash
   const prefix = providerId.split("-")[0];
-  const prefixName = PROVIDER_ICON_NAMES[prefix];
-  if (prefixName) return `${LOBEHUB_CDN_BASE}/${prefixName}.svg`;
-  // 3. Try the provider ID itself as a direct icon name
+  if (PROVIDER_ICON_NAMES[prefix]) return `${LOBEHUB_CDN_BASE}/${PROVIDER_ICON_NAMES[prefix]}.svg`;
+  // 3. Try fuzzy: check if providerId contains known brand names
+  for (const [key, icon] of Object.entries(PROVIDER_ICON_NAMES)) {
+    if (key.length > 2 && providerId.includes(key)) return `${LOBEHUB_CDN_BASE}/${icon}.svg`;
+  }
+  // 4. Direct URL attempt
   return `${LOBEHUB_CDN_BASE}/${providerId}.svg`;
 }
 

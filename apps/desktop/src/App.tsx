@@ -1940,6 +1940,7 @@ export default function App() {
 
   if (snapshot.activeView === "skills") {
     return (
+      <LocaleProvider locale={snapshot.locale}>
       <SecondarySurface onBack={() => setActiveView("threads")} testId="skills-surface" title="Skills">
         <div className="surface-toolbar">
           <label className="surface-toolbar__field">
@@ -1976,11 +1977,13 @@ export default function App() {
           }
         />
       </SecondarySurface>
+      </LocaleProvider>
     );
   }
 
   if (snapshot.activeView === "extensions") {
     return (
+      <LocaleProvider locale={snapshot.locale}>
       <SecondarySurface onBack={() => setActiveView("threads")} testId="extensions-surface" title="Extensions">
         <div className="surface-toolbar">
           <label className="surface-toolbar__field">
@@ -2011,6 +2014,7 @@ export default function App() {
           onToggleExtension={handleToggleExtension}
         />
       </SecondarySurface>
+      </LocaleProvider>
     );
   }
 

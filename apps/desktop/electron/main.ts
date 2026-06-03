@@ -231,7 +231,7 @@ async function startOpenDesign(): Promise<OpenDesignStatus> {
     return { ...currentStatus, reachable: false, message: `Open Design binary "${binary}" not found. Install it or set OPEN_DESIGN_OD_BIN.` };
   }
 
-  const child = spawn(binary, ["daemon", "--headless", "--serve-web", "--no-open", "--port", port], {
+  const child = spawn(binary, ["--port", port, "--no-open"], {
     detached: true,
     env: { ...process.env, OD_PORT: port },
     stdio: ["ignore", "pipe", "pipe"],

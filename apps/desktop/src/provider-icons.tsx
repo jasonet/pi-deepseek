@@ -65,48 +65,46 @@ export function providerColor(providerId: string): string {
 }
 
 function providerIconUrl(providerId: string): string | null {
-  // 1. Try PNG with -color suffix
+  // 1. Try PNG with -color suffix first, then without
   const name = ICON_NAMES[providerId] || providerId.split("-")[0];
   const finalName = ICON_NAMES[name] || name;
-  const pngUrl = `${LOBEHUB_PNG_BASE}/${finalName}-color.png`;
-  const svgUrl = `${LOBEHUB_SVG_BASE}/${finalName}.svg`;
-  // Return both: PNG first (colored), SVG fallback
-  return pngUrl;
+  // Return color PNG URL; fallback handled by onError in component
+  return `${LOBEHUB_PNG_BASE}/${finalName}-color.png`;
 }
 
 export function ProviderIcon({ provider, size = 32 }: {
   readonly provider: RuntimeSnapshot["providers"][number];
   readonly size?: number;
 }) {
-  const iconUrl = providerIconUrl(provider.id);
-  const svgFallback = iconUrl?.replace("-color.png", "").replace(LOBEHUB_PNG_BASE, LOBEHUB_SVG_BASE) + ".svg";
-  const [useSvg, setUseSvg] = useState(false);
-  const [imgError, setImgError] = useState(false);
+  const name = ICON_NAMES[provider.id] || provider.id.split("-")[0];
+  const finalName = ICON_NAMES[name] || name;
+  // Fallback chain: color PNG → plain PNG → SVG → initials
+  const urls = [
+    `${LOBEHUB_PNG_BASE}/${finalName}-color.png`,
+    `${LOBEHUB_PNG_BASE}/${finalName}.png`,
+    `${LOBEHUB_SVG_BASE}/${finalName}.svg`,
+  ];
+  const [urlIndex, setUrlIndex] = useState(0);
+  const [failed, setFailed] = useState(false);
 
-  if (iconUrl && !imgError) {
+  if (!failed && urlIndex < urls.length) {
     return (
       <img
-        src={useSvg ? svgFallback : iconUrl}
+        src={urls[urlIndex]}
         alt={provider.name}
         width={size}
         height={size}
         style={{ width: size, height: size, flexShrink: 0, borderRadius: 6 }}
-        onError={() => {
-          if (!useSvg) {
-            setUseSvg(true);
-          } else {
-            setImgError(true);
-          }
-        }}
+        onError={() => setUrlIndex(urlIndex + 1)}
       />
     );
   }
 
-  // Fallback: colored initials
+  // Final fallback: colored initials
   const color = providerColor(provider.id);
-  const name = provider.name || provider.id;
-  const words = name.split(/[\s-]+/);
-  const initials = words.length >= 2 ? (words[0][0] + words[1][0]).toUpperCase() : name.slice(0, 2).toUpperCase();
+  const pname = provider.name || provider.id;
+  const words = pname.split(/[\s-]+/);
+  const initials = words.length >= 2 ? (words[0][0] + words[1][0]).toUpperCase() : pname.slice(0, 2).toUpperCase();
   const fontSize = size < 24 ? 10 : size < 32 ? 12 : 14;
 
   return (

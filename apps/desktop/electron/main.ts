@@ -14,7 +14,7 @@ import {
 import { randomUUID } from "node:crypto";
 import { execSync, spawn, spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { readFile, stat } from "node:fs/promises";
+import { readFile, writeFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { DesktopAppStore } from "./app-store";
@@ -298,6 +298,39 @@ async function checkPiCliAndPrompt(): Promise<void> {
   if (result.response === 0) {
     clipboard.writeText(PI_INSTALL_COMMAND);
   }
+}
+
+async function registerBuiltInPlugins(): Promise<void> {
+  // Auto-register Pi-OpenDesign plugin if present in the app bundle
+  const pluginRoots = [
+    path.join(app.getAppPath(), "..", "..", "..", "..", ".pi", "extensions", "pi-open-design"),
+    path.join(process.cwd(), ".pi", "extensions", "pi-open-design"),
+    path.join(require("os").homedir(), ".pi", "extensions", "pi-open-design"),
+  ];
+
+  let pluginPath = "";
+  for (const root of pluginRoots) {
+    if (existsSync(path.join(root, "package.json"))) {
+      pluginPath = root;
+      break;
+    }
+  }
+  if (!pluginPath) return;
+
+  // Register in ~/.pi/agent/settings.json
+  const settingsPath = path.join(require("os").homedir(), ".pi", "agent", "settings.json");
+  try {
+    const raw = existsSync(settingsPath) ? await readFile(settingsPath, "utf8") : "{}";
+    const settings = JSON.parse(raw) as Record<string, unknown>;
+    const packages = Array.isArray(settings.packages) ? [...settings.packages] : [];
+    const pluginSource = pluginPath;
+    if (!packages.some((p: unknown) => typeof p === "string" && (p === pluginSource || p.endsWith("/pi-open-design")))) {
+      packages.push(pluginSource);
+      settings.packages = packages;
+      await writeFile(settingsPath, JSON.stringify(settings, null, 2) + "\n");
+      console.log(`[Pi-Deepseek] Auto-registered plugin: ${pluginSource}`);
+    }
+  } catch { /* silently skip if can't register */ }
 }
 
 function startAutoUpdateChecker(): void {
@@ -650,6 +683,9 @@ app.whenReady().then(async () => {
 
   // Check if pi CLI is installed; prompt user if not.
   await checkPiCliAndPrompt();
+
+  // Auto-register built-in plugins
+  await registerBuiltInPlugins();
 
   integratedTerminalShell = (await store.getState()).integratedTerminalShell;
   stopPruningTerminals = store.subscribe((state) => {

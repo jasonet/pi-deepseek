@@ -23,6 +23,8 @@ extraResources:
     to: icon.png
   - from: resources/icon.ico
     to: icon.ico
+  - from: resources/providers
+    to: providers
 
 asar:
   smartUnpack: false

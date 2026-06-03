@@ -1,106 +1,118 @@
 import { useState } from "react";
 import type { RuntimeSnapshot } from "@pi-gui/session-driver/runtime-types";
 
-const LOBEHUB_PNG_BASE = "https://raw.githubusercontent.com/lobehub/lobe-icons/refs/heads/master/packages/static-png/light";
-const LOBEHUB_SVG_BASE = "https://unpkg.com/@lobehub/icons-static-svg@1.91.0/icons";
+// Local bundled provider icons
+import anthropicPng from "../resources/providers/claude.png";
+import azurePng from "../resources/providers/azureai.png";
+import baichuanPng from "../resources/providers/baichuan.png";
+import bedrockPng from "../resources/providers/bedrock.png";
+import cerebrasPng from "../resources/providers/cerebras.png";
+import cloudflarePng from "../resources/providers/cloudflare.png";
+import codexPng from "../resources/providers/codex.png";
+import coherePng from "../resources/providers/cohere.png";
+import deepseekPng from "../resources/providers/deepseek.png";
+import fireworksPng from "../resources/providers/fireworks.png";
+import githubPng from "../resources/providers/github.png";
+import googlePng from "../resources/providers/google.png";
+import groqPng from "../resources/providers/groq.png";
+import huggingfacePng from "../resources/providers/huggingface.png";
+import kimiPng from "../resources/providers/kimi.png";
+import metaPng from "../resources/providers/meta.png";
+import microsoftPng from "../resources/providers/microsoft.png";
+import minimaxPng from "../resources/providers/minimax.png";
+import mistralPng from "../resources/providers/mistral.png";
+import novitaPng from "../resources/providers/novita.png";
+import openaiPng from "../resources/providers/openai.png";
+import opencodePng from "../resources/providers/opencode.png";
+import openrouterPng from "../resources/providers/openrouter.png";
+import perplexityPng from "../resources/providers/perplexity.png";
+import qwenPng from "../resources/providers/qwen.png";
+import stepfunPng from "../resources/providers/stepfun.png";
+import togetherPng from "../resources/providers/together.png";
+import vercelPng from "../resources/providers/vercel.png";
+import xaiPng from "../resources/providers/xai.png";
+import xiaomiPng from "../resources/providers/xiaomi.png";
+import zaiPng from "../resources/providers/zai.png";
+import zhipuPng from "../resources/providers/zhipu.png";
 
-const ICON_NAMES: Record<string, string> = {
-  deepseek: "deepseek",
-  anthropic: "anthropic",
-  openai: "openai",
-  google: "google",
-  groq: "groq",
-  mistral: "mistral",
-  cerebras: "cerebras",
-  openrouter: "openrouter",
-  xai: "xai",
-  zai: "zai",
-  huggingface: "huggingface",
-  fireworks: "fireworks",
-  moonshotai: "kimi",
-  minimax: "minimax",
-  opencode: "opencode",
-  "opencode-go": "opencode",
-  "vercel-ai-gateway": "vercel",
-  "amazon-bedrock": "bedrock",
-  aws: "bedrock",
-  "azure-openai-responses": "azureai",
-  azure: "azureai",
-  "kimi-coding": "kimi",
-  kimi: "kimi",
-  "google-vertex": "google",
-  "cloudflare-ai-gateway": "cloudflare",
-  "cloudflare-workers-ai": "cloudflare",
-  cloudflare: "cloudflare",
-  xiaomi: "xiaomimimo",
-  github: "github",
-  codex: "codex",
-  "github-copilot": "github",
-  perplexity: "perplexity",
-  cohere: "cohere",
-  together: "together",
-  novita: "novita",
-  siliconflow: "siliconflow",
-  "01-ai": "01ai",
-  baichuan: "baichuan",
-  deepbricks: "deepbricks",
-  zhipu: "zhipu",
-  moonshot: "kimi",
-  stepfun: "stepfun",
-  qwen: "qwen",
-  gemini: "google",
-  claude: "anthropic",
-  meta: "meta",
-  microsoft: "microsoft",
+const PROVIDER_PNG: Record<string, string> = {
+  anthropic: anthropicPng,
+  azure: azurePng,
+  "azure-openai-responses": azurePng,
+  baichuan: baichuanPng,
+  bedrock: bedrockPng,
+  "amazon-bedrock": bedrockPng,
+  cerebras: cerebrasPng,
+  cloudflare: cloudflarePng,
+  "cloudflare-ai-gateway": cloudflarePng,
+  "cloudflare-workers-ai": cloudflarePng,
+  codex: codexPng,
+  cohere: coherePng,
+  deepseek: deepseekPng,
+  fireworks: fireworksPng,
+  github: githubPng,
+  "github-copilot": githubPng,
+  google: googlePng,
+  "google-vertex": googlePng,
+  groq: groqPng,
+  huggingface: huggingfacePng,
+  kimi: kimiPng,
+  "kimi-coding": kimiPng,
+  moonshotai: kimiPng,
+  meta: metaPng,
+  microsoft: microsoftPng,
+  minimax: minimaxPng,
+  "minimax-cn": minimaxPng,
+  mistral: mistralPng,
+  novita: novitaPng,
+  openai: openaiPng,
+  opencode: opencodePng,
+  "opencode-go": opencodePng,
+  openrouter: openrouterPng,
+  perplexity: perplexityPng,
+  qwen: qwenPng,
+  stepfun: stepfunPng,
+  together: togetherPng,
+  vercel: vercelPng,
+  "vercel-ai-gateway": vercelPng,
+  xai: xaiPng,
+  xiaomi: xiaomiPng,
+  zai: zaiPng,
+  zhipu: zhipuPng,
+  claude: anthropicPng,
+  gemini: googlePng,
 };
 
 export function providerColor(providerId: string): string {
   const colors: Record<string, string> = {
     deepseek: "#4D6BFE", anthropic: "#D97757", openai: "#10A37F",
     google: "#4285F4", groq: "#F55036", mistral: "#FF6F00",
-    cerebras: "#E4234F", openrouter: "#6C3BD4", xai: "#111111", zai: "#0066FF",
-    huggingface: "#FFBD45", fireworks: "#F92672",
   };
   return colors[providerId] ?? "#6b7280";
-}
-
-function providerIconUrl(providerId: string): string | null {
-  // 1. Try PNG with -color suffix first, then without
-  const name = ICON_NAMES[providerId] || providerId.split("-")[0];
-  const finalName = ICON_NAMES[name] || name;
-  // Return color PNG URL; fallback handled by onError in component
-  return `${LOBEHUB_PNG_BASE}/${finalName}-color.png`;
 }
 
 export function ProviderIcon({ provider, size = 32 }: {
   readonly provider: RuntimeSnapshot["providers"][number];
   readonly size?: number;
 }) {
-  const name = ICON_NAMES[provider.id] || provider.id.split("-")[0];
-  const finalName = ICON_NAMES[name] || name;
-  // Fallback chain: color PNG → plain PNG → SVG → initials
-  const urls = [
-    `${LOBEHUB_PNG_BASE}/${finalName}-color.png`,
-    `${LOBEHUB_PNG_BASE}/${finalName}.png`,
-    `${LOBEHUB_SVG_BASE}/${finalName}.svg`,
-  ];
-  const [urlIndex, setUrlIndex] = useState(0);
-  const [failed, setFailed] = useState(false);
+  const pngUrl = PROVIDER_PNG[provider.id] ?? 
+    PROVIDER_PNG[provider.id.split("-")[0]];
+  const [imgError, setImgError] = useState(false);
 
-  if (!failed && urlIndex < urls.length) {
+  if (pngUrl && !imgError) {
     return (
       <img
-        src={urls[urlIndex]}
+        src={pngUrl}
         alt={provider.name}
         width={size}
         height={size}
         style={{ width: size, height: size, flexShrink: 0, borderRadius: 6 }}
-        onError={() => setUrlIndex(urlIndex + 1)}
+        onError={() => setImgError(true)}
       />
     );
   }
 
-  // Final fallback: colored initials
+  // Fallback: colored initials
   const color = providerColor(provider.id);
   const pname = provider.name || provider.id;
   const words = pname.split(/[\s-]+/);

@@ -79,6 +79,10 @@ export const desktopIpc = {
   installUpdate: "pi-gui:install-update",
   setAutoUpdateEnabled: "pi-gui:set-auto-update-enabled",
   getAutoUpdateEnabled: "pi-gui:get-auto-update-enabled",
+  setSkipAutoTitle: "pi-gui:set-skip-auto-title",
+  getOpenDesignStatus: "pi-gui:get-open-design-status",
+  startOpenDesign: "pi-gui:start-open-design",
+  openOpenDesignExternal: "pi-gui:open-open-design-external",
   terminalEnsurePanel: "pi-gui:terminal-ensure-panel",
   terminalCreateSession: "pi-gui:terminal-create-session",
   terminalSetActiveSession: "pi-gui:terminal-set-active-session",
@@ -176,6 +180,14 @@ export interface TerminalExitEvent {
 export interface TerminalErrorEvent {
   readonly terminalId: string;
   readonly message: string;
+}
+
+export interface OpenDesignStatus {
+  readonly daemonUrl: string;
+  readonly webUrl: string;
+  readonly reachable: boolean;
+  readonly version?: string;
+  readonly message?: string;
 }
 
 export interface DesktopShortcutInput {
@@ -291,6 +303,10 @@ export interface PiDesktopApi {
   installUpdate(): Promise<void>;
   setAutoUpdateEnabled(enabled: boolean): Promise<boolean>;
   getAutoUpdateEnabled(): Promise<boolean>;
+  setSkipAutoTitle(enabled: boolean): Promise<DesktopAppState>;
+  getOpenDesignStatus(): Promise<OpenDesignStatus>;
+  startOpenDesign(): Promise<OpenDesignStatus>;
+  openOpenDesignExternal(): Promise<void>;
   ensureTerminalPanel(
     workspaceId: string,
     terminalScopeId: string,

@@ -3,6 +3,7 @@ import { PRELOAD_DEV_RELOAD_MARKER } from "./dev-reload-preload-probe";
 import {
   desktopIpc,
   type DesktopNotificationPermissionStatus,
+  type OpenDesignStatus,
   type PiDesktopCommand,
   type TerminalDataEvent,
   type TerminalErrorEvent,
@@ -200,6 +201,14 @@ contextBridge.exposeInMainWorld("piApp", {
     ipcRenderer.invoke(desktopIpc.setAutoUpdateEnabled, enabled),
   getAutoUpdateEnabled: () =>
     ipcRenderer.invoke(desktopIpc.getAutoUpdateEnabled),
+  setSkipAutoTitle: (skip: boolean) =>
+    ipcRenderer.invoke(desktopIpc.setSkipAutoTitle, skip) as Promise<boolean>,
+  getOpenDesignStatus: () =>
+    ipcRenderer.invoke(desktopIpc.getOpenDesignStatus) as Promise<OpenDesignStatus>,
+  startOpenDesign: () =>
+    ipcRenderer.invoke(desktopIpc.startOpenDesign) as Promise<OpenDesignStatus>,
+  openOpenDesignExternal: () =>
+    ipcRenderer.invoke(desktopIpc.openOpenDesignExternal) as Promise<void>,
   ensureTerminalPanel: (workspaceId: string, terminalScopeId: string, size?: Partial<TerminalSize>) =>
     ipcRenderer.invoke(desktopIpc.terminalEnsurePanel, workspaceId, terminalScopeId, size) as Promise<TerminalPanelSnapshot>,
   createTerminalSession: (workspaceId: string, terminalScopeId: string, size?: Partial<TerminalSize>) =>

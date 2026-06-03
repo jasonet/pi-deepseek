@@ -29,6 +29,7 @@ import {
 import { deriveModelOnboardingState } from "./model-onboarding";
 import { SkillsView } from "./skills-view";
 import { ExtensionsView } from "./extensions-view";
+import { OpenDesignView } from "./open-design-view";
 import { SettingsView, type SettingsSection } from "./settings-view";
 import { SecondarySurface } from "./secondary-surface";
 import { NewThreadView } from "./new-thread-view";
@@ -110,7 +111,7 @@ function isEventInsideTerminal(event: globalThis.KeyboardEvent): boolean {
 }
 
 function canTogglePrimarySidebar(view: AppView | undefined): boolean {
-  return view === "threads" || view === "new-thread";
+  return view === "threads" || view === "new-thread" || view === "open-design";
 }
 
 function useRunningLabel(startedAt: string | undefined) {
@@ -197,7 +198,6 @@ export default function App() {
   const previousActiveViewRef = useRef<AppView | null>(null);
   const hydratedComposerSessionKeyRef = useRef("");
   const handledComposerSyncNonceRef = useRef(0);
-  const firstLaunchAutoOpenRef = useRef(false);
   const [showJumpToLatest, setShowJumpToLatest] = useState(false);
   const [showDiffPanel, setShowDiffPanel] = useState(false);
   const [openTerminalSessionKey, setOpenTerminalSessionKey] = useState("");
@@ -1116,35 +1116,6 @@ export default function App() {
     previousActiveViewRef.current = snapshot.activeView;
   }, [schedulePinnedBottomRealignment, selectedSession, selectedWorkspace?.id, snapshot]);
 
-  // First-launch detection: if no providers are connected and no default model
-  // is set, auto-open Settings > Providers so the user can configure their API key.
-  useEffect(() => {
-    if (!snapshot || !api || firstLaunchAutoOpenRef.current) {
-      return;
-    }
-
-    // Wait until we have runtime data for at least one workspace.
-    const workspace = rootWorkspaceOptions[0];
-    if (!workspace) {
-      return;
-    }
-
-    const runtime = snapshot.runtimeByWorkspace[workspace.id];
-    if (!runtime) {
-      return;
-    }
-
-    const hasAnyAuth = runtime.providers.some((provider) => provider.hasAuth);
-    const hasSelectableModels = buildModelOptions(runtime).length > 0;
-
-    if (!hasAnyAuth && !hasSelectableModels) {
-      firstLaunchAutoOpenRef.current = true;
-      openSettings(workspace.id, "providers");
-    } else {
-      firstLaunchAutoOpenRef.current = true;
-    }
-  }, [api, snapshot, rootWorkspaceOptions]);
-
   useEffect(() => {
     if (!api || composerDraft === persistedComposerDraft) {
       return undefined;
@@ -1300,14 +1271,17 @@ export default function App() {
     );
   }
 
-  const showTerminalTakeover = isTerminalVisibleForSelectedThread && isTerminalTakeoverForSelectedThread && Boolean(selectedWorkspace);
+  const threadWorkspaceToolsActive = snapshot.activeView === "threads";
+  const terminalVisibleInCurrentView = threadWorkspaceToolsActive && isTerminalVisibleForSelectedThread;
+  const diffVisibleInCurrentView = threadWorkspaceToolsActive && showDiffPanel;
+  const showTerminalTakeover = terminalVisibleInCurrentView && isTerminalTakeoverForSelectedThread && Boolean(selectedWorkspace);
   const mainClassName = [
     "main",
-    showDiffPanel ? "main--with-diff" : "",
-    isTerminalVisibleForSelectedThread ? "main--with-terminal" : "",
+    diffVisibleInCurrentView ? "main--with-diff" : "",
+    terminalVisibleInCurrentView ? "main--with-terminal" : "",
     showTerminalTakeover ? "main--terminal-takeover" : "",
   ].filter(Boolean).join(" ");
-  const terminalPanel = isTerminalVisibleForSelectedThread && selectedWorkspace ? (
+  const terminalPanel = terminalVisibleInCurrentView && selectedWorkspace ? (
     <TerminalPanel
       workspace={selectedWorkspace}
       sessionId={selectedSession?.id ?? ""}
@@ -2089,10 +2063,10 @@ export default function App() {
           api={api}
           setSnapshot={setSnapshot}
           updateSnapshot={updateSnapshot}
-          terminalAvailable={Boolean(selectedSessionKey)}
-          terminalVisible={isTerminalVisibleForSelectedThread}
+          terminalAvailable={threadWorkspaceToolsActive && Boolean(selectedSessionKey)}
+          terminalVisible={terminalVisibleInCurrentView}
           onToggleTerminal={toggleTerminal}
-          showDiffPanel={showDiffPanel}
+          showDiffPanel={diffVisibleInCurrentView}
           onToggleDiffPanel={toggleDiffPanel}
         />
 
@@ -2100,7 +2074,9 @@ export default function App() {
           terminalPanel
         ) : (
           <>
-        {snapshot.activeView === "new-thread" ? (
+        {snapshot.activeView === "open-design" ? (
+          <OpenDesignView api={api} />
+        ) : snapshot.activeView === "new-thread" ? (
           rootWorkspaceOptions.length > 0 ? (
             <NewThreadView
               workspaces={rootWorkspaceOptions}
@@ -2290,7 +2266,7 @@ export default function App() {
         {terminalPanel}
           </>
         )}
-        {showDiffPanel && selectedWorkspace && selectedSession ? (
+        {diffVisibleInCurrentView && selectedWorkspace && selectedSession ? (
           <DiffPanel
             workspaceId={selectedWorkspace.id}
             sessionId={selectedSession.id}

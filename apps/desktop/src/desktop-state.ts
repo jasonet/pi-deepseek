@@ -4,7 +4,7 @@ export type SessionStatus = "idle" | "running" | "failed";
 export type { SessionRole, TranscriptMessage } from "./timeline-types";
 import type { TranscriptMessage } from "./timeline-types";
 
-export type AppView = "threads" | "new-thread" | "skills" | "extensions" | "settings";
+export type AppView = "threads" | "new-thread" | "skills" | "extensions" | "open-design" | "settings";
 export type WorkspaceKind = "primary" | "worktree";
 export type WorktreeStatus = "ready" | "missing" | "error";
 export type NewThreadEnvironment = "local" | "worktree";
@@ -178,6 +178,7 @@ export interface DesktopAppState {
   readonly enableTransparency: boolean;
   readonly locale: Locale;
   readonly autoUpdateEnabled: boolean;
+  readonly skipAutoTitle: boolean;
   readonly revision: number;
   readonly lastError?: string;
 }
@@ -224,6 +225,7 @@ export function createEmptyDesktopAppState(): DesktopAppState {
     enableTransparency: false,
     locale: "en",
     autoUpdateEnabled: true,
+    skipAutoTitle: false,
     revision: 0,
   };
 }

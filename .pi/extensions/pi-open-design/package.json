@@ -1,0 +1,25 @@
+{
+  "name": "pi-open-design",
+  "displayName": "Open Design",
+  "version": "0.9.0-pi.0",
+  "type": "module",
+  "description": "Pi GUI extension bridge for launching and checking Open Design.",
+  "license": "Apache-2.0",
+  "piGui": {
+    "targetVersion": "2.2.4"
+  },
+  "openDesign": {
+    "version": "0.9.0",
+    "defaultDaemonUrl": "http://127.0.0.1:7456",
+    "defaultWebUrl": "http://127.0.0.1:3000"
+  },
+  "pi": {
+    "extensions": [
+      "./extensions/open-design.js"
+    ]
+  },
+  "files": [
+    "extensions",
+    "open-design.manifest.json"
+  ]
+}

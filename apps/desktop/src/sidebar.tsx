@@ -158,6 +158,14 @@ export function Sidebar(props: SidebarProps) {
             <span>{t("sidebar.extensions")}</span>
           </button>
           <button
+            className={`sidebar__nav-item ${activeView === "open-design" ? "sidebar__nav-item--active" : ""}`}
+            type="button"
+            onClick={() => onSetActiveView("open-design")}
+          >
+            <ExtensionIcon />
+            <span>{t("sidebar.openDesign")}</span>
+          </button>
+          <button
             className="sidebar__nav-item"
             type="button"
             onClick={() => onOpenSettings(selectedWorkspace?.rootWorkspaceId ?? selectedWorkspace?.id)}

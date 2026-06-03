@@ -785,7 +785,7 @@ export class DesktopAppStore implements AppStoreInternals {
     try {
       this.state = {
         ...this.state,
-        activeView: persisted.activeView ?? this.state.activeView,
+        activeView: "threads",
         modelSettingsScopeMode: persisted.modelSettingsScopeMode ?? this.state.modelSettingsScopeMode,
         globalModelSettings: persisted.appGlobalModelSettings ?? this.state.globalModelSettings,
         notificationPreferences: {

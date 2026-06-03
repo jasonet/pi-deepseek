@@ -1,0 +1,16 @@
+{
+  "id": "pi-open-design",
+  "name": "Open Design",
+  "version": "0.9.0-pi.0",
+  "targetPiGuiVersion": "2.2.4",
+  "openDesignVersion": "0.9.0",
+  "commands": [
+    "od-status",
+    "od-open",
+    "od-create"
+  ],
+  "daemon": {
+    "defaultUrl": "http://127.0.0.1:7456",
+    "defaultWebUrl": "http://127.0.0.1:3000"
+  }
+}

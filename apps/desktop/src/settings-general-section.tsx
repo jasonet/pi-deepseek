@@ -11,6 +11,8 @@ interface SettingsGeneralSectionProps {
   readonly onSetModelSettingsScopeMode: (mode: ModelSettingsScopeMode) => void;
   readonly onSetIntegratedTerminalShell: (shellPath: string) => void;
   readonly onToggleSkillCommands: (enabled: boolean) => void;
+  readonly skipAutoTitle: boolean;
+  readonly onSetSkipAutoTitle: (skip: boolean) => void;
 }
 
 export function SettingsGeneralSection({
@@ -20,6 +22,8 @@ export function SettingsGeneralSection({
   onSetModelSettingsScopeMode,
   onSetIntegratedTerminalShell,
   onToggleSkillCommands,
+  skipAutoTitle,
+  onSetSkipAutoTitle,
 }: SettingsGeneralSectionProps) {
   const t = useT();
   const connectedCount = runtime?.providers.filter((p) => p.hasAuth).length ?? 0;
@@ -87,6 +91,10 @@ export function SettingsGeneralSection({
               }
             }}
           />
+        </SettingsRow>
+        <SettingsRow title={t("settings.general.skipAutoTitle")} description={t("settings.general.skipAutoTitleDesc")}>
+          <input aria-label={t("settings.general.skipAutoTitle")} checked={skipAutoTitle} type="checkbox"
+            onChange={(e) => onSetSkipAutoTitle(e.target.checked)} />
         </SettingsRow>
       </SettingsGroup>
 

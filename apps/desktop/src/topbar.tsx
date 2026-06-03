@@ -129,6 +129,11 @@ export function Topbar(props: TopbarProps) {
             <span className="topbar__separator">/</span>
             <span className="topbar__session">New thread</span>
           </>
+        ) : activeView === "open-design" ? (
+          <>
+            <span className="topbar__separator">/</span>
+            <span className="topbar__session">Open Design</span>
+          </>
         ) : null}
       </div>
 

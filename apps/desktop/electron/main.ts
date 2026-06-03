@@ -6,12 +6,13 @@ import {
   ipcMain,
   Menu,
   nativeImage,
+  net,
   shell,
   type MenuItemConstructorOptions,
   type MessageBoxOptions,
 } from "electron";
 import { randomUUID } from "node:crypto";
-import { execSync } from "node:child_process";
+import { execSync, spawn } from "node:child_process";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -27,7 +28,7 @@ import { checkForUpdate, initUpdateChecker } from "./update-checker";
 import { ThemeManager } from "./theme-manager";
 import { TerminalService } from "./terminal-service";
 import type { DesktopAppState, ThemeMode } from "../src/desktop-state";
-import { desktopIpc, getDesktopCommandFromShortcut } from "../src/ipc";
+import { desktopIpc, getDesktopCommandFromShortcut, type OpenDesignStatus } from "../src/ipc";
 import { SUPPORTED_COMPOSER_IMAGE_TYPES } from "../src/composer-attachments";
 import type {
   ComposerAttachment,
@@ -47,6 +48,7 @@ import { autoUpdater } from "electron-updater";
 const isDev = Boolean(process.env.ELECTRON_RENDERER_URL);
 let autoUpdateEnabled = true;
 let autoUpdateInterval: ReturnType<typeof setInterval> | undefined;
+let skipAutoTitle = false;
 const windowTestMode = resolveWindowTestMode();
 const devReloadMarkersEnabled = process.env.PI_APP_DEV_RELOAD_MARKERS === "1";
 let store: DesktopAppStore;
@@ -121,6 +123,118 @@ function readClipboardImageAttachment(): ComposerImageAttachment | null {
 }
 
 const PI_INSTALL_COMMAND = "curl -fsSL https://pi.dev/install.sh | sh";
+const OPEN_DESIGN_EXTENSION_ID = "pi-open-design";
+const OPEN_DESIGN_DEFAULT_DAEMON_URL = "http://127.0.0.1:7456";
+const OPEN_DESIGN_DEFAULT_WEB_URL = "http://127.0.0.1:3000";
+
+interface OpenDesignConfig {
+  readonly daemonUrl: string;
+  readonly webUrl: string;
+}
+
+async function readOpenDesignConfig(): Promise<OpenDesignConfig> {
+  const envDaemonUrl = process.env.OPEN_DESIGN_DAEMON_URL?.trim();
+  const envWebUrl = process.env.OPEN_DESIGN_WEB_URL?.trim();
+  let daemonUrl = envDaemonUrl || OPEN_DESIGN_DEFAULT_DAEMON_URL;
+  let webUrl = envWebUrl || OPEN_DESIGN_DEFAULT_WEB_URL;
+
+  if (envDaemonUrl && envWebUrl) {
+    return { daemonUrl, webUrl };
+  }
+
+  const roots = new Set([
+    process.cwd(),
+    app.getAppPath(),
+    path.resolve(app.getAppPath(), ".."),
+    path.resolve(app.getAppPath(), "..", ".."),
+    path.resolve(app.getAppPath(), "..", "..", ".."),
+    path.resolve(__dirname, "..", "..", "..", ".."),
+  ]);
+
+  for (const root of roots) {
+    const manifestPath = path.join(root, ".pi", "extensions", OPEN_DESIGN_EXTENSION_ID, "open-design.manifest.json");
+    try {
+      const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as {
+        daemon?: { defaultUrl?: string; defaultWebUrl?: string };
+      };
+      daemonUrl = envDaemonUrl || manifest.daemon?.defaultUrl || daemonUrl;
+      webUrl = envWebUrl || manifest.daemon?.defaultWebUrl || webUrl;
+      break;
+    } catch {
+      // Keep scanning plausible dev/package roots.
+    }
+  }
+
+  return { daemonUrl, webUrl };
+}
+
+async function fetchOpenDesignJson(url: string): Promise<unknown> {
+  const response = await net.fetch(url);
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+  return response.json();
+}
+
+async function getOpenDesignStatus(): Promise<OpenDesignStatus> {
+  const config = await readOpenDesignConfig();
+  try {
+    await fetchOpenDesignJson(`${config.daemonUrl}/api/health`);
+    let version: string | undefined;
+    try {
+      const versionResponse = await fetchOpenDesignJson(`${config.daemonUrl}/api/version`) as { version?: unknown; openDesignVersion?: unknown };
+      version = typeof versionResponse.version === "string"
+        ? versionResponse.version
+        : typeof versionResponse.openDesignVersion === "string"
+          ? versionResponse.openDesignVersion
+          : undefined;
+    } catch {
+      version = undefined;
+    }
+    return { ...config, reachable: true, version };
+  } catch (error) {
+    return {
+      ...config,
+      reachable: false,
+      message: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+async function startOpenDesign(): Promise<OpenDesignStatus> {
+  const currentStatus = await getOpenDesignStatus();
+  if (currentStatus.reachable) {
+    return currentStatus;
+  }
+
+  const daemonUrl = new URL(currentStatus.daemonUrl);
+  const port = daemonUrl.port || "7456";
+  const binary = process.env.OPEN_DESIGN_OD_BIN?.trim() || "od";
+  const child = spawn(binary, ["daemon", "--headless", "--serve-web", "--no-open", "--port", port], {
+    detached: true,
+    env: {
+      ...process.env,
+      OD_PORT: port,
+    },
+    stdio: "ignore",
+  });
+  child.unref();
+
+  const deadline = Date.now() + 12_000;
+  let latestStatus = currentStatus;
+  while (Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    latestStatus = await getOpenDesignStatus();
+    if (latestStatus.reachable) {
+      return latestStatus;
+    }
+  }
+
+  return {
+    ...latestStatus,
+    message: latestStatus.message || `Started ${binary}, but ${currentStatus.daemonUrl} did not become reachable in time.`,
+  };
+}
 
 function isPiCliInstalled(): boolean {
   // pi-coding-agent is a dependency of this app, always bundled in the asar.
@@ -494,7 +608,10 @@ app.whenReady().then(async () => {
     userDataDir: configuredUserDataDir,
     initialWorkspacePaths: resolveInitialWorkspacePaths(),
     getWindow: () => mainWindow,
-    generateThreadTitleOverride: async (workspace, options) => generateThreadTitleOverride?.(workspace, options),
+    generateThreadTitleOverride: async (workspace, options) => {
+      if (skipAutoTitle) return null;
+      return generateThreadTitleOverride?.(workspace, options);
+    },
   });
   await store.initialize();
 
@@ -570,6 +687,12 @@ app.whenReady().then(async () => {
       throw new Error(`Refusing to open unsupported URL: ${url}`);
     }
     return shell.openExternal(url);
+  });
+  ipcMain.handle(desktopIpc.getOpenDesignStatus, () => getOpenDesignStatus());
+  ipcMain.handle(desktopIpc.startOpenDesign, () => startOpenDesign());
+  ipcMain.handle(desktopIpc.openOpenDesignExternal, async () => {
+    const status = await getOpenDesignStatus();
+    return shell.openExternal(status.webUrl);
   });
   ipcMain.handle(desktopIpc.stateRequest, () => store.getState());
   ipcMain.handle(desktopIpc.selectedTranscriptRequest, () => store.getSelectedTranscript());
@@ -724,6 +847,10 @@ app.whenReady().then(async () => {
     return enabled;
   });
   ipcMain.handle(desktopIpc.getAutoUpdateEnabled, async () => autoUpdateEnabled);
+  ipcMain.handle(desktopIpc.setSkipAutoTitle, async (_event, skip: boolean) => {
+    skipAutoTitle = skip;
+    return skip;
+  });
   ipcMain.handle(desktopIpc.terminalEnsurePanel, (event, workspaceId: string, terminalScopeId: string, size) => {
     return getTerminalService().ensurePanel(event.sender, workspaceId, terminalScopeId, size);
   });

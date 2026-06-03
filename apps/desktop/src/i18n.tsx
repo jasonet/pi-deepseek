@@ -28,6 +28,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "sidebar.newThread": "New Thread",
     "sidebar.skills": "Skills",
     "sidebar.extensions": "Extensions",
+    "sidebar.openDesign": "Open Design",
     "sidebar.settings": "Settings",
     "sidebar.searchThreads": "Search threads…",
     "sidebar.openFolder": "Open folder",
@@ -84,6 +85,8 @@ const translations: Record<Locale, Record<string, string>> = {
     "settings.general.sendMessage": "Send message",
     "settings.general.newLine": "New line",
     "settings.general.none": "None",
+    "settings.general.skipAutoTitle": "Skip AI thread titles",
+    "settings.general.skipAutoTitleDesc": "New threads use generic titles instead of AI-generated names. Faster thread creation.",
 
     // Settings → Appearance
     "settings.appearance": "Appearance",
@@ -217,6 +220,20 @@ const translations: Record<Locale, Record<string, string>> = {
     "extensions.description": "Browse and toggle extensions for {workspace}.",
     "extensions.search": "Search extensions",
 
+    // Open Design view
+    "openDesign.eyebrow": "Plugin workspace",
+    "openDesign.title": "Open Design",
+    "openDesign.description": "Run the Open Design 0.9 environment inside Pi GUI.",
+    "openDesign.statusReady": "Ready",
+    "openDesign.statusStopped": "Daemon not running",
+    "openDesign.openBrowser": "Open in browser",
+    "openDesign.start": "Start Open Design",
+    "openDesign.starting": "Starting…",
+    "openDesign.reload": "Reload",
+    "openDesign.localDaemon": "Local daemon",
+    "openDesign.emptyTitle": "Open Design is ready to mount",
+    "openDesign.emptyDescription": "Start the local daemon, then Pi GUI will load the Open Design homepage in this tab.",
+
     // Model selector
     "model.chooseModel": "Choose model",
     "model.searchModels": "Search models",
@@ -293,6 +310,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "sidebar.newThread": "新建会话",
     "sidebar.skills": "技能",
     "sidebar.extensions": "扩展",
+    "sidebar.openDesign": "Open Design",
     "sidebar.settings": "设置",
     "sidebar.searchThreads": "搜索会话…",
     "sidebar.openFolder": "打开文件夹",
@@ -349,6 +367,8 @@ const translations: Record<Locale, Record<string, string>> = {
     "settings.general.sendMessage": "发送消息",
     "settings.general.newLine": "换行",
     "settings.general.none": "无",
+    "settings.general.skipAutoTitle": "跳过 AI 自动标题",
+    "settings.general.skipAutoTitleDesc": "新会话使用通用标题，不使用 AI 生成。创建更快。",
 
     // Settings → Appearance
     "settings.appearance": "外观",
@@ -478,6 +498,20 @@ const translations: Record<Locale, Record<string, string>> = {
     "extensions.description": "浏览并切换 {workspace} 的扩展。",
     "extensions.search": "搜索扩展",
 
+    // Open Design view
+    "openDesign.eyebrow": "插件工作区",
+    "openDesign.title": "Open Design",
+    "openDesign.description": "在 Pi GUI 内运行完整的 Open Design 0.9 环境。",
+    "openDesign.statusReady": "已就绪",
+    "openDesign.statusStopped": "Daemon 未运行",
+    "openDesign.openBrowser": "浏览器打开",
+    "openDesign.start": "启动 Open Design",
+    "openDesign.starting": "启动中…",
+    "openDesign.reload": "重新加载",
+    "openDesign.localDaemon": "本地 Daemon",
+    "openDesign.emptyTitle": "Open Design 可挂载",
+    "openDesign.emptyDescription": "启动本地 daemon 后，Pi GUI 会在这个标签页中加载 Open Design 首页。",
+
     // Model selector
     "model.chooseModel": "选择模型",
     "model.searchModels": "搜索模型",
@@ -554,6 +588,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "sidebar.newThread": "新增會話",
     "sidebar.skills": "技能",
     "sidebar.extensions": "擴充功能",
+    "sidebar.openDesign": "Open Design",
     "sidebar.settings": "設定",
     "sidebar.searchThreads": "搜尋會話…",
     "sidebar.openFolder": "開啟資料夾",
@@ -725,6 +760,20 @@ const translations: Record<Locale, Record<string, string>> = {
     "skills.refreshHint": "重新整理發現或為此工作區建立新技能。",
     "skills.selectHint": "從列表中選擇技能檢視詳情。",
 
+    // Open Design view
+    "openDesign.eyebrow": "外掛工作區",
+    "openDesign.title": "Open Design",
+    "openDesign.description": "在 Pi GUI 內執行完整的 Open Design 0.9 環境。",
+    "openDesign.statusReady": "已就緒",
+    "openDesign.statusStopped": "Daemon 未執行",
+    "openDesign.openBrowser": "用瀏覽器開啟",
+    "openDesign.start": "啟動 Open Design",
+    "openDesign.starting": "啟動中…",
+    "openDesign.reload": "重新載入",
+    "openDesign.localDaemon": "本機 Daemon",
+    "openDesign.emptyTitle": "Open Design 可掛載",
+    "openDesign.emptyDescription": "啟動本機 daemon 後，Pi GUI 會在這個標籤頁中載入 Open Design 首頁。",
+
     // Model selector
     "model.chooseModel": "選擇模型",
     "model.searchModels": "搜尋模型",
@@ -774,6 +823,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "sidebar.newThread": "新規スレッド",
     "sidebar.skills": "スキル",
     "sidebar.extensions": "拡張機能",
+    "sidebar.openDesign": "Open Design",
     "sidebar.settings": "設定",
     "sidebar.searchThreads": "スレッドを検索…",
     "sidebar.openFolder": "フォルダを開く",
@@ -957,6 +1007,20 @@ const translations: Record<Locale, Record<string, string>> = {
     "extensions.title": "拡張機能",
     "extensions.description": "{workspace} の拡張機能を閲覧・切替します。",
     "extensions.search": "拡張機能を検索",
+
+    // Open Design view
+    "openDesign.eyebrow": "プラグインワークスペース",
+    "openDesign.title": "Open Design",
+    "openDesign.description": "Pi GUI 内で Open Design 0.9 環境を実行します。",
+    "openDesign.statusReady": "準備完了",
+    "openDesign.statusStopped": "Daemon は未起動",
+    "openDesign.openBrowser": "ブラウザで開く",
+    "openDesign.start": "Open Design を起動",
+    "openDesign.starting": "起動中…",
+    "openDesign.reload": "再読み込み",
+    "openDesign.localDaemon": "ローカル Daemon",
+    "openDesign.emptyTitle": "Open Design をマウントできます",
+    "openDesign.emptyDescription": "ローカル daemon を起動すると、Pi GUI がこのタブで Open Design のホームを読み込みます。",
 
     // Model selector
     "model.chooseModel": "モデルを選択",

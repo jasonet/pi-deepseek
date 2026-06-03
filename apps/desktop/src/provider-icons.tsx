@@ -88,6 +88,8 @@ function providerIconUrl(providerId: string): string | null {
   // Special cases with direct PNG URLs
   const pngMap: Record<string, string> = {
     xiaomi: "https://raw.githubusercontent.com/lobehub/lobe-icons/refs/heads/master/packages/static-png/light/xiaomimimo.png",
+    bedrock: "https://raw.githubusercontent.com/lobehub/lobe-icons/refs/heads/master/packages/static-png/light/bedrock-color.png",
+    "amazon-bedrock": "https://raw.githubusercontent.com/lobehub/lobe-icons/refs/heads/master/packages/static-png/light/bedrock-color.png",
   };
   if (pngMap[providerId]) return pngMap[providerId];
   // 1. Exact match

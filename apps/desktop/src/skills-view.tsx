@@ -4,6 +4,8 @@ import type { WorkspaceRecord } from "./desktop-state";
 import { RefreshIcon } from "./icons";
 import { titleCase } from "./string-utils";
 import { useT } from "./i18n";
+import { useLocale } from "./i18n";
+import { getSkillDescription } from "./skill-translations";
 
 interface SkillsViewProps {
   readonly workspace?: WorkspaceRecord;
@@ -16,10 +18,13 @@ interface SkillsViewProps {
 
 export function SkillsView({ workspace, runtime, onRefresh, onOpenSkillFolder, onToggleSkill, onTrySkill }: SkillsViewProps) {
   const t = useT();
+  const { locale } = useLocale();
   useEffect(() => { onRefresh(); }, []); // Auto-refresh on first open
   const [query, setQuery] = useState("");
   const [selectedSkillPath, setSelectedSkillPath] = useState<string | undefined>();
   const skills = runtime?.skills ?? [];
+  const desc = (skill: RuntimeSkillRecord) => getSkillDescription(skill.name, locale) ?? skill.description;
+
   const filteredSkills = useMemo(() => {
     const n = query.trim().toLowerCase();
     if (!n) return skills;
@@ -82,7 +87,7 @@ export function SkillsView({ workspace, runtime, onRefresh, onOpenSkillFolder, o
                       {skill.enabled ? t("skills.enabled") : t("skills.disabled")}
                     </span>
                   </span>
-                  <span className="skill-card__description">{skill.description}</span>
+                  <span className="skill-card__description">{desc(skill)}</span>
                   <span className="skill-card__meta">
                     <span>{skill.source}</span><span>{skill.slashCommand}</span>
                     {skill.disableModelInvocation ? <span>{t("skills.slashOnly")}</span> : null}
@@ -101,7 +106,7 @@ export function SkillsView({ workspace, runtime, onRefresh, onOpenSkillFolder, o
                     {selectedSkill.enabled ? t("skills.enabled") : t("skills.disabled")}
                   </span>
                 </div>
-                <p className="skill-detail__description">{selectedSkill.description}</p>
+                <p className="skill-detail__description">{desc(selectedSkill)}</p>
                 <div className="skill-detail__meta-list">
                   <div><div className="skill-detail__meta-label">{t("skills.source")}</div><div className="skill-detail__description">{selectedSkill.source}</div></div>
                   <div><div className="skill-detail__meta-label">{t("skills.path")}</div><div className="skill-detail__path">{selectedSkill.filePath}</div></div>

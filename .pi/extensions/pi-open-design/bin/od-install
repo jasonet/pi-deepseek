@@ -1,0 +1,51 @@
+#!/bin/bash
+# Pi-Deepseek Open Design Auto-Installer
+# Called on first launch of Open Design tab.
+# Downloads and builds open-design daemon if not present.
+
+set -e
+OD_HOME="${OD_HOME:-$HOME/.pi/open-design}"
+OD_REPO="${OD_REPO:-https://github.com/jasonet/open-design.git}"
+OD_VERSION="${OD_VERSION:-main}"
+
+mkdir -p "$OD_HOME"
+
+# Already installed?
+if [ -f "$OD_HOME/.installed" ]; then
+  exec "$OD_HOME/bin/od" "$@"
+fi
+
+echo "[Pi-Deepseek] Installing Open Design daemon..."
+
+# Clone if needed
+if [ ! -d "$OD_HOME/repo" ]; then
+  echo "[Pi-Deepseek] Cloning open-design..."
+  git clone --depth 1 --branch "$OD_VERSION" "$OD_REPO" "$OD_HOME/repo" 2>&1
+fi
+
+cd "$OD_HOME/repo"
+
+# Install deps
+if [ ! -d "node_modules" ]; then
+  echo "[Pi-Deepseek] Installing dependencies (this may take a minute)..."
+  pnpm install --frozen-lockfile 2>&1 || npm install 2>&1
+fi
+
+# Build daemon
+echo "[Pi-Deepseek] Building daemon..."
+pnpm --filter @open-design/daemon build 2>&1 || true
+
+# Create launcher symlink
+mkdir -p "$OD_HOME/bin"
+cat > "$OD_HOME/bin/od" << 'LAUNCHER'
+#!/bin/bash
+cd "$HOME/.pi/open-design/repo"
+exec node apps/daemon/bin/od.mjs "$@"
+LAUNCHER
+chmod +x "$OD_HOME/bin/od"
+
+# Mark as installed
+date > "$OD_HOME/.installed"
+echo "[Pi-Deepseek] Open Design installed successfully."
+
+exec "$OD_HOME/bin/od" "$@"

@@ -12,7 +12,8 @@ import {
   type MessageBoxOptions,
 } from "electron";
 import { randomUUID } from "node:crypto";
-import { execSync, spawn } from "node:child_process";
+import { execSync, spawn, spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -209,15 +210,47 @@ async function startOpenDesign(): Promise<OpenDesignStatus> {
 
   const daemonUrl = new URL(currentStatus.daemonUrl);
   const port = daemonUrl.port || "7456";
+  // Default: use the bundled plugin launcher (auto-installs on first run)
+  if (!envDaemonUrl && !envWebUrl) {
+    const installScript = path.join(__dirname, "..", "..", "..", "..", ".pi", "extensions", OPEN_DESIGN_EXTENSION_ID, "bin", "od-install");
+    if (existsSync(installScript)) {
+      process.env.OPEN_DESIGN_OD_BIN = installScript;
+    }
+  }
+
   const binary = process.env.OPEN_DESIGN_OD_BIN?.trim() || "od";
+
+  // Validate the binary exists
+  const binaryExists = existsSync(binary) || (() => {
+    try {
+      const which = spawnSync("which", [binary], { timeout: 3000 });
+      return which.status === 0 && which.stdout.toString().trim().length > 0;
+    } catch { return false; }
+  })();
+  if (!binaryExists) {
+    return { ...currentStatus, reachable: false, message: `Open Design binary "${binary}" not found. Install it or set OPEN_DESIGN_OD_BIN.` };
+  }
+
   const child = spawn(binary, ["daemon", "--headless", "--serve-web", "--no-open", "--port", port], {
     detached: true,
-    env: {
-      ...process.env,
-      OD_PORT: port,
-    },
-    stdio: "ignore",
+    env: { ...process.env, OD_PORT: port },
+    stdio: ["ignore", "pipe", "pipe"],
   });
+
+  // Check for immediate startup failure
+  const startupResult = await Promise.race([
+    new Promise<string | null>((resolve) => {
+      child.stderr?.on("data", (data: Buffer) => resolve(data.toString()));
+      child.stdout?.on("data", (data: Buffer) => resolve(data.toString()));
+    }),
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000)),
+  ]);
+
+  if (startupResult && !startupResult.includes("listening") && !startupResult.includes("started")) {
+    child.kill();
+    return { ...currentStatus, reachable: false, message: `Open Design failed to start: ${startupResult.slice(0, 200)}` };
+  }
+
   child.unref();
 
   const deadline = Date.now() + 12_000;

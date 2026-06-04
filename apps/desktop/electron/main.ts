@@ -1011,19 +1011,8 @@ app.whenReady().then(async () => {
   });
   ipcMain.handle(desktopIpc.getOpenDesignStatus, () => getOpenDesignStatus());
   ipcMain.handle(desktopIpc.installOpenDesign, async () => {
-    return new Promise((resolve) => {
-      const child = spawn("sh", ["-c", "curl -fsSL https://open-design.ai/install.sh | sh -s pi"], {
-        stdio: ["ignore", "pipe", "pipe"],
-        timeout: 120_000,
-      });
-      let stdout = "";
-      child.stdout?.on("data", (d: Buffer) => { stdout += d.toString(); });
-      child.on("close", (code) => {
-        if (code === 0) resolve({ ok: true, message: stdout.slice(-200) || "Open Design MCP installed" });
-        else resolve({ ok: false, message: `Exit code ${code}: ${stdout.slice(-200)}` });
-      });
-      child.on("error", (e) => resolve({ ok: false, message: e.message }));
-    });
+    // OD daemon must be installed separately — see https://open-design.ai
+    return { ok: false, message: "Install via: cd ~/Sites/Github/open-design && pnpm install" };
   });
   ipcMain.handle(desktopIpc.stateRequest, () => store.getState());
   ipcMain.handle(desktopIpc.selectedTranscriptRequest, () => store.getSelectedTranscript());

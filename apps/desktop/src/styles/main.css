@@ -2539,7 +2539,7 @@
   padding: 16px 18px;
   border-radius: 18px;
   border: 1px solid var(--line);
-  background: var(--surface);
+  background: rgba(77, 107, 254, 0.04);
 }
 
 .skill-card {

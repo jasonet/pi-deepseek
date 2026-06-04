@@ -265,7 +265,7 @@ async function getOpenDesignStatus(): Promise<OpenDesignStatus> {
   }
 
   const webReachable = await isOpenDesignWebReachable(config.webUrl);
-  const reachable = daemonReachable && webReachable;
+  const reachable = daemonReachable; // MCP mode: daemon API is all we need
   return {
     daemonUrl: config.daemonUrl,
     webUrl: config.webUrl,
@@ -273,11 +273,9 @@ async function getOpenDesignStatus(): Promise<OpenDesignStatus> {
     daemonReachable,
     webReachable,
     version,
-    message: reachable
+    message: daemonReachable
       ? undefined
-      : daemonReachable
-        ? `Open Design daemon is ready, but web UI is not reachable at ${config.webUrl}.`
-        : daemonMessage,
+      : daemonMessage,
   };
 }
 

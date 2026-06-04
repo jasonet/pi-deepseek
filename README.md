@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/jasonet/pi-deepseek/releases/latest"><img src="https://img.shields.io/github/v/release/jasonet/pi-deepseek?label=v0.2.4&color=%234D6BFE" alt="Latest Release" /></a>
+  <a href="https://github.com/jasonet/pi-deepseek/releases/latest"><img src="https://img.shields.io/github/v/release/jasonet/pi-deepseek?label=v0.2.5&color=%234D6BFE" alt="Latest Release" /></a>
   <a href="https://github.com/jasonet/pi-deepseek/releases/latest"><img src="https://img.shields.io/badge/platform-macOS_|_Windows_|_Linux-lightgrey" alt="Platform" /></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License" /></a>
 </p>
@@ -20,12 +20,12 @@
 
 | 平台 | 架构 | 格式 | 下载 |
 |------|------|------|------|
-| **macOS** | Apple Silicon (M1–M4) | DMG | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v0.2.4/Pi-Deepseek-0.2.2-mac-arm64.dmg) |
-| **macOS** | Intel (x64) | DMG | [![Download](https://img.shields.io/badge/Download-x64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v0.2.4/Pi-Deepseek-0.2.2-mac-x64.dmg) |
-| **Windows** | x64 | 安装版 | [![Download](https://img.shields.io/badge/Download-Setup-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v0.2.4/Pi-Deepseek-0.2.2-win-x64-setup.exe) |
-| **Windows** | x64 | 便携版 | [![Download](https://img.shields.io/badge/Download-Portable-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v0.2.4/Pi-Deepseek-0.2.2-win-x64-portable.exe) |
-| **Linux** | x64 | deb | [![Download](https://img.shields.io/badge/Download-.deb-%234D6BFE?logo=ubuntu)](https://github.com/jasonet/pi-deepseek/releases/download/v0.2.4/Pi-Deepseek-0.2.2-linux-amd64.deb) |
-| **Linux** | x64 | AppImage | [![Download](https://img.shields.io/badge/Download-AppImage-%234D6BFE?logo=linux)](https://github.com/jasonet/pi-deepseek/releases/download/v0.2.4/Pi-Deepseek-0.2.2-linux-x86_64.AppImage) |
+| **macOS** | Apple Silicon (M1–M4) | DMG | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v0.2.5/Pi-Deepseek-0.2.5-mac-arm64.dmg) |
+| **macOS** | Intel (x64) | DMG | [![Download](https://img.shields.io/badge/Download-x64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v0.2.5/Pi-Deepseek-0.2.5-mac-x64.dmg) |
+| **Windows** | x64 | 安装版 | [![Download](https://img.shields.io/badge/Download-Setup-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v0.2.5/Pi-Deepseek-0.2.5-win-x64-setup.exe) |
+| **Windows** | x64 | 便携版 | [![Download](https://img.shields.io/badge/Download-Portable-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v0.2.5/Pi-Deepseek-0.2.5-win-x64-portable.exe) |
+| **Linux** | x64 | deb | [![Download](https://img.shields.io/badge/Download-.deb-%234D6BFE?logo=ubuntu)](https://github.com/jasonet/pi-deepseek/releases/download/v0.2.5/Pi-Deepseek-0.2.5-linux-amd64.deb) |
+| **Linux** | x64 | AppImage | [![Download](https://img.shields.io/badge/Download-AppImage-%234D6BFE?logo=linux)](https://github.com/jasonet/pi-deepseek/releases/download/v0.2.5/Pi-Deepseek-0.2.5-linux-x86_64.AppImage) |
 
 > 💡 **macOS**：下载 `.dmg` 双击挂载，将 `Pi-Deepseek.app` 拖入 `/Applications`。
 > **Windows**：`Setup.exe` 为安装版（推荐），`Portable.exe` 为绿色免安装版。
@@ -56,7 +56,32 @@
 - 持久保存界面状态（工作区、会话、输入框草稿）
 - Codex 风格的时间线与会话交互
 - **内置 DeepSeek V4 Pro 1M / Flash 1M 模型**，一键配置 API Key
-- **中文 / 日文 UI**，Settings → Appearance 即时切换
+- **中文简体 / 中文繁體 / 日文 UI**，Settings → Appearance 即时切换
+- **40+ 提供商品牌图标**，余额显示，紧凑布局
+- **Open Design MCP 集成**（扩展 → Open Design → 查看 daemon 状态）
+- **Cmd/Ctrl+Tab** 快速切换会话
+- **自动更新**（Settings → Notifications → Auto Update）
+
+## Open Design 使用
+
+```bash
+# 安装 Open Design MCP（在终端执行一次）
+cd ~/Sites/Github/open-design
+pnpm install && pnpm rebuild better-sqlite3
+
+# 启动 daemon
+od --port 7456 --no-open
+
+# 注册为 Pi MCP server
+od mcp install pi
+```
+
+安装后在 Pi 对话中直接使用：
+- "用 OD 做一个登录页"
+- "生成一个 pitch deck"
+- "把这个按钮改成蓝色"
+
+Pi 会自动调用 OD 工具并在对话流中显示进度。
 
 ## 本地开发
 

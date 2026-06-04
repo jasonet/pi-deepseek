@@ -29,7 +29,6 @@ import {
 import { deriveModelOnboardingState } from "./model-onboarding";
 import { SkillsView } from "./skills-view";
 import { ExtensionsView } from "./extensions-view";
-import { OpenDesignView } from "./open-design-view";
 import { SettingsView, type SettingsSection } from "./settings-view";
 import { SecondarySurface } from "./secondary-surface";
 import { NewThreadView } from "./new-thread-view";
@@ -2078,9 +2077,7 @@ export default function App() {
           terminalPanel
         ) : (
           <>
-        {snapshot.activeView === "open-design" ? (
-          <OpenDesignView api={api} />
-        ) : snapshot.activeView === "new-thread" ? (
+        {snapshot.activeView === "new-thread" ? (
           rootWorkspaceOptions.length > 0 ? (
             <NewThreadView
               workspaces={rootWorkspaceOptions}

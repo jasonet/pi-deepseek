@@ -205,10 +205,8 @@ contextBridge.exposeInMainWorld("piApp", {
     ipcRenderer.invoke(desktopIpc.setSkipAutoTitle, skip) as Promise<boolean>,
   getOpenDesignStatus: () =>
     ipcRenderer.invoke(desktopIpc.getOpenDesignStatus) as Promise<OpenDesignStatus>,
-  startOpenDesign: () =>
-    ipcRenderer.invoke(desktopIpc.startOpenDesign) as Promise<OpenDesignStatus>,
-  openOpenDesignExternal: () =>
-    ipcRenderer.invoke(desktopIpc.openOpenDesignExternal) as Promise<void>,
+  installOpenDesign: () =>
+    ipcRenderer.invoke(desktopIpc.installOpenDesign) as Promise<{ ok: boolean; message: string }>,
   setComposerWorkMode: (mode: string) =>
     ipcRenderer.invoke(desktopIpc.setComposerWorkMode, mode) as Promise<DesktopAppState>,
   getComposerWorkMode: () =>

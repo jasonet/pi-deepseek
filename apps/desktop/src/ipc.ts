@@ -81,8 +81,7 @@ export const desktopIpc = {
   getAutoUpdateEnabled: "pi-gui:get-auto-update-enabled",
   setSkipAutoTitle: "pi-gui:set-skip-auto-title",
   getOpenDesignStatus: "pi-gui:get-open-design-status",
-  startOpenDesign: "pi-gui:start-open-design",
-  openOpenDesignExternal: "pi-gui:open-open-design-external",
+  installOpenDesign: "pi-gui:install-open-design",
   setComposerWorkMode: "pi-gui:set-composer-work-mode",
   getComposerWorkMode: "pi-gui:get-composer-work-mode",
   terminalEnsurePanel: "pi-gui:terminal-ensure-panel",
@@ -309,8 +308,7 @@ export interface PiDesktopApi {
   getAutoUpdateEnabled(): Promise<boolean>;
   setSkipAutoTitle(enabled: boolean): Promise<DesktopAppState>;
   getOpenDesignStatus(): Promise<OpenDesignStatus>;
-  startOpenDesign(): Promise<OpenDesignStatus>;
-  openOpenDesignExternal(): Promise<void>;
+  installOpenDesign(): Promise<{ ok: boolean; message: string }>;
   setComposerWorkMode(mode: string): Promise<DesktopAppState>;
   getComposerWorkMode(): Promise<string>;
   ensureTerminalPanel(

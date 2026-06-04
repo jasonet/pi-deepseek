@@ -1011,8 +1011,14 @@ app.whenReady().then(async () => {
   });
   ipcMain.handle(desktopIpc.getOpenDesignStatus, () => getOpenDesignStatus());
   ipcMain.handle(desktopIpc.installOpenDesign, async () => {
-    // OD daemon must be installed separately — see https://open-design.ai
-    return { ok: false, message: "Install via: cd ~/Sites/Github/open-design && pnpm install" };
+    const root = path.join(app.getPath("home"), "Sites", "Github", "open-design");
+    if (!existsSync(root)) return { ok: false, message: "open-design repo not found at " + root };
+    try {
+      execSync("pnpm install", { cwd: root, stdio: "pipe", timeout: 180_000, env: { ...process.env, PATH: `${app.getPath("home")}/.bun/bin:/opt/homebrew/bin:${process.env.PATH}` } });
+      return { ok: true, message: "Dependencies installed. Restart daemon to apply." };
+    } catch (e: any) {
+      return { ok: false, message: e.stderr?.toString()?.slice(-300) || e.message };
+    }
   });
   ipcMain.handle(desktopIpc.stateRequest, () => store.getState());
   ipcMain.handle(desktopIpc.selectedTranscriptRequest, () => store.getSelectedTranscript());

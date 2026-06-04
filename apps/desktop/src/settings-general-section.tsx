@@ -105,6 +105,8 @@ export function SettingsGeneralSection({
         <SettingsInfoRow label={t("settings.general.newTerminalTab")} value="Cmd+T" />
         <SettingsInfoRow label={t("settings.general.sendMessage")} value="Enter" />
         <SettingsInfoRow label={t("settings.general.newLine")} value="Shift+Enter" />
+        <SettingsInfoRow label={t("settings.general.nextSession")} value="Cmd+Tab (Ctrl+Tab)" />
+        <SettingsInfoRow label={t("settings.general.prevSession")} value="Cmd+Shift+Tab (Ctrl+Shift+Tab)" />
       </SettingsGroup>
     </>
   );

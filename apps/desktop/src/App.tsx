@@ -1013,6 +1013,19 @@ export default function App() {
         toggleDiffPanel();
         return;
       }
+      // Cmd+Tab / Ctrl+Tab : next session, Ctrl+Shift+Tab : prev session
+      if ((event.metaKey || event.ctrlKey) && (event.key === "Tab" || event.code === "Tab") && snapshot) {
+        event.preventDefault();
+        const allSessions = snapshot.workspaces.flatMap((w) => w.sessions.filter((s) => !s.archivedAt));
+        if (allSessions.length <= 1) return;
+        const currentId = selectedSession?.id ?? selectedWorkspace?.sessions[0]?.id;
+        const currentIdx = allSessions.findIndex((s) => s.id === currentId);
+        const nextIdx = event.shiftKey
+          ? (currentIdx <= 0 ? allSessions.length - 1 : currentIdx - 1)
+          : (currentIdx >= allSessions.length - 1 || currentIdx === -1 ? 0 : currentIdx + 1);
+        void updateSnapshot(api, setSnapshot, () => api.selectSession({ workspaceId: snapshot.workspaces.find((w) => w.sessions.some((s) => s.id === allSessions[nextIdx].id))?.id ?? "", sessionId: allSessions[nextIdx].id }));
+        return;
+      }
       const command = getDesktopCommandFromShortcut({
         modifier: event.metaKey || event.ctrlKey,
         shift: event.shiftKey,

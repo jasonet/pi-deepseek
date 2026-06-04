@@ -1011,12 +1011,19 @@ app.whenReady().then(async () => {
   });
   ipcMain.handle(desktopIpc.getOpenDesignStatus, () => getOpenDesignStatus());
   ipcMain.handle(desktopIpc.installOpenDesign, async () => {
-    try {
-      execSync("curl -fsSL https://open-design.ai/install.sh | sh -s pi", { timeout: 120_000 });
-      return { ok: true, message: "Open Design MCP installed" };
-    } catch (e: any) {
-      return { ok: false, message: e.message };
-    }
+    return new Promise((resolve) => {
+      const child = spawn("sh", ["-c", "curl -fsSL https://open-design.ai/install.sh | sh -s pi"], {
+        stdio: ["ignore", "pipe", "pipe"],
+        timeout: 120_000,
+      });
+      let stdout = "";
+      child.stdout?.on("data", (d: Buffer) => { stdout += d.toString(); });
+      child.on("close", (code) => {
+        if (code === 0) resolve({ ok: true, message: stdout.slice(-200) || "Open Design MCP installed" });
+        else resolve({ ok: false, message: `Exit code ${code}: ${stdout.slice(-200)}` });
+      });
+      child.on("error", (e) => resolve({ ok: false, message: e.message }));
+    });
   });
   ipcMain.handle(desktopIpc.stateRequest, () => store.getState());
   ipcMain.handle(desktopIpc.selectedTranscriptRequest, () => store.getSelectedTranscript());

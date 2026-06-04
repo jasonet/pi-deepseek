@@ -1012,12 +1012,13 @@ app.whenReady().then(async () => {
   ipcMain.handle(desktopIpc.getOpenDesignStatus, () => getOpenDesignStatus());
   ipcMain.handle(desktopIpc.installOpenDesign, async () => {
     const root = path.join(app.getPath("home"), "Sites", "Github", "open-design");
-    if (!existsSync(root)) return { ok: false, message: "open-design repo not found at " + root };
+    if (!existsSync(root)) return { ok: false, message: "open-design repo not found" };
     try {
-      execSync("pnpm install", { cwd: root, stdio: "pipe", timeout: 180_000, env: { ...process.env, PATH: `${app.getPath("home")}/.bun/bin:/opt/homebrew/bin:${process.env.PATH}` } });
-      return { ok: true, message: "Dependencies installed. Restart daemon to apply." };
+      spawnSync("pnpm", ["install"], { cwd: root, stdio: "pipe", timeout: 180_000, env: { ...process.env } });
+      spawnSync("pnpm", ["rebuild", "better-sqlite3"], { cwd: root, stdio: "pipe", timeout: 60_000, env: { ...process.env } });
+      return { ok: true, message: "Dependencies installed & rebuilt. Restart daemon." };
     } catch (e: any) {
-      return { ok: false, message: e.stderr?.toString()?.slice(-300) || e.message };
+      return { ok: false, message: e.message };
     }
   });
   ipcMain.handle(desktopIpc.stateRequest, () => store.getState());

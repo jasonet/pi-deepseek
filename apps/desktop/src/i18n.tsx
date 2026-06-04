@@ -253,6 +253,8 @@ const translations: Record<Locale, Record<string, string>> = {
     "openDesign.daemonStopped": "Daemon offline",
     "openDesign.webReady": "Web ready",
     "openDesign.webStopped": "Web offline",
+    "openDesign.daemonStatus": "Daemon status",
+    "openDesign.install": "Install OD",
     "openDesign.openBrowser": "Open in browser",
     "openDesign.start": "Start Open Design",
     "openDesign.starting": "Starting…",

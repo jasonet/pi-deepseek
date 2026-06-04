@@ -3,6 +3,7 @@ import type { RuntimeExtensionRecord, RuntimeSnapshot } from "@pi-gui/session-dr
 import type { ExtensionCommandCompatibilityRecord, WorkspaceRecord } from "./desktop-state";
 import { RefreshIcon } from "./icons";
 import { useT } from "./i18n";
+import { OpenDesignStatusBadge } from "./open-design-status";
 
 interface ExtensionsViewProps {
   readonly workspace?: WorkspaceRecord;
@@ -121,6 +122,7 @@ export function ExtensionsView({
                     {selectedExtension.enabled ? t("skills.disable") : t("skills.enable")}
                   </button>
                 </div>
+                {selectedExtension.displayName === "Open Design" ? <OpenDesignStatusBadge /> : null}
                 <ExtensionContributionSection title={t("extensions.commands")} items={selectedExtension.commands} emptyLabel={t("extensions.noCommands")} />
                 <ExtensionCompatibilitySection commands={selectedExtension.commands} compatibilityRecords={selectedCompat} t={t} />
                 <ExtensionContributionSection title={t("extensions.tools")} items={selectedExtension.tools} emptyLabel={t("extensions.noTools")} />

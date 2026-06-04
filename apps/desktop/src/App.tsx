@@ -110,7 +110,7 @@ function isEventInsideTerminal(event: globalThis.KeyboardEvent): boolean {
 }
 
 function canTogglePrimarySidebar(view: AppView | undefined): boolean {
-  return view === "threads" || view === "new-thread" || view === "open-design";
+  return view === "threads" || view === "new-thread";
 }
 
 function useRunningLabel(startedAt: string | undefined) {

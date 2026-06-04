@@ -1010,10 +1010,13 @@ app.whenReady().then(async () => {
     return shell.openExternal(url);
   });
   ipcMain.handle(desktopIpc.getOpenDesignStatus, () => getOpenDesignStatus());
-  ipcMain.handle(desktopIpc.startOpenDesign, () => startOpenDesign());
-  ipcMain.handle(desktopIpc.openOpenDesignExternal, async () => {
-    const status = await getOpenDesignStatus();
-    return shell.openExternal(status.webUrl);
+  ipcMain.handle(desktopIpc.installOpenDesign, async () => {
+    try {
+      execSync("curl -fsSL https://open-design.ai/install.sh | sh -s pi", { timeout: 120_000 });
+      return { ok: true, message: "Open Design MCP installed" };
+    } catch (e: any) {
+      return { ok: false, message: e.message };
+    }
   });
   ipcMain.handle(desktopIpc.stateRequest, () => store.getState());
   ipcMain.handle(desktopIpc.selectedTranscriptRequest, () => store.getSelectedTranscript());

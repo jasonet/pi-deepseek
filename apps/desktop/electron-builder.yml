@@ -1,7 +1,7 @@
 appId: com.pi-deepseek.desktop
 productName: Pi-Deepseek
 copyright: Copyright 2026 Yiding by HKEZ
-electronVersion: 34.5.8
+electronVersion: 35.7.5
 
 directories:
   output: release

@@ -194,7 +194,22 @@ export class DesktopAppStore implements AppStoreInternals {
       return null;
     }
     await this.ensureTranscriptLoaded(sessionRef);
-    return this.buildSelectedTranscriptRecord(sessionRef);
+    const record = this.buildSelectedTranscriptRecord(sessionRef);
+    if (!record) return null;
+    // Limit transcript size to avoid IPC deserialization crash
+    const MAX_TRANSCRIPT_SIZE = 500 * 1024; // 500KB
+    let size = 0;
+    const truncated = [];
+    for (const item of record.transcript) {
+      const itemSize = JSON.stringify(item).length;
+      if (size + itemSize > MAX_TRANSCRIPT_SIZE) break;
+      truncated.push(item);
+      size += itemSize;
+    }
+    if (truncated.length < record.transcript.length) {
+      console.warn(`Transcript truncated from ${record.transcript.length} to ${truncated.length} items (${(size/1024).toFixed(0)}KB)`);
+    }
+    return { ...record, transcript: truncated };
   }
 
   async flushPersistence(): Promise<void> {

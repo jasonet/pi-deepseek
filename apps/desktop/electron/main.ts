@@ -709,7 +709,11 @@ function attachStatePublisher(window: BrowserWindow): void {
   });
   stopPublishingSelectedTranscript = store.subscribeToSelectedTranscript((payload) => {
     if (canPublishToWindow(window)) {
-      window.webContents.send(desktopIpc.selectedTranscriptChanged, payload);
+      try {
+        window.webContents.send(desktopIpc.selectedTranscriptChanged, payload);
+      } catch (e) {
+        console.error("Failed to send transcript to renderer:", e);
+      }
     }
   });
   window.webContents.once("render-process-gone", () => {

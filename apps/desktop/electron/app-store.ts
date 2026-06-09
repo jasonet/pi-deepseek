@@ -207,7 +207,7 @@ export class DesktopAppStore implements AppStoreInternals {
       size += itemSize;
     }
     if (truncated.length < record.transcript.length) {
-      console.warn(`Transcript truncated from ${record.transcript.length} to ${truncated.length} items (${(size/1024).toFixed(0)}KB)`);
+      // Transcript truncated — silently cap to avoid renderer crash
     }
     return { ...record, transcript: truncated };
   }

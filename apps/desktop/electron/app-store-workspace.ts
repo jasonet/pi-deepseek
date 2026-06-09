@@ -126,12 +126,16 @@ export async function archiveSession(
   target: WorkspaceSessionTarget,
 ): Promise<DesktopAppState> {
   await store.initialize();
+  console.log("[Archive Main] Start:", target.workspaceId, target.sessionId);
 
   return store.withErrorHandling(async () => {
     const sessionRef = toSessionRef(target);
     store.clearPendingAutoTitle(sessionRef);
     await store.driver.archiveSession(sessionRef);
-    return store.refreshState(selectionAfterArchiving(store.state, target));
+    console.log("[Archive Main] Driver done, refreshing state...");
+    const result = store.refreshState(selectionAfterArchiving(store.state, target));
+    console.log("[Archive Main] State refreshed, returning");
+    return result;
   });
 }
 

@@ -1695,6 +1695,7 @@ export default function App() {
   };
 
   const handleArchiveSession = (target: { workspaceId: string; sessionId: string }) => {
+    console.log("[Archive] Click: workspaceId=", target.workspaceId, "sessionId=", target.sessionId);
     void updateSnapshot(api, setSnapshot, () => api.archiveSession(target));
   };
 

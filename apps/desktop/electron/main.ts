@@ -708,12 +708,13 @@ function attachStatePublisher(window: BrowserWindow): void {
     }
   });
   stopPublishingSelectedTranscript = store.subscribeToSelectedTranscript((payload) => {
-    if (canPublishToWindow(window)) {
-      try {
-        window.webContents.send(desktopIpc.selectedTranscriptChanged, payload);
-      } catch (e) {
-        console.error("Failed to send transcript to renderer:", e);
+    if (canPublishToWindow(window) && payload) {
+      // Truncate before sending to avoid V8 deserialization crash
+      const MAX_ITEMS = 150;
+      if (payload.transcript.length > MAX_ITEMS) {
+        payload = { ...payload, transcript: payload.transcript.slice(-MAX_ITEMS) };
       }
+      window.webContents.send(desktopIpc.selectedTranscriptChanged, payload);
     }
   });
   window.webContents.once("render-process-gone", () => {

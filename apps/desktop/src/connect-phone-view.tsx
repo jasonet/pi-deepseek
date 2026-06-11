@@ -14,7 +14,7 @@ interface ConnectPhoneViewProps {
   readonly channels: readonly ImChannel[];
   readonly onSaveChannel: (input: SaveImChannelInput) => Promise<void>;
   readonly onRemoveChannel: (channelId: string) => Promise<void>;
-  readonly onConnected: (provider: ConnectPhoneProvider) => void;
+  readonly onConnected: (provider: ConnectPhoneProvider, sessionId?: string) => void;
 }
 
 const PROVIDERS: readonly { id: ConnectPhoneProvider; label: string; description: string }[] = [
@@ -215,7 +215,7 @@ export function ConnectPhoneView({
                   <span>{labelForProvider(channel.provider)} · {channel.enabled ? "enabled" : "disabled"} · {channel.status}</span>
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
-                  <button className="button button--primary" style={{ fontSize: 12, padding: "4px 12px" }} type="button" onClick={() => onConnected(channel.provider)}>进入会话</button>
+                  <button className="button button--primary" style={{ fontSize: 12, padding: "4px 12px" }} type="button" onClick={() => onConnected(channel.provider, channel.sessionId)}>进入会话</button>
                   <button className="button button--secondary" type="button" onClick={() => void onRemoveChannel(channel.id)}>移除</button>
                 </div>
               </div>

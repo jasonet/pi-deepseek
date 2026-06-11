@@ -69,10 +69,13 @@ export async function pollFeishuInstall(fetcher: FetchLike, deviceCode: string):
 }
 
 export async function startWeixinInstallQrcode(fetcher: FetchLike): Promise<ConnectPhoneQrStartResult> {
+  const instanceId = randomUUID();
   const payload = await requestWeixinBridge(fetcher, "web.login.start", {
     force: true,
     timeoutMs: 300_000,
     verbose: true,
+    source: "pi-deepseek",
+    instanceId,
   });
   const url = readFirstString(payload, ["qrDataUrl", "qrUrl", "qrcode", "qrCode", "url"]);
   const sessionKey = readFirstString(payload, ["sessionKey", "accountId", "loginId"]);
@@ -92,6 +95,7 @@ export async function startWeixinInstallQrcode(fetcher: FetchLike): Promise<Conn
     userCode: "",
     interval: 3,
     expireIn: 120,
+    instanceId,
   };
 }
 

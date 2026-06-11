@@ -99,6 +99,7 @@ export type ConnectPhoneQrStartResult =
       readonly userCode: string;
       readonly interval: number;
       readonly expireIn: number;
+      readonly instanceId?: string;
     }
   | { readonly ok: false; readonly message: string };
 

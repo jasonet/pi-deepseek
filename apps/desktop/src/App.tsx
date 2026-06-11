@@ -1071,6 +1071,8 @@ export default function App() {
     preserveBottomOnNextPaneResizeRef.current = false;
     resetExactBottomRestoreState(selectedSessionKey || null);
     setDisableTimelineVirtualization(Boolean(selectedSessionKey));
+    // Jump directly to bottom when entering a session — no animation
+    pinnedToBottomRef.current = true;
   }, [selectedSessionKey]);
 
   useLayoutEffect(() => {

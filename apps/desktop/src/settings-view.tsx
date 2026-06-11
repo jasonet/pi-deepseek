@@ -1,7 +1,8 @@
 import type { RuntimeSettingsSnapshot, RuntimeSnapshot } from "@pi-gui/session-driver/runtime-types";
-import type { ModelSettingsScopeMode, NotificationPreferences, WorkspaceRecord } from "./desktop-state";
+import type { ImChannel, ModelSettingsScopeMode, NotificationPreferences, SaveImChannelInput, WorkspaceRecord } from "./desktop-state";
 import type { DesktopNotificationPermissionStatus } from "./ipc";
 import { SettingsAppearanceSection } from "./settings-appearance-section";
+import { SettingsChannelsSection } from "./settings-channels-section";
 import { SettingsGeneralSection } from "./settings-general-section";
 import { SettingsModelsSection } from "./settings-models-section";
 import { SettingsNotificationsSection } from "./settings-notifications-section";
@@ -16,6 +17,7 @@ interface SettingsViewProps {
   readonly runtime?: RuntimeSnapshot;
   readonly section: SettingsSection;
   readonly notificationPreferences: NotificationPreferences;
+  readonly imChannels: readonly ImChannel[];
   readonly notificationPermissionStatus: DesktopNotificationPermissionStatus;
   readonly notificationPermissionPending: boolean;
   readonly modelSettingsScopeMode: ModelSettingsScopeMode;
@@ -23,6 +25,8 @@ interface SettingsViewProps {
   readonly themeMode: "system" | "light" | "dark";
   readonly enableTransparency: boolean;
   readonly locale: string;
+  readonly autoUpdateEnabled: boolean;
+  readonly skipAutoTitle: boolean;
   readonly onSetModelSettingsScopeMode: (mode: ModelSettingsScopeMode) => void;
   readonly onSetDefaultModel: (provider: string, modelId: string) => void;
   readonly onSetThinkingLevel: (thinkingLevel: RuntimeSettingsSnapshot["defaultThinkingLevel"]) => void;
@@ -33,7 +37,11 @@ interface SettingsViewProps {
   readonly onSetProviderApiKey: (providerId: string, apiKey: string) => Promise<string | undefined>;
   readonly onRemoveProviderApiKey: (providerId: string) => Promise<string | undefined>;
   readonly onSetNotificationPreferences: (preferences: Partial<NotificationPreferences>) => void;
+  readonly onSaveImChannel: (input: SaveImChannelInput) => Promise<void>;
+  readonly onRemoveImChannel: (channelId: string) => Promise<void>;
   readonly onSetIntegratedTerminalShell: (shellPath: string) => void;
+  readonly onSetAutoUpdateEnabled: (enabled: boolean) => void;
+  readonly onSetSkipAutoTitle: (enabled: boolean) => void;
   readonly onRequestNotificationPermission: () => void;
   readonly onOpenSystemNotificationSettings: () => void;
   readonly onSetThemeMode: (mode: "system" | "light" | "dark") => void;
@@ -46,6 +54,7 @@ export function SettingsView({
   runtime,
   section,
   notificationPreferences,
+  imChannels,
   notificationPermissionStatus,
   notificationPermissionPending,
   modelSettingsScopeMode,
@@ -53,6 +62,8 @@ export function SettingsView({
   themeMode,
   enableTransparency,
   locale,
+  autoUpdateEnabled,
+  skipAutoTitle,
   onSetModelSettingsScopeMode,
   onSetDefaultModel,
   onSetThinkingLevel,
@@ -63,7 +74,11 @@ export function SettingsView({
   onSetProviderApiKey,
   onRemoveProviderApiKey,
   onSetNotificationPreferences,
+  onSaveImChannel,
+  onRemoveImChannel,
   onSetIntegratedTerminalShell,
+  onSetAutoUpdateEnabled,
+  onSetSkipAutoTitle,
   onRequestNotificationPermission,
   onOpenSystemNotificationSettings,
   onSetThemeMode,
@@ -72,7 +87,7 @@ export function SettingsView({
 }: SettingsViewProps) {
   const t = useT();
 
-  if (!workspace && section !== "general" && section !== "notifications" && section !== "appearance") {
+  if (!workspace && section !== "general" && section !== "channels" && section !== "notifications" && section !== "appearance") {
     return (
       <section className="canvas canvas--empty">
         <div className="empty-panel">
@@ -117,6 +132,8 @@ export function SettingsView({
               onSetModelSettingsScopeMode={onSetModelSettingsScopeMode}
               onSetIntegratedTerminalShell={onSetIntegratedTerminalShell}
               onToggleSkillCommands={onToggleSkillCommands}
+              skipAutoTitle={skipAutoTitle}
+              onSetSkipAutoTitle={onSetSkipAutoTitle}
             />
           ) : null}
 
@@ -139,6 +156,14 @@ export function SettingsView({
             />
           ) : null}
 
+          {section === "channels" ? (
+            <SettingsChannelsSection
+              channels={imChannels}
+              onSaveChannel={onSaveImChannel}
+              onRemoveChannel={onRemoveImChannel}
+            />
+          ) : null}
+
           {section === "notifications" ? (
             <SettingsNotificationsSection
               notificationPreferences={notificationPreferences}
@@ -147,6 +172,8 @@ export function SettingsView({
               onSetNotificationPreferences={onSetNotificationPreferences}
               onRequestNotificationPermission={onRequestNotificationPermission}
               onOpenSystemNotificationSettings={onOpenSystemNotificationSettings}
+              autoUpdateEnabled={autoUpdateEnabled}
+              onSetAutoUpdateEnabled={onSetAutoUpdateEnabled}
             />
           ) : null}
         </div>

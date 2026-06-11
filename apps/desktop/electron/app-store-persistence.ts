@@ -1,6 +1,7 @@
 import type {
   AppView,
   ExtensionCommandCompatibilityRecord,
+  ImChannel,
   ModelSettingsScopeMode,
   NotificationPreferences,
 } from "../src/desktop-state";
@@ -11,7 +12,7 @@ import { dirname } from "node:path";
 
 const uiStateWriteQueueByPath = new Map<string, Promise<void>>();
 export interface PersistedUiState {
-  readonly version?: 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+  readonly version?: 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
   readonly selectedWorkspaceId?: string;
   readonly selectedSessionId?: string;
   readonly activeView?: AppView;
@@ -19,6 +20,7 @@ export interface PersistedUiState {
   readonly composerDraftsBySession?: Record<string, string>;
   readonly extensionCommandCompatibilityByWorkspace?: Record<string, readonly ExtensionCommandCompatibilityRecord[]>;
   readonly notificationPreferences?: NotificationPreferences;
+  readonly imChannels?: readonly ImChannel[];
   readonly integratedTerminalShell?: string;
   readonly lastViewedAtBySession?: Record<string, string>;
   readonly workspaceOrder?: readonly string[];
@@ -41,7 +43,9 @@ export async function readPersistedUiState(uiStateFilePath: string): Promise<Leg
     const parsed = JSON.parse(raw) as LegacyPersistedUiState;
     return {
       version:
-        parsed.version === 9
+        parsed.version === 10
+          ? 10
+          : parsed.version === 9
           ? 9
           : parsed.version === 8
             ? 8
@@ -65,6 +69,7 @@ export async function readPersistedUiState(uiStateFilePath: string): Promise<Leg
       composerDraftsBySession: parsed.composerDraftsBySession,
       extensionCommandCompatibilityByWorkspace: parsed.extensionCommandCompatibilityByWorkspace,
       notificationPreferences: parsed.notificationPreferences,
+      imChannels: normalizeImChannels(parsed.imChannels),
       integratedTerminalShell:
         typeof parsed.integratedTerminalShell === "string" ? parsed.integratedTerminalShell : undefined,
       lastViewedAtBySession: parsed.lastViewedAtBySession,
@@ -94,7 +99,7 @@ export async function writePersistedUiState(
     await mkdir(dirname(uiStateFilePath), { recursive: true });
     const serialized = `${JSON.stringify(
       {
-        version: 9,
+        version: 10,
         ...payload,
       } satisfies PersistedUiState,
       null,
@@ -127,6 +132,31 @@ export async function writePersistedUiState(
         throw renameError;
       }
     }
+  });
+}
+
+function normalizeImChannels(value: unknown): ImChannel[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+  return value.filter((entry): entry is ImChannel => {
+    if (!entry || typeof entry !== "object") return false;
+    const channel = entry as Partial<ImChannel>;
+    return (
+      typeof channel.id === "string" &&
+      typeof channel.provider === "string" &&
+      typeof channel.label === "string" &&
+      typeof channel.enabled === "boolean" &&
+      typeof channel.status === "string" &&
+      typeof channel.credential === "object" &&
+      channel.credential !== null &&
+      typeof channel.agentProfile === "object" &&
+      channel.agentProfile !== null &&
+      typeof channel.settings === "object" &&
+      channel.settings !== null &&
+      typeof channel.createdAt === "string" &&
+      typeof channel.updatedAt === "string"
+    );
   });
 }
 

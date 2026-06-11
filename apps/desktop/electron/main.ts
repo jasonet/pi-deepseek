@@ -28,6 +28,12 @@ import {
 import { checkForUpdate, initUpdateChecker } from "./update-checker";
 import { ThemeManager } from "./theme-manager";
 import { TerminalService } from "./terminal-service";
+import {
+  pollFeishuInstall,
+  pollWeixinInstall,
+  startFeishuInstallQrcode,
+  startWeixinInstallQrcode,
+} from "./connect-phone-install";
 import type { DesktopAppState, ThemeMode } from "../src/desktop-state";
 import { desktopIpc, getDesktopCommandFromShortcut, type OpenDesignStatus } from "../src/ipc";
 import { SUPPORTED_COMPOSER_IMAGE_TYPES } from "../src/composer-attachments";
@@ -44,13 +50,22 @@ import type {
 import type { SessionDriverEvent } from "@pi-gui/session-driver";
 import type { GenerateThreadTitleOptions } from "@pi-gui/pi-sdk-driver";
 import type { WorkspaceRef } from "@pi-gui/session-driver";
-import { autoUpdater } from "electron-updater";
+let autoUpdater: any;
+try {
+  const mod = require("electron-updater");
+  autoUpdater = mod.autoUpdater;
+} catch {
+  // electron-updater not available in packaged build — auto-update disabled
+  autoUpdater = null;
+}
 
 const isDev = Boolean(process.env.ELECTRON_RENDERER_URL);
 let autoUpdateEnabled = true;
 let autoUpdateInterval: ReturnType<typeof setInterval> | undefined;
 let skipAutoTitle = false;
 let composerWorkMode: string = "pi-agent";
+
+function safeAutoUpdater() { return autoUpdater; }
 const windowTestMode = resolveWindowTestMode();
 const devReloadMarkersEnabled = process.env.PI_APP_DEV_RELOAD_MARKERS === "1";
 let store: DesktopAppStore;
@@ -587,11 +602,11 @@ function startAutoUpdateChecker(): void {
   if (isDev || autoUpdateInterval) return;
   autoUpdateInterval = setInterval(async () => {
     try {
-      const result = await autoUpdater.checkForUpdates();
+      const result = await safeAutoUpdater()?.checkForUpdates();
       if (result?.updateInfo?.version) {
         const latest = result.updateInfo.version;
         if (latest !== app.getVersion()) {
-          await autoUpdater.downloadUpdate();
+          await safeAutoUpdater()?.downloadUpdate();
         }
       }
     } catch {}
@@ -599,11 +614,11 @@ function startAutoUpdateChecker(): void {
   // Also check immediately on first start
   setTimeout(async () => {
     try {
-      const result = await autoUpdater.checkForUpdates();
+      const result = await safeAutoUpdater()?.checkForUpdates();
       if (result?.updateInfo?.version) {
         const latest = result.updateInfo.version;
         if (latest !== app.getVersion()) {
-          await autoUpdater.downloadUpdate();
+          await safeAutoUpdater()?.downloadUpdate();
         }
       }
     } catch {}
@@ -709,10 +724,9 @@ function attachStatePublisher(window: BrowserWindow): void {
   });
   stopPublishingSelectedTranscript = store.subscribeToSelectedTranscript((payload) => {
     if (canPublishToWindow(window) && payload) {
-      // Truncate before sending to avoid V8 deserialization crash
-      const MAX_ITEMS = 150;
-      if (payload.transcript.length > MAX_ITEMS) {
-        payload = { ...payload, transcript: payload.transcript.slice(-MAX_ITEMS) };
+      const len = payload.transcript?.length ?? 0;
+      if (len > 150) {
+        payload = { ...payload, transcript: payload.transcript.slice(-150) };
       }
       window.webContents.send(desktopIpc.selectedTranscriptChanged, payload);
     }
@@ -887,7 +901,8 @@ app.setName("pi");
 const configuredUserDataDir = process.env.PI_APP_USER_DATA_DIR?.trim() || app.getPath("userData").replace(/\/pi$/, "/pi-deepseek");
 app.setPath("userData", configuredUserDataDir);
 
-const hasSingleInstanceLock = app.requestSingleInstanceLock();
+const shouldRequestSingleInstanceLock = !process.env.PI_APP_TEST_MODE;
+const hasSingleInstanceLock = shouldRequestSingleInstanceLock ? app.requestSingleInstanceLock() : true;
 if (!hasSingleInstanceLock) {
   console.error(`[Pi-Deepseek] Single instance lock failed. userData: ${configuredUserDataDir}`);
   app.quit();
@@ -1105,6 +1120,37 @@ app.whenReady().then(async () => {
   ipcMain.handle(desktopIpc.setNotificationPreferences, (_event, preferences) =>
     store.setNotificationPreferences(preferences),
   );
+  ipcMain.handle(desktopIpc.saveImChannel, (_event, input) =>
+    store.saveImChannel(input),
+  );
+  ipcMain.handle(desktopIpc.removeImChannel, (_event, channelId: string) =>
+    store.removeImChannel(channelId),
+  );
+  ipcMain.handle(desktopIpc.startConnectPhoneQr, async (_event, input: { readonly provider?: string; readonly isLark?: boolean }) => {
+    try {
+      if (input.provider === "weixin") {
+        return await startWeixinInstallQrcode((url, init) => net.fetch(url, init));
+      }
+      if (input.provider === "feishu") {
+        return await startFeishuInstallQrcode((url, init) => net.fetch(url, init), input.isLark === true);
+      }
+      return { ok: false, message: "暂不支持该连接方式。" };
+    } catch (error) {
+      return { ok: false, message: error instanceof Error ? error.message : String(error) };
+    }
+  });
+  ipcMain.handle(desktopIpc.pollConnectPhoneQr, async (_event, provider: string, deviceCode: string) => {
+    if (!deviceCode.trim()) {
+      return { done: false, message: "二维码会话已过期，请重新生成。" };
+    }
+    if (provider === "weixin") {
+      return pollWeixinInstall((url, init) => net.fetch(url, init), deviceCode);
+    }
+    if (provider === "feishu") {
+      return pollFeishuInstall((url, init) => net.fetch(url, init), deviceCode);
+    }
+    return { done: false, message: "暂不支持该连接方式。" };
+  });
   ipcMain.handle(desktopIpc.setIntegratedTerminalShell, (_event, shellPath: string) =>
     store.setIntegratedTerminalShell(shellPath),
   );
@@ -1141,7 +1187,7 @@ app.whenReady().then(async () => {
   ipcMain.handle(desktopIpc.checkForUpdate, async () => {
     if (isDev) return { status: "dev" };
     try {
-      const result = await autoUpdater.checkForUpdates();
+      const result = await safeAutoUpdater()?.checkForUpdates();
       if (result?.updateInfo?.version) {
         const latest = result.updateInfo.version;
         const current = app.getVersion();
@@ -1158,14 +1204,14 @@ app.whenReady().then(async () => {
   ipcMain.handle(desktopIpc.downloadUpdate, async () => {
     if (isDev) return { status: "dev" };
     try {
-      await autoUpdater.downloadUpdate();
+      await safeAutoUpdater()?.downloadUpdate();
       return { status: "downloaded" };
     } catch (e: any) {
       return { status: "error", message: e.message };
     }
   });
   ipcMain.handle(desktopIpc.installUpdate, async () => {
-    autoUpdater.quitAndInstall();
+    safeAutoUpdater()?.quitAndInstall();
   });
   ipcMain.handle(desktopIpc.setAutoUpdateEnabled, async (_event, enabled: boolean) => {
     autoUpdateEnabled = enabled;
@@ -1507,7 +1553,7 @@ function createRuntimeLoginCallbacks() {
 async function showLoginInstructions(url: string, instructions: string): Promise<void> {
   const window = mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined;
   const detail = `${instructions}\n\n${url}`;
-  await dialog.showMessageBox(window, {
+  const options: MessageBoxOptions = {
     type: "info",
     title: "Provider login",
     message: "Continue provider login in your browser.",
@@ -1515,7 +1561,12 @@ async function showLoginInstructions(url: string, instructions: string): Promise
     buttons: ["OK"],
     defaultId: 0,
     cancelId: 0,
-  });
+  };
+  if (window) {
+    await dialog.showMessageBox(window, options);
+  } else {
+    await dialog.showMessageBox(options);
+  }
 }
 
 async function promptForText(message: string, placeholder = "", allowEmpty = false): Promise<string> {

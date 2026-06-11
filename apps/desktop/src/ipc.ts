@@ -9,11 +9,15 @@ import type {
   ComposerAttachment,
   ComposerImageAttachment,
   CreateSessionInput,
+  ConnectPhoneQrPollResult,
+  ConnectPhoneQrStartInput,
+  ConnectPhoneQrStartResult,
   CreateWorktreeInput,
   DesktopAppState,
   ModelSettingsScopeMode,
   NotificationPreferences,
   RemoveWorktreeInput,
+  SaveImChannelInput,
   SelectedTranscriptRecord,
   StartThreadInput,
   WorkspaceSessionTarget,
@@ -69,6 +73,10 @@ export const desktopIpc = {
   setExtensionEnabled: "pi-gui:set-extension-enabled",
   respondToHostUiRequest: "pi-gui:respond-to-host-ui-request",
   setNotificationPreferences: "pi-gui:set-notification-preferences",
+  saveImChannel: "pi-gui:save-im-channel",
+  removeImChannel: "pi-gui:remove-im-channel",
+  startConnectPhoneQr: "pi-gui:start-connect-phone-qr",
+  pollConnectPhoneQr: "pi-gui:poll-connect-phone-qr",
   setIntegratedTerminalShell: "pi-gui:set-integrated-terminal-shell",
   setEnableTransparency: "pi-gui:set-enable-transparency",
   setLocale: "pi-gui:set-locale",
@@ -296,6 +304,10 @@ export interface PiDesktopApi {
       | { readonly requestId: string; readonly cancelled: true },
   ): Promise<DesktopAppState>;
   setNotificationPreferences(preferences: Partial<NotificationPreferences>): Promise<DesktopAppState>;
+  saveImChannel(input: SaveImChannelInput): Promise<DesktopAppState>;
+  removeImChannel(channelId: string): Promise<DesktopAppState>;
+  startConnectPhoneQr(input: ConnectPhoneQrStartInput): Promise<ConnectPhoneQrStartResult>;
+  pollConnectPhoneQr(provider: ConnectPhoneQrStartInput["provider"], deviceCode: string): Promise<ConnectPhoneQrPollResult>;
   setIntegratedTerminalShell(shell: string): Promise<DesktopAppState>;
   setEnableTransparency(enabled: boolean): Promise<DesktopAppState>;
   setLocale(locale: string): Promise<DesktopAppState>;

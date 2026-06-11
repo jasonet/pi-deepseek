@@ -4,7 +4,7 @@ export type SessionStatus = "idle" | "running" | "failed";
 export type { SessionRole, TranscriptMessage } from "./timeline-types";
 import type { TranscriptMessage } from "./timeline-types";
 
-export type AppView = "threads" | "new-thread" | "skills" | "extensions" | "settings";
+export type AppView = "threads" | "new-thread" | "skills" | "extensions" | "settings" | "connect-phone";
 export type WorkspaceKind = "primary" | "worktree";
 export type WorktreeStatus = "ready" | "missing" | "error";
 export type NewThreadEnvironment = "local" | "worktree";
@@ -12,6 +12,17 @@ export type ThemeMode = "system" | "light" | "dark";
 export type ModelSettingsScopeMode = "app-global" | "per-repo";
 export type Locale = "en" | "zh-CN" | "zh-TW" | "ja";
 export type ComposerWorkMode = "pi-agent" | "open-design";
+export type ImProvider =
+  | "feishu"
+  | "weixin"
+  | "telegram"
+  | "discord"
+  | "dingtalk"
+  | "slack"
+  | "whatsapp"
+  | "line";
+export type ConnectPhoneProvider = Extract<ImProvider, "feishu" | "weixin">;
+export type ImProviderStatus = "stopped" | "starting" | "running" | "error";
 export type ComposerDraftSyncSource =
   | "state"
   | "selection"
@@ -25,6 +36,75 @@ export interface NotificationPreferences {
   readonly backgroundFailure: boolean;
   readonly attentionNeeded: boolean;
 }
+
+export interface ImAgentProfile {
+  readonly name: string;
+  readonly description: string;
+  readonly identity: string;
+  readonly personality: string;
+  readonly userContext: string;
+  readonly replyRules: string;
+}
+
+export type ImCredential =
+  | { readonly kind: "feishu"; readonly appId: string; readonly appSecret: string; readonly domain: "feishu" | "lark" }
+  | { readonly kind: "weixin"; readonly accountId: string; readonly sessionKey: string }
+  | { readonly kind: "telegram"; readonly botToken: string }
+  | { readonly kind: "discord"; readonly botToken: string }
+  | { readonly kind: "dingtalk"; readonly appKey: string; readonly appSecret: string }
+  | { readonly kind: "slack"; readonly botToken: string; readonly signingSecret: string }
+  | { readonly kind: "whatsapp"; readonly phoneNumberId: string; readonly accessToken: string }
+  | { readonly kind: "line"; readonly channelAccessToken: string; readonly channelSecret: string };
+
+export interface ImSettings {
+  readonly enabled: boolean;
+  readonly provider: ImProvider;
+  readonly port: number;
+  readonly path: string;
+  readonly secret: string;
+  readonly workspaceRoot: string;
+  readonly model: string;
+  readonly mode: "agent" | "plan";
+  readonly responseTimeoutMs: number;
+}
+
+export interface ImChannel {
+  readonly id: string;
+  readonly provider: ImProvider;
+  readonly label: string;
+  readonly enabled: boolean;
+  readonly status: ImProviderStatus;
+  readonly credential: ImCredential;
+  readonly agentProfile: ImAgentProfile;
+  readonly settings: ImSettings;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export type SaveImChannelInput = Omit<ImChannel, "id" | "status" | "createdAt" | "updatedAt"> & {
+  readonly id?: string;
+  readonly status?: ImProviderStatus;
+};
+
+export interface ConnectPhoneQrStartInput {
+  readonly provider: ConnectPhoneProvider;
+  readonly isLark?: boolean;
+}
+
+export type ConnectPhoneQrStartResult =
+  | {
+      readonly ok: true;
+      readonly url: string;
+      readonly deviceCode: string;
+      readonly userCode: string;
+      readonly interval: number;
+      readonly expireIn: number;
+    }
+  | { readonly ok: false; readonly message: string };
+
+export type ConnectPhoneQrPollResult =
+  | { readonly done: false; readonly message?: string }
+  | { readonly done: true; readonly provider: ConnectPhoneProvider; readonly credential: Extract<ImCredential, { readonly kind: ConnectPhoneProvider }> };
 
 export interface ComposerImageAttachment {
   readonly id: string;
@@ -170,6 +250,7 @@ export interface DesktopAppState {
   readonly sessionExtensionUiBySession: Readonly<Record<string, SessionExtensionUiStateRecord>>;
   readonly extensionCommandCompatibilityByWorkspace: Readonly<Record<string, readonly ExtensionCommandCompatibilityRecord[]>>;
   readonly notificationPreferences: NotificationPreferences;
+  readonly imChannels: readonly ImChannel[];
   readonly integratedTerminalShell: string;
   readonly lastViewedAtBySession: Readonly<Record<string, string>>;
   readonly workspaceOrder: readonly string[];
@@ -216,6 +297,7 @@ export function createEmptyDesktopAppState(): DesktopAppState {
       backgroundFailure: true,
       attentionNeeded: true,
     },
+    imChannels: [],
     integratedTerminalShell: "",
     lastViewedAtBySession: {},
     workspaceOrder: [],
@@ -238,5 +320,7 @@ export function getSelectedWorkspace(state: DesktopAppState): WorkspaceRecord | 
 }
 
 export function getSelectedSession(state: DesktopAppState): SessionRecord | undefined {
-  return getSelectedWorkspace(state)?.sessions.find((session) => session.id === state.selectedSessionId);
+  return getSelectedWorkspace(state)?.sessions.find(
+    (session) => session.id === state.selectedSessionId && !session.archivedAt,
+  );
 }

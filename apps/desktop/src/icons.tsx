@@ -230,6 +230,15 @@ export function SettingsIcon() {
   );
 }
 
+export function PhoneIcon() {
+  return (
+    <Icon>
+      <rect x="6.2" y="2.8" width="7.6" height="14.4" rx="2" stroke="currentColor" strokeWidth="1.35" />
+      <path d="M8.6 5h2.8M9.25 14.8h1.5" stroke="currentColor" strokeLinecap="round" strokeWidth="1.35" />
+    </Icon>
+  );
+}
+
 export function ModelIcon() {
   return (
     <Icon>

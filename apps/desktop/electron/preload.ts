@@ -24,11 +24,15 @@ import type {
   AppView,
   ComposerAttachment,
   ComposerImageAttachment,
+  ConnectPhoneQrPollResult,
+  ConnectPhoneQrStartInput,
+  ConnectPhoneQrStartResult,
   CreateSessionInput,
   CreateWorktreeInput,
   DesktopAppState,
   NotificationPreferences,
   RemoveWorktreeInput,
+  SaveImChannelInput,
   SelectedTranscriptRecord,
   StartThreadInput,
   WorkspaceSessionTarget,
@@ -181,6 +185,14 @@ contextBridge.exposeInMainWorld("piApp", {
     ipcRenderer.invoke(desktopIpc.respondToHostUiRequest, workspaceId, sessionId, response) as Promise<DesktopAppState>,
   setNotificationPreferences: (preferences: Partial<NotificationPreferences>) =>
     ipcRenderer.invoke(desktopIpc.setNotificationPreferences, preferences) as Promise<DesktopAppState>,
+  saveImChannel: (input: SaveImChannelInput) =>
+    ipcRenderer.invoke(desktopIpc.saveImChannel, input) as Promise<DesktopAppState>,
+  removeImChannel: (channelId: string) =>
+    ipcRenderer.invoke(desktopIpc.removeImChannel, channelId) as Promise<DesktopAppState>,
+  startConnectPhoneQr: (input: ConnectPhoneQrStartInput) =>
+    ipcRenderer.invoke(desktopIpc.startConnectPhoneQr, input) as Promise<ConnectPhoneQrStartResult>,
+  pollConnectPhoneQr: (provider: ConnectPhoneQrStartInput["provider"], deviceCode: string) =>
+    ipcRenderer.invoke(desktopIpc.pollConnectPhoneQr, provider, deviceCode) as Promise<ConnectPhoneQrPollResult>,
   setIntegratedTerminalShell: (shellPath: string) =>
     ipcRenderer.invoke(desktopIpc.setIntegratedTerminalShell, shellPath) as Promise<DesktopAppState>,
   setEnableTransparency: (enabled: boolean) =>

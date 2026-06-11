@@ -3,7 +3,7 @@ import type { RuntimeSettingsSnapshot, RuntimeSnapshot } from "@pi-gui/session-d
 import { ProviderIcon, providerLoginIconUrl } from "./provider-icons";
 import { ProviderBalance } from "./provider-balance";
 
-export type SettingsSection = "appearance" | "general" | "providers" | "models" | "notifications";
+export type SettingsSection = "appearance" | "general" | "providers" | "models" | "channels" | "notifications";
 
 export const THINKING_LEVELS: NonNullable<RuntimeSettingsSnapshot["defaultThinkingLevel"]>[] = [
   "low", "medium", "high", "xhigh",
@@ -18,19 +18,21 @@ export function labelForThinking(level: NonNullable<RuntimeSettingsSnapshot["def
   return level.charAt(0).toUpperCase() + level.slice(1);
 }
 
-export function sectionTitle(t: (key: string) => string, section: SettingsSection): string {
+type Translate = (key: string, vars?: Record<string, string>) => string;
+
+export function sectionTitle(t: Translate, section: SettingsSection): string {
   const map: Record<SettingsSection, string> = {
     appearance: "settings.appearance", providers: "settings.providers",
-    models: "settings.models", notifications: "settings.notifications", general: "settings.general",
+    models: "settings.models", channels: "settings.channels", notifications: "settings.notifications", general: "settings.general",
   };
   return t(map[section]);
 }
 
-export function sectionDescription(t: (key: string) => string, section: SettingsSection, workspaceName: string): string {
+export function sectionDescription(t: Translate, section: SettingsSection, workspaceName: string): string {
   if (section === "providers") return t("settings.providers.description", { workspace: workspaceName });
   const map: Record<SettingsSection, string> = {
     appearance: "settings.appearance.description", providers: "settings.providers.description",
-    models: "settings.models.description", notifications: "settings.notifications.description",
+    models: "settings.models.description", channels: "settings.channels.description", notifications: "settings.notifications.description",
     general: "settings.general.description",
   };
   return t(map[section]);

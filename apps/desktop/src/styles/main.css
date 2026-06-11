@@ -2341,6 +2341,41 @@
   flex-shrink: 0;
 }
 
+.settings-input {
+  min-height: 34px;
+  width: min(360px, 42vw);
+  max-width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-strong);
+  color: var(--text-strong);
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+
+.settings-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+textarea.settings-input {
+  resize: vertical;
+  line-height: 1.45;
+}
+
+.settings-inline-fields {
+  display: grid;
+  grid-template-columns: minmax(92px, 0.45fr) minmax(180px, 1fr);
+  gap: 8px;
+  width: min(360px, 42vw);
+}
+
+.settings-inline-fields .settings-input {
+  width: 100%;
+}
+
 .settings-row__actions {
   display: flex;
   flex-wrap: wrap;
@@ -2511,6 +2546,196 @@
   border-radius: 12px;
   border: 1px solid #e1e6ef;
   background: #f9fafc;
+}
+
+.connect-phone__layout {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.8fr) minmax(320px, 1.4fr);
+  gap: 16px;
+}
+
+.connect-phone__providers,
+.connect-phone__qr-panel,
+.connect-phone__channels,
+.connect-phone__future {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.connect-phone__providers {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  padding: 10px;
+}
+
+.connect-phone__provider {
+  display: grid;
+  gap: 5px;
+  width: 100%;
+  min-height: 88px;
+  padding: 12px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.connect-phone__provider:hover,
+.connect-phone__provider--active {
+  border-color: rgba(56, 132, 255, 0.26);
+  background: rgba(56, 132, 255, 0.08);
+}
+
+.connect-phone__provider-title {
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--text-strong);
+}
+
+.connect-phone__provider-description,
+.connect-phone__muted,
+.connect-phone__channel span,
+.connect-phone__future-row span:last-child {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.connect-phone__qr-panel {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  min-height: 430px;
+  padding: 18px;
+}
+
+.connect-phone__qr-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+
+.connect-phone__qr-header h2,
+.connect-phone__channels h2,
+.connect-phone__future h2 {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.25;
+  color: var(--text-strong);
+}
+
+.connect-phone__qr-header p {
+  margin: 6px 0 0;
+  max-width: 480px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.connect-phone__domain {
+  max-width: 112px;
+}
+
+.connect-phone__qr-box {
+  display: grid;
+  place-items: center;
+  width: 256px;
+  height: 256px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.connect-phone__qr-image {
+  width: 220px;
+  height: 220px;
+  object-fit: contain;
+}
+
+.connect-phone__qr-placeholder {
+  display: grid;
+  place-items: center;
+  width: 220px;
+  height: 220px;
+  border: 1px dashed rgba(16, 24, 40, 0.22);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.connect-phone__code {
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: var(--surface-muted);
+  color: var(--text-strong);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.connect-phone__status {
+  min-height: 20px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.connect-phone__status--connected {
+  color: #15803d;
+}
+
+.connect-phone__status--error {
+  color: #b42318;
+}
+
+.connect-phone__actions {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.connect-phone__channels,
+.connect-phone__future {
+  display: grid;
+  grid-column: span 2;
+  gap: 10px;
+  padding: 14px;
+}
+
+.connect-phone__channel,
+.connect-phone__future-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+
+.connect-phone__channel:first-of-type,
+.connect-phone__future-row:first-of-type {
+  border-top: 0;
+}
+
+.connect-phone__channel > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.connect-phone__channel strong,
+.connect-phone__future-row span:first-child {
+  color: var(--text-strong);
+  font-size: 14px;
 }
 
 .skills-toolbar {
@@ -3090,6 +3315,27 @@
   .skills-grid {
     grid-template-columns: 1fr;
   }
+
+  .connect-phone__layout {
+    grid-template-columns: 1fr;
+  }
+
+  .connect-phone__providers {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .connect-phone__channels,
+  .connect-phone__future {
+    grid-column: auto;
+  }
+
+  .connect-phone__qr-header,
+  .connect-phone__actions,
+  .connect-phone__channel,
+  .connect-phone__future-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
 }
 
 /* Thread search */
@@ -3353,6 +3599,28 @@ mark.thread-find-active {
 
 :root.dark .settings-toggle--row {
   border-color: var(--line);
+  background: var(--surface-muted);
+}
+
+:root.dark .connect-phone__providers,
+:root.dark .connect-phone__qr-panel,
+:root.dark .connect-phone__channels,
+:root.dark .connect-phone__future {
+  border-color: var(--line);
+  background: var(--surface);
+}
+
+:root.dark .connect-phone__provider:hover,
+:root.dark .connect-phone__provider--active {
+  border-color: rgba(124, 157, 250, 0.32);
+  background: rgba(124, 157, 250, 0.12);
+}
+
+:root.dark .connect-phone__qr-placeholder {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+:root.dark .connect-phone__code {
   background: var(--surface-muted);
 }
 

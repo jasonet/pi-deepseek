@@ -11,7 +11,7 @@ export const LOCALE_LABELS: Record<Locale, string> = {
 
 export interface LocaleContextValue {
   readonly locale: Locale;
-  readonly t: (key: string) => string;
+  readonly t: (key: string, vars?: Record<string, string>) => string;
 }
 
 const LocaleContext = createContext<LocaleContextValue>({
@@ -30,6 +30,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "sidebar.extensions": "Extensions",
     "sidebar.openDesign": "Open Design",
     "sidebar.settings": "Settings",
+    "sidebar.connectPhone": "连接手机",
     "sidebar.searchThreads": "Search threads…",
     "sidebar.openFolder": "Open folder",
     "sidebar.createWorktree": "Create permanent worktree",
@@ -142,6 +143,10 @@ const translations: Record<Locale, Record<string, string>> = {
     "settings.providers.builtIn": "Built in",
     "settings.providers.needsApiKey": "Needs API key",
     "settings.providers.balance": "Balance",
+
+    // Settings → Channels
+    "settings.channels": "Channels",
+    "settings.channels.description": "Configure IM entry points and provider parameters for remote pi sessions.",
 
     // Settings → Models
     "settings.models": "Models",

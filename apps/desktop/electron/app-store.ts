@@ -1,4 +1,5 @@
 import type { BrowserWindow } from "electron";
+import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
@@ -41,6 +42,7 @@ import {
   type ComposerDraftSyncSource,
   type ExtensionCommandCompatibilityRecord,
   type ModelSettingsScopeMode,
+  type SaveImChannelInput,
   createEmptyDesktopAppState,
   type CreateSessionInput,
   type CreateWorktreeInput,
@@ -546,6 +548,53 @@ export class DesktopAppStore implements AppStoreInternals {
     return this.state.locale;
   }
 
+  async saveImChannel(input: SaveImChannelInput): Promise<DesktopAppState> {
+    await this.initialize();
+    const now = new Date().toISOString();
+    const channelId = input.id?.trim() || `im_${randomUUID()}`;
+    const existing = this.state.imChannels.find((channel) => channel.id === channelId);
+    const nextChannel = {
+      id: channelId,
+      provider: input.provider,
+      label: input.label.trim() || input.provider,
+      enabled: input.enabled,
+      status: input.status ?? existing?.status ?? "stopped",
+      credential: input.credential,
+      agentProfile: input.agentProfile,
+      settings: input.settings,
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    };
+    const nextChannels = existing
+      ? this.state.imChannels.map((channel) => channel.id === channelId ? nextChannel : channel)
+      : [...this.state.imChannels, nextChannel];
+    this.state = {
+      ...this.state,
+      imChannels: nextChannels,
+      lastError: undefined,
+      revision: this.state.revision + 1,
+    };
+    await this.persistUiState();
+    return this.emit();
+  }
+
+  async removeImChannel(channelId: string): Promise<DesktopAppState> {
+    await this.initialize();
+    const normalized = channelId.trim();
+    const nextChannels = this.state.imChannels.filter((channel) => channel.id !== normalized);
+    if (nextChannels.length === this.state.imChannels.length) {
+      return structuredClone(this.state);
+    }
+    this.state = {
+      ...this.state,
+      imChannels: nextChannels,
+      lastError: undefined,
+      revision: this.state.revision + 1,
+    };
+    await this.persistUiState();
+    return this.emit();
+  }
+
   getProviderAuth(providerId: string): string | undefined {
     try {
       const authPath = join(homedir(), ".pi", "agent", "auth.json");
@@ -807,6 +856,7 @@ export class DesktopAppStore implements AppStoreInternals {
           ...this.state.notificationPreferences,
           ...persisted.notificationPreferences,
         },
+        imChannels: persisted.imChannels ?? this.state.imChannels,
         integratedTerminalShell: persisted.integratedTerminalShell ?? this.state.integratedTerminalShell,
         lastViewedAtBySession: persisted.lastViewedAtBySession ?? {},
         workspaceOrder: persisted.workspaceOrder ?? [],
@@ -1756,6 +1806,7 @@ export class DesktopAppStore implements AppStoreInternals {
       composerDraftsBySession: mapToRecord(this.sessionState.composerDraftsBySession),
       extensionCommandCompatibilityByWorkspace: serializeCompatibilityByWorkspace(this.extensionCommandCompatibilityByWorkspace),
       notificationPreferences: this.state.notificationPreferences,
+      imChannels: this.state.imChannels.length > 0 ? this.state.imChannels : undefined,
       integratedTerminalShell: this.state.integratedTerminalShell || undefined,
       lastViewedAtBySession: mapToRecord(this.sessionState.lastViewedAtBySession),
       workspaceOrder: this.state.workspaceOrder.length > 0 ? this.state.workspaceOrder : undefined,
@@ -2553,14 +2604,15 @@ function resolveSelectedSessionIdFromCatalog(
   sessions: readonly SessionCatalogEntry[],
 ): string {
   const workspaceSessions = sessions.filter((session) => session.workspaceId === workspaceId);
-  if (!workspaceSessions.length) {
+  const activeSessions = workspaceSessions.filter((session) => !session.archivedAt);
+  if (!activeSessions.length) {
     return "";
   }
   if (
     preferredSessionId &&
-    workspaceSessions.some((session) => session.sessionRef.sessionId === preferredSessionId)
+    activeSessions.some((session) => session.sessionRef.sessionId === preferredSessionId)
   ) {
     return preferredSessionId;
   }
-  return workspaceSessions[0]?.sessionRef.sessionId ?? "";
+  return activeSessions[0]?.sessionRef.sessionId ?? "";
 }

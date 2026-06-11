@@ -66,3 +66,46 @@ test("archives a hovered thread into a restorable sidebar section", async () => 
     await harness.close();
   }
 });
+
+test("archiving the only visible thread keeps the app on a usable surface", async () => {
+  const userDataDir = await makeUserDataDir("pi-app-user-data-");
+  const workspacePath = await makeWorkspace("archive-last-thread-workspace");
+  const harness = await launchDesktop(userDataDir, {
+    initialWorkspaces: [workspacePath],
+    testMode: "background",
+  });
+
+  try {
+    const window = await harness.firstWindow();
+    await createNamedThread(window, "Only thread");
+
+    const activeRow = window.locator(".session-list > .session-row").filter({ hasText: "Only thread" }).first();
+    await activeRow.hover();
+    await activeRow.locator(".session-row__action").click();
+
+    await expect(window.getByTestId("new-thread-composer")).toBeVisible({ timeout: 15_000 });
+    await expect
+      .poll(async () => window.locator("#root").evaluate((root) => root.children.length))
+      .toBeGreaterThan(0);
+    await expect
+      .poll(async () => {
+        const state = await getDesktopState(window);
+        return {
+          activeView: state.activeView,
+          selectedSessionId: state.selectedSessionId,
+        };
+      })
+      .toEqual({
+        activeView: "new-thread",
+        selectedSessionId: "",
+      });
+    await expect
+      .poll(async () => {
+        const state = await getDesktopState(window);
+        return state.workspaces[0]?.sessions.find((session) => session.title === "Only thread")?.archivedAt ?? "";
+      })
+      .not.toBe("");
+  } finally {
+    await harness.close();
+  }
+});

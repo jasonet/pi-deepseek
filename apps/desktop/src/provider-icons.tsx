@@ -112,8 +112,8 @@ export function ProviderIcon({ provider, size = 32 }: {
   readonly provider: RuntimeSnapshot["providers"][number];
   readonly size?: number;
 }) {
-  const pngUrl = PROVIDER_PNG[provider.id] ?? 
-    PROVIDER_PNG[provider.id.split("-")[0]];
+  const providerFamily = provider.id.split("-")[0] ?? provider.id;
+  const pngUrl = PROVIDER_PNG[provider.id] ?? PROVIDER_PNG[providerFamily];
   const [imgError, setImgError] = useState(false);
 
   if (pngUrl && !imgError) {
@@ -133,7 +133,9 @@ export function ProviderIcon({ provider, size = 32 }: {
   const color = providerColor(provider.id);
   const pname = provider.name || provider.id;
   const words = pname.split(/[\s-]+/);
-  const initials = words.length >= 2 ? (words[0][0] + words[1][0]).toUpperCase() : pname.slice(0, 2).toUpperCase();
+  const firstInitial = words[0]?.[0] ?? pname[0] ?? "?";
+  const secondInitial = words[1]?.[0] ?? "";
+  const initials = words.length >= 2 ? (firstInitial + secondInitial).toUpperCase() : pname.slice(0, 2).toUpperCase();
   const fontSize = size < 24 ? 10 : size < 32 ? 12 : 14;
 
   return (

@@ -9,6 +9,7 @@ import {
   type ComposerImageAttachment,
   type DesktopAppState,
   type NewThreadEnvironment,
+  type SaveImChannelInput,
   type SelectedTranscriptRecord,
   type StartThreadInput,
   type WorktreeRecord,
@@ -38,6 +39,7 @@ import { SidebarToggleButton } from "./sidebar-toggle-button";
 import { Topbar } from "./topbar";
 import { LocaleProvider, useT } from "./i18n";
 import { TerminalPanel } from "./terminal-panel";
+import { ConnectPhoneView } from "./connect-phone-view";
 import { ConversationTimeline, VIRTUALIZATION_THRESHOLD } from "./conversation-timeline";
 import { useSlashMenu } from "./hooks/use-slash-menu";
 import { useMentionMenu } from "./hooks/use-mention-menu";
@@ -279,7 +281,9 @@ export default function App() {
   }, [refreshNotificationPermissionStatus, settingsSection, snapshot?.activeView]);
 
   const selectedWorkspace = snapshot ? (getSelectedWorkspace(snapshot) ?? snapshot.workspaces[0]) : undefined;
-  const selectedSession = snapshot ? (getSelectedSession(snapshot) ?? selectedWorkspace?.sessions[0]) : undefined;
+  const selectedSession = snapshot
+    ? (getSelectedSession(snapshot) ?? selectedWorkspace?.sessions.find((session) => !session.archivedAt))
+    : undefined;
   const {
     activeWorktrees,
     linkedWorktreeByWorkspaceId,
@@ -1023,7 +1027,12 @@ export default function App() {
         const nextIdx = event.shiftKey
           ? (currentIdx <= 0 ? allSessions.length - 1 : currentIdx - 1)
           : (currentIdx >= allSessions.length - 1 || currentIdx === -1 ? 0 : currentIdx + 1);
-        void updateSnapshot(api, setSnapshot, () => api.selectSession({ workspaceId: snapshot.workspaces.find((w) => w.sessions.some((s) => s.id === allSessions[nextIdx].id))?.id ?? "", sessionId: allSessions[nextIdx].id }));
+        if (!api) return;
+        const nextSession = allSessions[nextIdx];
+        if (!nextSession) return;
+        const workspaceId = snapshot.workspaces.find((w) => w.sessions.some((s) => s.id === nextSession.id))?.id;
+        if (!workspaceId) return;
+        void updateSnapshot(api, setSnapshot, () => api.selectSession({ workspaceId, sessionId: nextSession.id }));
         return;
       }
       const command = getDesktopCommandFromShortcut({
@@ -1346,6 +1355,10 @@ export default function App() {
     setActiveView("new-thread");
   };
 
+  const openConnectPhone = () => {
+    setActiveView("connect-phone");
+  };
+
   const handleSelectNewThreadWorkspace = (workspaceId: string) => {
     setPendingNewThreadWorkspaceId("");
     setNewThreadRootWorkspaceId(workspaceId);
@@ -1663,6 +1676,24 @@ export default function App() {
     void updateSnapshot(api, setSnapshot, () => api.setNotificationPreferences(preferences));
   };
 
+  const handleSetAutoUpdateEnabled = (enabled: boolean) => {
+    setSnapshot((prev) => prev ? { ...prev, autoUpdateEnabled: enabled, revision: prev.revision + 1 } : prev);
+    void api?.setAutoUpdateEnabled(enabled);
+  };
+
+  const handleSetSkipAutoTitle = (enabled: boolean) => {
+    setSnapshot((prev) => prev ? { ...prev, skipAutoTitle: enabled, revision: prev.revision + 1 } : prev);
+    void api?.setSkipAutoTitle(enabled);
+  };
+
+  const handleSaveImChannel = async (input: SaveImChannelInput) => {
+    await updateSnapshot(api, setSnapshot, () => api.saveImChannel(input));
+  };
+
+  const handleRemoveImChannel = async (channelId: string) => {
+    await updateSnapshot(api, setSnapshot, () => api.removeImChannel(channelId));
+  };
+
   const handleSetIntegratedTerminalShell = (shellPath: string) => {
     void updateSnapshot(api, setSnapshot, () => api.setIntegratedTerminalShell(shellPath));
   };
@@ -1918,6 +1949,7 @@ export default function App() {
           runtime={settingsSection === "models" ? settingsModelRuntime : settingsRuntime}
           section={settingsSection}
           notificationPreferences={snapshot.notificationPreferences}
+          imChannels={snapshot.imChannels}
           notificationPermissionStatus={notificationPermissionStatus}
           notificationPermissionPending={notificationPermissionPending}
           modelSettingsScopeMode={snapshot.modelSettingsScopeMode}
@@ -1925,6 +1957,8 @@ export default function App() {
           themeMode={themeMode}
           enableTransparency={snapshot.enableTransparency}
           locale={snapshot.locale}
+          autoUpdateEnabled={snapshot.autoUpdateEnabled}
+          skipAutoTitle={snapshot.skipAutoTitle}
           onLoginProvider={handleLoginProvider}
           onLogoutProvider={handleLogoutProvider}
           onSetProviderApiKey={handleSetProviderApiKey}
@@ -1932,6 +1966,10 @@ export default function App() {
           onSetModelSettingsScopeMode={handleSetModelSettingsScopeMode}
           onSetDefaultModel={handleSetDefaultModel}
           onSetNotificationPreferences={handleSetNotificationPreferences}
+          onSetAutoUpdateEnabled={handleSetAutoUpdateEnabled}
+          onSetSkipAutoTitle={handleSetSkipAutoTitle}
+          onSaveImChannel={handleSaveImChannel}
+          onRemoveImChannel={handleRemoveImChannel}
           onSetIntegratedTerminalShell={handleSetIntegratedTerminalShell}
           onRequestNotificationPermission={handleRequestNotificationPermission}
           onOpenSystemNotificationSettings={handleOpenSystemNotificationSettings}
@@ -1988,6 +2026,20 @@ export default function App() {
                 : "Create a new skill for this workspace and explain which files you will add.",
             )
           }
+        />
+      </SecondarySurface>
+      </LocaleProvider>
+    );
+  }
+
+  if (snapshot.activeView === "connect-phone") {
+    return (
+      <LocaleProvider locale={snapshot.locale}>
+      <SecondarySurface onBack={() => setActiveView("threads")} testId="connect-phone-surface" title="连接手机">
+        <ConnectPhoneView
+          channels={snapshot.imChannels}
+          onSaveChannel={handleSaveImChannel}
+          onRemoveChannel={handleRemoveImChannel}
         />
       </SecondarySurface>
       </LocaleProvider>
@@ -2060,6 +2112,7 @@ export default function App() {
           onOpenSkills={openSkills}
           onOpenExtensions={openExtensions}
           onOpenSettings={openSettings}
+          onOpenConnectPhone={openConnectPhone}
           onArchiveSession={handleArchiveSession}
           onSelectSession={handleSelectSession}
           onUnarchiveSession={handleUnarchiveSession}

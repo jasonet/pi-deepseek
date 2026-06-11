@@ -183,7 +183,7 @@ function selectionAfterArchiving(state: DesktopAppState, target: WorkspaceSessio
     selectedWorkspaceId: next?.workspaceId ?? target.workspaceId,
     selectedSessionId: next?.session.id ?? "",
     clearLastError: true,
-    activeView: "threads",
+    activeView: next ? "threads" : "new-thread",
   };
 }
 

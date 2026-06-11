@@ -14,7 +14,7 @@ import {
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { AppView, SessionRecord, WorkspaceRecord, WorktreeRecord } from "./desktop-state";
-import { ArchiveIcon, ChevronDownIcon, ExtensionIcon, FolderIcon, PlusIcon, RestoreIcon, SettingsIcon, SkillIcon, WorktreeIcon } from "./icons";
+import { ArchiveIcon, ChevronDownIcon, ExtensionIcon, FolderIcon, PhoneIcon, PlusIcon, RestoreIcon, SettingsIcon, SkillIcon, WorktreeIcon } from "./icons";
 import type { PiDesktopApi } from "./ipc";
 import { formatRelativeTime } from "./string-utils";
 import type { WorkspaceMenuState } from "./hooks/use-workspace-menu";
@@ -43,6 +43,7 @@ interface SidebarProps {
   readonly onOpenSkills: (workspaceId?: string) => void;
   readonly onOpenExtensions: (workspaceId?: string) => void;
   readonly onOpenSettings: (workspaceId?: string) => void;
+  readonly onOpenConnectPhone: () => void;
   readonly onArchiveSession: (target: { workspaceId: string; sessionId: string }) => void;
   readonly onSelectSession: (target: { workspaceId: string; sessionId: string }) => void;
   readonly onUnarchiveSession: (target: { workspaceId: string; sessionId: string }) => void;
@@ -65,6 +66,7 @@ export function Sidebar(props: SidebarProps) {
     onOpenSkills,
     onOpenExtensions,
     onOpenSettings,
+    onOpenConnectPhone,
     onArchiveSession,
     onSelectSession,
     onUnarchiveSession,
@@ -256,6 +258,16 @@ export function Sidebar(props: SidebarProps) {
           </DndContext>
         )}
       </div>
+      <div className="sidebar__footer">
+        <button
+          className={`sidebar__settings ${activeView === "connect-phone" ? "sidebar__settings--active" : ""}`}
+          type="button"
+          onClick={onOpenConnectPhone}
+        >
+          <span className="sidebar__settings-mark"><PhoneIcon /></span>
+          <span>{t("sidebar.connectPhone")}</span>
+        </button>
+      </div>
     </aside>
   );
 }
@@ -326,6 +338,7 @@ function WorkspaceGroupContent(
     dragHandleProps,
   } = props;
 
+  const t = useT();
   const workspaceActive =
     rootWorkspace.id === selectedWorkspace?.id ||
     rootWorkspace.id === selectedWorkspace?.rootWorkspaceId;
@@ -578,7 +591,11 @@ function ThreadSessionRow({
           aria-label={`${archived ? "Restore" : "Archive"} ${thread.session.title}`}
           className="icon-button session-row__action"
           type="button"
-          onClick={onAction}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onAction();
+          }}
         >
           {archived ? <RestoreIcon /> : <ArchiveIcon />}
         </button>

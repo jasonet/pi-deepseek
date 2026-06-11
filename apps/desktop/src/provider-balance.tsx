@@ -22,6 +22,7 @@ export function ProviderBalance({ providerId, hasAuth }: { providerId: string; h
 
   if (!balance && !error) return null;
   if (error) return null;
+  if (balance == null) return null;
 
   const num = parseFloat(balance);
   const display = isNaN(num) ? balance : `${num.toFixed(1)} CNY`;

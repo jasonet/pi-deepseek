@@ -30,11 +30,11 @@ export function SettingsProvidersSection({
   const oauthProviders = providers.filter((p) => p.oauthSupported);
   const filteredProviders = filterProviders(providers, providerQuery);
   // Sorted all-providers list: API key first (connected → available), external last, hide OAuth
-  const sortedAllProviders = filterProviders(
+  const sortedAllProviders = [...filterProviders(
     providers.filter((p) => !p.oauthSupported),
     providerQuery,
-  ).sort((a, b) => {
-    const rank = (p: typeof a) => {
+  )].sort((a, b) => {
+    const rank = (p: RuntimeSnapshot["providers"][number]) => {
       if (p.apiKeySetupSupported) return p.hasAuth ? 0 : 1;
       return 2;
     };

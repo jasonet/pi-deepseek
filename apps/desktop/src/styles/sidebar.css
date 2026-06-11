@@ -673,6 +673,7 @@
 }
 
 .sidebar__settings {
+  width: 100%;
   display: inline-flex;
   align-items: center;
   gap: 10px;
@@ -683,10 +684,21 @@
   border-radius: 10px;
 }
 
+.sidebar__settings--active {
+  background: var(--surface-overlay);
+  border-color: var(--line);
+  color: var(--text-strong);
+}
+
 .sidebar__settings-mark {
   display: grid;
   place-items: center;
   color: var(--muted-settings);
+}
+
+.sidebar__settings-mark svg {
+  width: 16px;
+  height: 16px;
 }
 
 @media (max-width: 1180px) {

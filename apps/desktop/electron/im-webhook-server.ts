@@ -60,7 +60,8 @@ export function createImWebhookServer(store: DesktopAppStore): ImWebhookServer {
             timestamp: msg.timestamp || new Date().toISOString(),
           });
 
-          // Send to pi session
+          // Send to pi session and wait for reply
+          let reply = "";
           try {
             const sessionRef = {
               workspaceId: findWorkspaceForSession(state, channel.sessionId),
@@ -70,18 +71,55 @@ export function createImWebhookServer(store: DesktopAppStore): ImWebhookServer {
             if (sessionRef.workspaceId) {
               const driver = (store as any).driver;
               if (driver?.sendUserMessage) {
+                // Subscribe to session events to capture the reply
+                const replyPromise = new Promise<string>((resolve) => {
+                  const unsubscribe = driver.subscribe(sessionRef, (event: any) => {
+                    if (event.type === "runCompleted") {
+                      // Get final assistant message
+                      const msgs = (event as any).messages ?? [];
+                      const lastAssistant = [...msgs].reverse().find((m: any) => m.role === "assistant");
+                      if (lastAssistant?.content) {
+                        const text = typeof lastAssistant.content === "string"
+                          ? lastAssistant.content
+                          : (lastAssistant.content as any[])?.map((c: any) => c.text ?? "").join("") ?? "";
+                        resolve(text);
+                        unsubscribe();
+                      }
+                    } else if (event.type === "runFailed") {
+                      resolve("Agent run failed");
+                      unsubscribe();
+                    }
+                  });
+                  // Timeout after 5 minutes
+                  setTimeout(() => { resolve("Agent timeout"); unsubscribe(); }, 300_000);
+                });
+
                 await driver.sendUserMessage(sessionRef, {
                   text: msg.text,
                   source: "im",
                 });
+
+                reply = await replyPromise;
+
+                // Save outgoing reply
+                saveImMessage(channel.provider, channel.id, {
+                  id: createImMessageId(),
+                  channelId: channel.id,
+                  provider: channel.provider,
+                  direction: "out",
+                  text: reply,
+                  senderId: "agent",
+                  timestamp: new Date().toISOString(),
+                });
               }
             }
           } catch (e) {
-            console.error("[IM Webhook] Failed to send to session:", e);
+            console.error("[IM Webhook] Agent error:", e);
+            reply = "Error: " + (e instanceof Error ? e.message : String(e));
           }
 
           res.writeHead(200);
-          res.end(JSON.stringify({ ok: true, messageId }));
+          res.end(JSON.stringify({ ok: true, messageId, reply: reply.slice(0, 500) }));
         } catch (e) {
           console.error("[IM Webhook] Error:", e);
           res.writeHead(500);

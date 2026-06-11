@@ -1698,7 +1698,7 @@ export default function App() {
   };
   const handleImConnected = async (provider: ConnectPhoneProvider, sessionId?: string) => {
     // If channel already has a valid session, just navigate to it
-    if (sessionId && sessionId !== "none") {
+    if (sessionId && sessionId !== "none" && sessionId.length > 10) {
       const workspace = rootWorkspaceOptions[0];
       if (workspace) {
         await updateSnapshot(api, setSnapshot, () =>
@@ -1717,16 +1717,17 @@ export default function App() {
         api.startThread({
           rootWorkspaceId: workspace.id,
           environment: "local",
-          prompt: `${label} 已连接 — 手机和 App 的 agent 对话会话`,
+          prompt: `📱 ${label} 手机消息`,
         }),
       );
       const newSession = state.workspaces
         .find((w) => w.id === workspace.id)
         ?.sessions?.at(-1);
       if (newSession) {
-        // Update channel sessionId directly in snapshot (no separate IPC needed)
+        // Select the new session and link it to the channel
         setSnapshot((prev) => prev ? {
           ...prev,
+          selectedSessionId: newSession.id,
           imChannels: prev.imChannels.map((c) =>
             c.provider === provider ? { ...c, sessionId: newSession.id } : c
           ),

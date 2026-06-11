@@ -2,7 +2,7 @@ import http from "node:http";
 import type { DesktopAppStore } from "./app-store";
 import { saveImMessage, createImMessageId, type ImWebhookMessage } from "./im-message-store";
 
-const DEFAULT_PORT = 8788;
+const DEFAULT_PORT = 8789;
 const WEBHOOK_PATH = "/im/webhook";
 
 export interface ImWebhookServer {

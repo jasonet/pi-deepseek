@@ -1724,13 +1724,13 @@ export default function App() {
         .find((w) => w.id === workspace.id)
         ?.sessions?.at(-1);
       if (newSession) {
-        await updateSnapshot(api, setSnapshot, () =>
-          api.updateImChannelSession(provider, newSession.id),
-        );
-        // Store in local channel state for next time
-        snapshot.imChannels = snapshot.imChannels.map((c) =>
-          c.provider === provider ? { ...c, sessionId: newSession.id } : c,
-        );
+        // Update channel sessionId directly in snapshot (no separate IPC needed)
+        setSnapshot((prev) => prev ? {
+          ...prev,
+          imChannels: prev.imChannels.map((c) =>
+            c.provider === provider ? { ...c, sessionId: newSession.id } : c
+          ),
+        } : prev);
       }
     }
   };

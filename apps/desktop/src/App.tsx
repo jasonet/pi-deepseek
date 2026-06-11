@@ -1697,8 +1697,8 @@ export default function App() {
     await updateSnapshot(api, setSnapshot, () => api.removeImChannel(channelId));
   };
   const handleImConnected = async (provider: ConnectPhoneProvider, sessionId?: string) => {
-    // If channel already has a session, just navigate to it
-    if (sessionId) {
+    // If channel already has a valid session, just navigate to it
+    if (sessionId && sessionId !== "none") {
       const workspace = rootWorkspaceOptions[0];
       if (workspace) {
         await updateSnapshot(api, setSnapshot, () =>

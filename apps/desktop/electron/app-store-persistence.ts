@@ -85,8 +85,8 @@ export async function readPersistedUiState(uiStateFilePath: string): Promise<Leg
       allowMultiple: typeof parsed.allowMultiple === "boolean" ? parsed.allowMultiple : undefined,
       enableTransparency: typeof parsed.enableTransparency === "boolean" ? parsed.enableTransparency : undefined,
       locale: typeof parsed.locale === "string" ? parsed.locale : undefined,
-      collapsedWorkspaces: isRecord(parsed.collapsedWorkspaces) ? parsed.collapsedWorkspaces as Record<string, boolean> : undefined,
-      expandedArchivedByWorkspace: isRecord(parsed.expandedArchivedByWorkspace) ? parsed.expandedArchivedByWorkspace as Record<string, boolean> : undefined,
+      collapsedWorkspaces: (typeof parsed.collapsedWorkspaces === "object" && parsed.collapsedWorkspaces !== null) ? parsed.collapsedWorkspaces as Record<string, boolean> : undefined,
+      expandedArchivedByWorkspace: (typeof parsed.expandedArchivedByWorkspace === "object" && parsed.expandedArchivedByWorkspace !== null) ? parsed.expandedArchivedByWorkspace as Record<string, boolean> : undefined,
       composerAttachmentsBySession: parsed.composerAttachmentsBySession,
       transcripts: parsed.transcripts,
     };

@@ -55,6 +55,7 @@ interface ComposerPanelProps {
   readonly modelOnboarding: ModelOnboardingState;
   readonly onOpenModelSettings: (section: ModelOnboardingSettingsSection) => void;
   readonly onSubmit: () => void;
+  readonly onRetryLast?: () => void;
   readonly showMentionMenu: boolean;
   readonly mentionOptions: readonly string[];
   readonly selectedMentionIndex: number;
@@ -163,6 +164,13 @@ export function ComposerPanel({
           footer={(
             <div className="composer__footer">
               <div className="composer__footer-row">
+                {lastError ? (
+                  <div className="composer__error" style={{ color: "#f85149", fontSize: 12, marginBottom: 4 }}>
+                    {lastError}
+                    <button className="button button--secondary" style={{ marginLeft: 8, fontSize: 11, padding: "2px 8px" }}
+                      onClick={onRetryLast} type="button">重试</button>
+                  </div>
+                ) : null}
                 <div className="composer__hint">
                   {selectedSession.status === "running"
                     ? `${runningLabel} · Enter to queue · Cmd+Enter to steer`

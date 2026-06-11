@@ -16,20 +16,24 @@ export async function startFeishuInstallQrcode(fetcher: FetchLike, isLark: boole
   const domain = isLark ? "lark" : "feishu";
   const endpoint = `${isLark ? LARK_BASE_URL : FEISHU_BASE_URL}/oauth/v1/app/registration`;
 
-  // Init
+  // Init — get nonce
   const initPayload = await postFeishuForm(fetcher, endpoint, { action: "init" });
+  const nonce = readString(initPayload, "nonce");
   const initError = readString(initPayload, "error");
   if (initError) {
     return { ok: false, message: `飞书初始化失败: ${readString(initPayload, "error_description") ?? initError}` };
   }
 
-  // Begin
-  const payload = await postFeishuForm(fetcher, endpoint, {
+  // Begin — use nonce from init
+  const beginForm: Record<string, string> = {
     action: "begin",
     archetype: "PersonalAgent",
     auth_method: "client_secret",
     request_user_info: "open_id",
-  });
+  };
+  if (nonce) beginForm.nonce = nonce;
+
+  const payload = await postFeishuForm(fetcher, endpoint, beginForm);
   const beginError = readString(payload, "error");
   if (beginError) {
     return { ok: false, message: `飞书注册失败: ${readString(payload, "error_description") ?? beginError}` };

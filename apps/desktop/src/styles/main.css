@@ -2645,16 +2645,18 @@ textarea.settings-input {
 .connect-phone__qr-box {
   display: grid;
   place-items: center;
-  width: 256px;
-  height: 256px;
+  width: 100%;
+  min-height: 320px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fff;
+  padding: 16px;
 }
 
 .connect-phone__qr-image {
-  width: 220px;
-  height: 220px;
+  width: 100%;
+  height: auto;
+  max-width: 360px;
   object-fit: contain;
 }
 

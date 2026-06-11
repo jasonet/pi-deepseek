@@ -162,6 +162,14 @@ export function Sidebar(props: SidebarProps) {
           <button
             className="sidebar__nav-item"
             type="button"
+            onClick={() => onOpenConnectPhone()}
+          >
+            <PhoneIcon />
+            <span>{t("sidebar.connectPhone")}</span>
+          </button>
+          <button
+            className="sidebar__nav-item"
+            type="button"
             onClick={() => onOpenSettings(selectedWorkspace?.rootWorkspaceId ?? selectedWorkspace?.id)}
           >
             <SettingsIcon />

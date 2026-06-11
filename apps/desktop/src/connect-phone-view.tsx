@@ -18,7 +18,7 @@ interface ConnectPhoneViewProps {
 }
 
 const PROVIDERS: readonly { id: ConnectPhoneProvider; label: string; description: string }[] = [
-  { id: "weixin", label: "微信", description: "使用 OpenClaw bridge 生成微信登录二维码。" },
+  { id: "weixin", label: "微信", description: "微信机器人通过 Tailscale 或局域网 IP 发送消息到本地 webhook。" },
   { id: "feishu", label: "飞书", description: "使用飞书/Lark 官方授权二维码完成个人应用安装。" },
 ];
 
@@ -104,6 +104,25 @@ export function ConnectPhoneView({
       return;
     }
 
+    // WeChat: save channel directly without QR code (use webhook)
+    if (nextProvider === "weixin") {
+      setStatus("saving");
+      await onSaveChannel({
+        provider: "weixin",
+        label: "微信",
+        enabled: true,
+        status: "running",
+        credential: { kind: "weixin", accountId: "direct", sessionKey: "webhook" },
+        agentProfile: { name: "微信", description: "", identity: "", personality: "", userContext: "", replyRules: "" },
+        settings: { enabled: true, provider: "weixin", port: 8789, path: "/im/webhook", secret: "", workspaceRoot: "~/.deepseekgui/claw", model: "auto", mode: "agent", responseTimeoutMs: 120_000 },
+      });
+      setStatus("connected");
+      setMessage(`微信已连接。Webhook: :8789/im/webhook`);
+      onConnected(nextProvider);
+      return;
+    }
+
+    // Feishu: use QR code flow
     setProvider(nextProvider);
     setInstallQr(null);
     setStatus("loading");
@@ -116,7 +135,7 @@ export function ConnectPhoneView({
     }
     setInstallQr(result);
     setStatus("scanning");
-    setMessage(nextProvider === "weixin" ? "请使用微信扫码并在手机上确认登录。" : "请使用飞书扫码完成授权。");
+    setMessage("请使用飞书扫码完成授权。");
   }
 
   function switchProvider(nextProvider: ConnectPhoneProvider) {

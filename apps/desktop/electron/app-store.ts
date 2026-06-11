@@ -863,6 +863,8 @@ export class DesktopAppStore implements AppStoreInternals {
         sidebarCollapsed: persisted.sidebarCollapsed ?? this.state.sidebarCollapsed,
         enableTransparency: persisted.enableTransparency ?? this.state.enableTransparency,
         locale: parseLocale(persisted.locale),
+        collapsedWorkspaces: persisted.collapsedWorkspaces ?? this.state.collapsedWorkspaces,
+        expandedArchivedByWorkspace: persisted.expandedArchivedByWorkspace ?? this.state.expandedArchivedByWorkspace,
       };
       await this.migrateLegacyPersistence(persisted);
       this.sessionState.lastViewedAtBySession.clear();
@@ -1815,6 +1817,8 @@ export class DesktopAppStore implements AppStoreInternals {
       sidebarCollapsed: this.state.sidebarCollapsed || undefined,
       enableTransparency: this.state.enableTransparency,
       locale: this.state.locale !== "en" ? this.state.locale : undefined,
+      collapsedWorkspaces: Object.keys(this.state.collapsedWorkspaces).length > 0 ? this.state.collapsedWorkspaces : undefined,
+      expandedArchivedByWorkspace: Object.keys(this.state.expandedArchivedByWorkspace).length > 0 ? this.state.expandedArchivedByWorkspace : undefined,
     };
 
     await writePersistedUiState(this.uiStateFilePath, payload);

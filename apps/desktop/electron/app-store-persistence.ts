@@ -30,6 +30,8 @@ export interface PersistedUiState {
   readonly allowMultiple?: boolean;
   readonly enableTransparency?: boolean;
   readonly locale?: string;
+  readonly collapsedWorkspaces?: Record<string, boolean>;
+  readonly expandedArchivedByWorkspace?: Record<string, boolean>;
 }
 
 export interface LegacyPersistedUiState extends PersistedUiState {
@@ -83,6 +85,8 @@ export async function readPersistedUiState(uiStateFilePath: string): Promise<Leg
       allowMultiple: typeof parsed.allowMultiple === "boolean" ? parsed.allowMultiple : undefined,
       enableTransparency: typeof parsed.enableTransparency === "boolean" ? parsed.enableTransparency : undefined,
       locale: typeof parsed.locale === "string" ? parsed.locale : undefined,
+      collapsedWorkspaces: isRecord(parsed.collapsedWorkspaces) ? parsed.collapsedWorkspaces as Record<string, boolean> : undefined,
+      expandedArchivedByWorkspace: isRecord(parsed.expandedArchivedByWorkspace) ? parsed.expandedArchivedByWorkspace as Record<string, boolean> : undefined,
       composerAttachmentsBySession: parsed.composerAttachmentsBySession,
       transcripts: parsed.transcripts,
     };

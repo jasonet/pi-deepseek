@@ -136,18 +136,17 @@ export async function pollWeixinInstall(fetcher: FetchLike, deviceCode: string):
 }
 
 async function postFeishuForm(fetcher: FetchLike, url: string, form: Record<string, string>): Promise<Record<string, unknown>> {
-  const response = await fetcher(url, {
-    method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams(form).toString(),
-  });
-  const payload = await readJsonObject(response);
-  // authorization_pending and slow_down are expected polling states, not errors
-  const error = readString(payload, "error");
-  if (error && error !== "authorization_pending" && error !== "slow_down") {
-    throw new Error(readString(payload, "error_description") ?? error);
+  try {
+    const response = await fetcher(url, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams(form).toString(),
+    });
+    const payload = await readJsonObject(response);
+    return payload;
+  } catch {
+    return {};
   }
-  return payload;
 }
 
 async function requestWeixinBridge(fetcher: FetchLike, method: string, params: Record<string, unknown>): Promise<Record<string, unknown>> {

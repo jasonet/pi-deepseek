@@ -16,13 +16,24 @@ export async function startFeishuInstallQrcode(fetcher: FetchLike, isLark: boole
   const domain = isLark ? "lark" : "feishu";
   const endpoint = `${isLark ? LARK_BASE_URL : FEISHU_BASE_URL}/oauth/v1/app/registration`;
 
-  await postFeishuForm(fetcher, endpoint, { action: "init" });
+  // Init
+  const initPayload = await postFeishuForm(fetcher, endpoint, { action: "init" });
+  const initError = readString(initPayload, "error");
+  if (initError) {
+    return { ok: false, message: `飞书初始化失败: ${readString(initPayload, "error_description") ?? initError}` };
+  }
+
+  // Begin
   const payload = await postFeishuForm(fetcher, endpoint, {
     action: "begin",
     archetype: "PersonalAgent",
     auth_method: "client_secret",
     request_user_info: "open_id",
   });
+  const beginError = readString(payload, "error");
+  if (beginError) {
+    return { ok: false, message: `飞书注册失败: ${readString(payload, "error_description") ?? beginError}` };
+  }
 
   const url = readString(payload, "verification_uri_complete");
   const deviceCode = readString(payload, "device_code");
@@ -142,10 +153,14 @@ async function postFeishuForm(fetcher: FetchLike, url: string, form: Record<stri
       headers: { "content-type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams(form).toString(),
     });
-    const payload = await readJsonObject(response);
-    return payload;
-  } catch {
-    return {};
+    const text = await response.text();
+    try {
+      return JSON.parse(text) as Record<string, unknown>;
+    } catch {
+      return { error: "parse_error", error_description: text.slice(0, 200) };
+    }
+  } catch (err) {
+    return { error: "network_error", error_description: err instanceof Error ? err.message : String(err) };
   }
 }
 

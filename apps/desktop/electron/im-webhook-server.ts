@@ -136,8 +136,8 @@ export function createImWebhookServer(store: DesktopAppStore): ImWebhookServer {
       });
 
       return new Promise<void>((resolve) => {
-        server!.listen(port, "127.0.0.1", () => {
-          console.log(`[IM Webhook] Listening on http://127.0.0.1:${port}${WEBHOOK_PATH}`);
+        server!.listen(port, "0.0.0.0", () => {
+          console.log(`[IM Webhook] Listening on http://0.0.0.0:${port}${WEBHOOK_PATH}`);
           resolve();
         });
       });

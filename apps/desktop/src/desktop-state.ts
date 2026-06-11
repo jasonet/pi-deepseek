@@ -264,6 +264,8 @@ export interface DesktopAppState {
   readonly autoUpdateEnabled: boolean;
   readonly skipAutoTitle: boolean;
   readonly composerWorkMode: ComposerWorkMode;
+  readonly collapsedWorkspaces: Readonly<Record<string, boolean>>;
+  readonly expandedArchivedByWorkspace: Readonly<Record<string, boolean>>;
   readonly revision: number;
   readonly lastError?: string;
 }
@@ -313,6 +315,8 @@ export function createEmptyDesktopAppState(): DesktopAppState {
     autoUpdateEnabled: true,
     skipAutoTitle: false,
     composerWorkMode: "pi-agent",
+    collapsedWorkspaces: {},
+    expandedArchivedByWorkspace: {},
     revision: 0,
   };
 }

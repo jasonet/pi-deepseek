@@ -837,6 +837,7 @@ export default function App() {
   const wsMenu = useWorkspaceMenu({
     api,
     setSnapshot,
+    snapshot,
     updateSnapshot,
   });
 

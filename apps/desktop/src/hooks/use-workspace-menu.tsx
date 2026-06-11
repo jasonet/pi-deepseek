@@ -5,6 +5,7 @@ import type { PiDesktopApi } from "../ipc";
 interface UseWorkspaceMenuParams {
   readonly api: PiDesktopApi | undefined;
   readonly setSnapshot: Dispatch<SetStateAction<DesktopAppState | null>>;
+  readonly snapshot: DesktopAppState | null;
   readonly updateSnapshot: (
     api: PiDesktopApi,
     setSnapshot: Dispatch<SetStateAction<DesktopAppState | null>>,
@@ -41,13 +42,17 @@ export interface WorkspaceMenuState {
 }
 
 export function useWorkspaceMenu(params: UseWorkspaceMenuParams): WorkspaceMenuState {
-  const { api, setSnapshot, updateSnapshot } = params;
+  const { api, setSnapshot, snapshot, updateSnapshot } = params;
 
   const [workspaceMenuId, setWorkspaceMenuId] = useState<string | null>(null);
   const [workspaceRenameId, setWorkspaceRenameId] = useState<string | null>(null);
   const [workspaceRenameDraft, setWorkspaceRenameDraft] = useState("");
-  const [expandedArchivedByWorkspace, setExpandedArchivedByWorkspace] = useState<Record<string, boolean>>({});
-  const [collapsedWorkspaces, setCollapsedWorkspaces] = useState<Record<string, boolean>>({});
+  const [expandedArchivedByWorkspace, setExpandedArchivedByWorkspace] = useState<Record<string, boolean>>(
+    snapshot?.expandedArchivedByWorkspace ?? {},
+  );
+  const [collapsedWorkspaces, setCollapsedWorkspaces] = useState<Record<string, boolean>>(
+    snapshot?.collapsedWorkspaces ?? {},
+  );
   const [environmentMenuOpen, setEnvironmentMenuOpen] = useState(false);
 
   const workspaceMenuWrapRef = useRef<HTMLSpanElement | null>(null);
@@ -144,11 +149,19 @@ export function useWorkspaceMenu(params: UseWorkspaceMenuParams): WorkspaceMenuS
   };
 
   const toggleArchived = (workspaceId: string, open: boolean) => {
-    setExpandedArchivedByWorkspace((current) => ({ ...current, [workspaceId]: open }));
+    setExpandedArchivedByWorkspace((current) => {
+      const next = { ...current, [workspaceId]: open };
+      setSnapshot((prev) => prev ? { ...prev, expandedArchivedByWorkspace: next } : prev);
+      return next;
+    });
   };
 
   const toggleWorkspaceCollapsed = (workspaceId: string) => {
-    setCollapsedWorkspaces((current) => ({ ...current, [workspaceId]: !current[workspaceId] }));
+    setCollapsedWorkspaces((current) => {
+      const next = { ...current, [workspaceId]: !current[workspaceId] };
+      setSnapshot((prev) => prev ? { ...prev, collapsedWorkspaces: next } : prev);
+      return next;
+    });
   };
 
   const expandWorkspace = (workspaceId: string) => {

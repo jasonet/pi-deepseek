@@ -1693,6 +1693,20 @@ export default function App() {
   const handleRemoveImChannel = async (channelId: string) => {
     await updateSnapshot(api, setSnapshot, () => api.removeImChannel(channelId));
   };
+  const handleImConnected = (provider: ConnectPhoneProvider) => {
+    setActiveView("threads");
+    const label = provider === "weixin" ? "📱微信" : "📱飞书";
+    const workspace = rootWorkspaceOptions[0];
+    if (workspace) {
+      void updateSnapshot(api, setSnapshot, () =>
+        api.startThread({
+          rootWorkspaceId: workspace.id,
+          environment: "local",
+          prompt: `${label} 已连接 — 手机和 App 的 agent 对话会话`,
+        }),
+      );
+    }
+  };
 
   const handleSetIntegratedTerminalShell = (shellPath: string) => {
     void updateSnapshot(api, setSnapshot, () => api.setIntegratedTerminalShell(shellPath));
@@ -2040,6 +2054,7 @@ export default function App() {
           channels={snapshot.imChannels}
           onSaveChannel={handleSaveImChannel}
           onRemoveChannel={handleRemoveImChannel}
+          onConnected={handleImConnected}
         />
       </SecondarySurface>
       </LocaleProvider>

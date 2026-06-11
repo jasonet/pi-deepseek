@@ -14,6 +14,7 @@ interface ConnectPhoneViewProps {
   readonly channels: readonly ImChannel[];
   readonly onSaveChannel: (input: SaveImChannelInput) => Promise<void>;
   readonly onRemoveChannel: (channelId: string) => Promise<void>;
+  readonly onConnected: (provider: ConnectPhoneProvider) => void;
 }
 
 const PROVIDERS: readonly { id: ConnectPhoneProvider; label: string; description: string }[] = [
@@ -32,6 +33,7 @@ export function ConnectPhoneView({
   channels,
   onSaveChannel,
   onRemoveChannel,
+  onConnected,
 }: ConnectPhoneViewProps) {
   const phoneChannels = useMemo(
     () => channels.filter((channel) => channel.provider === "weixin" || channel.provider === "feishu"),
@@ -71,6 +73,7 @@ export function ConnectPhoneView({
           setStatus("connected");
           setMessage(`${labelForProvider(result.provider)} 已连接。`);
           setInstallQr(null);
+          onConnected(result.provider);
           return;
         }
         if (result.message) {

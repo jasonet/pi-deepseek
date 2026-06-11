@@ -49,6 +49,7 @@ import type {
 } from "../src/desktop-state";
 import type { SessionDriverEvent } from "@pi-gui/session-driver";
 import type { GenerateThreadTitleOptions } from "@pi-gui/pi-sdk-driver";
+import { createImWebhookServer, type ImWebhookServer } from "./im-webhook-server";
 import type { WorkspaceRef } from "@pi-gui/session-driver";
 let autoUpdater: any;
 try {
@@ -64,6 +65,7 @@ let autoUpdateEnabled = true;
 let autoUpdateInterval: ReturnType<typeof setInterval> | undefined;
 let skipAutoTitle = false;
 let composerWorkMode: string = "pi-agent";
+let imWebhookServer: ImWebhookServer | null = null;
 
 function safeAutoUpdater() { return autoUpdater; }
 const windowTestMode = resolveWindowTestMode();
@@ -969,6 +971,11 @@ app.whenReady().then(async () => {
   });
   installApplicationMenu();
   startAutoUpdateChecker();
+
+  // Start IM webhook server for WeChat/Feishu message reception
+  imWebhookServer = createImWebhookServer(store);
+  imWebhookServer.start().catch(() => {});
+
   if (process.env.PI_APP_TEST_MODE) {
     Object.assign(globalThis, {
       __PI_APP_TEST_HOOKS: {

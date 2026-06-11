@@ -1126,6 +1126,9 @@ app.whenReady().then(async () => {
   ipcMain.handle(desktopIpc.removeImChannel, (_event, channelId: string) =>
     store.removeImChannel(channelId),
   );
+  ipcMain.handle(desktopIpc.updateImChannelSession, async (_event, provider: string, sessionId: string) => {
+    return store.updateImChannelSession(provider, sessionId);
+  });
   ipcMain.handle(desktopIpc.startConnectPhoneQr, async (_event, input: { readonly provider?: string; readonly isLark?: boolean }) => {
     try {
       if (input.provider === "weixin") {

@@ -77,6 +77,7 @@ export interface ImChannel {
   readonly credential: ImCredential;
   readonly agentProfile: ImAgentProfile;
   readonly settings: ImSettings;
+  readonly sessionId?: string;
   readonly createdAt: string;
   readonly updatedAt: string;
 }

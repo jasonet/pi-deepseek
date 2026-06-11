@@ -75,6 +75,7 @@ export const desktopIpc = {
   setNotificationPreferences: "pi-gui:set-notification-preferences",
   saveImChannel: "pi-gui:save-im-channel",
   removeImChannel: "pi-gui:remove-im-channel",
+  updateImChannelSession: "pi-gui:update-im-channel-session",
   startConnectPhoneQr: "pi-gui:start-connect-phone-qr",
   pollConnectPhoneQr: "pi-gui:poll-connect-phone-qr",
   setIntegratedTerminalShell: "pi-gui:set-integrated-terminal-shell",

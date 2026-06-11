@@ -1693,18 +1693,42 @@ export default function App() {
   const handleRemoveImChannel = async (channelId: string) => {
     await updateSnapshot(api, setSnapshot, () => api.removeImChannel(channelId));
   };
-  const handleImConnected = (provider: ConnectPhoneProvider) => {
+  const handleImConnected = async (provider: ConnectPhoneProvider, sessionId?: string) => {
+    // If channel already has a session, just navigate to it
+    if (sessionId) {
+      const workspace = rootWorkspaceOptions[0];
+      if (workspace) {
+        await updateSnapshot(api, setSnapshot, () =>
+          api.selectSession({ workspaceId: workspace.id, sessionId }),
+        );
+      }
+      setActiveView("threads");
+      return;
+    }
+    // New connection: create session and return to threads
     setActiveView("threads");
     const label = provider === "weixin" ? "📱微信" : "📱飞书";
     const workspace = rootWorkspaceOptions[0];
-    if (workspace) {
-      void updateSnapshot(api, setSnapshot, () =>
+    if (workspace && api) {
+      const state = await updateSnapshot(api, setSnapshot, () =>
         api.startThread({
           rootWorkspaceId: workspace.id,
           environment: "local",
           prompt: `${label} 已连接 — 手机和 App 的 agent 对话会话`,
         }),
       );
+      const newSession = state.workspaces
+        .find((w) => w.id === workspace.id)
+        ?.sessions?.at(-1);
+      if (newSession) {
+        await updateSnapshot(api, setSnapshot, () =>
+          api.updateImChannelSession(provider, newSession.id),
+        );
+        // Store in local channel state for next time
+        snapshot.imChannels = snapshot.imChannels.map((c) =>
+          c.provider === provider ? { ...c, sessionId: newSession.id } : c,
+        );
+      }
     }
   };
 

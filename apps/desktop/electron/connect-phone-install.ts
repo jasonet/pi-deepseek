@@ -142,8 +142,10 @@ async function postFeishuForm(fetcher: FetchLike, url: string, form: Record<stri
     body: new URLSearchParams(form).toString(),
   });
   const payload = await readJsonObject(response);
-  if (!response.ok) {
-    throw new Error(readString(payload, "error_description") ?? readString(payload, "error") ?? `HTTP ${response.status}`);
+  // authorization_pending and slow_down are expected polling states, not errors
+  const error = readString(payload, "error");
+  if (error && error !== "authorization_pending" && error !== "slow_down") {
+    throw new Error(readString(payload, "error_description") ?? error);
   }
   return payload;
 }

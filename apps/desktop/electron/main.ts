@@ -1140,16 +1140,20 @@ app.whenReady().then(async () => {
     }
   });
   ipcMain.handle(desktopIpc.pollConnectPhoneQr, async (_event, provider: string, deviceCode: string) => {
-    if (!deviceCode.trim()) {
-      return { done: false, message: "二维码会话已过期，请重新生成。" };
+    try {
+      if (!deviceCode.trim()) {
+        return { done: false, message: "二维码会话已过期，请重新生成。" };
+      }
+      if (provider === "weixin") {
+        return pollWeixinInstall((url, init) => net.fetch(url, init), deviceCode);
+      }
+      if (provider === "feishu") {
+        return pollFeishuInstall((url, init) => net.fetch(url, init), deviceCode);
+      }
+      return { done: false, message: "暂不支持该连接方式。" };
+    } catch (error) {
+      return { done: false, message: error instanceof Error ? error.message : String(error) };
     }
-    if (provider === "weixin") {
-      return pollWeixinInstall((url, init) => net.fetch(url, init), deviceCode);
-    }
-    if (provider === "feishu") {
-      return pollFeishuInstall((url, init) => net.fetch(url, init), deviceCode);
-    }
-    return { done: false, message: "暂不支持该连接方式。" };
   });
   ipcMain.handle(desktopIpc.setIntegratedTerminalShell, (_event, shellPath: string) =>
     store.setIntegratedTerminalShell(shellPath),

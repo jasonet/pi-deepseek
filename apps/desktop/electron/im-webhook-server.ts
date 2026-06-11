@@ -20,6 +20,12 @@ export function createImWebhookServer(store: DesktopAppStore): ImWebhookServer {
     async start() {
       if (server) return;
       server = http.createServer(async (req, res) => {
+        // Health check
+        if (req.method === "GET" && req.url === "/im/health") {
+          res.writeHead(200);
+          res.end(JSON.stringify({ ok: true, message: "IM webhook server running" }));
+          return;
+        }
         // Only handle POST /im/webhook
         if (req.method !== "POST" || req.url !== WEBHOOK_PATH) {
           res.writeHead(404);

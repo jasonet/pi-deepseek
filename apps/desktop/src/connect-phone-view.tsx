@@ -170,7 +170,7 @@ export function ConnectPhoneView({
                 installQr.url.startsWith("data:image/") ? (
                   <img className="connect-phone__qr-image" src={installQr.url} alt={`${selectedProvider.label} 登录二维码`} />
                 ) : (
-                  <QRCodeSVG value={installQr.url} size={360} marginSize={4} level="M" />
+                  <QRCodeSVG value={installQr.url} size={400} marginSize={2} level="M" style={{ width: "100%", height: "100%" }} />
                 )
               ) : (
                 <div className="connect-phone__qr-placeholder">

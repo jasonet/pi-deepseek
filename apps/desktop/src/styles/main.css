@@ -2646,17 +2646,17 @@ textarea.settings-input {
   display: grid;
   place-items: center;
   width: 100%;
-  min-height: 320px;
+  min-width: 360px;
+  aspect-ratio: 1;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fff;
-  padding: 16px;
+  padding: 12px;
 }
 
 .connect-phone__qr-image {
   width: 100%;
-  height: auto;
-  max-width: 360px;
+  height: 100%;
   object-fit: contain;
 }
 

@@ -34,6 +34,7 @@ import {
   startFeishuInstallQrcode,
   startWeixinInstallQrcode,
 } from "./connect-phone-install";
+import { configureLogger } from "./logger";
 import type { DesktopAppState, ThemeMode } from "../src/desktop-state";
 import { desktopIpc, getDesktopCommandFromShortcut, type OpenDesignStatus } from "../src/ipc";
 import { SUPPORTED_COMPOSER_IMAGE_TYPES } from "../src/composer-attachments";
@@ -41,6 +42,7 @@ import type {
   ComposerAttachment,
   ComposerFileAttachment,
   ComposerImageAttachment,
+  ConnectPhoneProvider,
   CreateSessionInput,
   CreateWorktreeInput,
   RemoveWorktreeInput,
@@ -50,6 +52,11 @@ import type {
 import type { SessionDriverEvent } from "@pi-gui/session-driver";
 import type { GenerateThreadTitleOptions } from "@pi-gui/pi-sdk-driver";
 import { createImWebhookServer, type ImWebhookServer } from "./im-webhook-server";
+import {
+  configureWeixinBridgeRuntimeContextProvider,
+  ensureWeixinBridgeRpcUrl,
+  stopWeixinBridgeRuntime,
+} from "./weixin-bridge-runtime";
 import type { WorkspaceRef } from "@pi-gui/session-driver";
 let autoUpdater: any;
 try {
@@ -61,6 +68,7 @@ try {
 }
 
 const isDev = Boolean(process.env.ELECTRON_RENDERER_URL);
+const PI_WEIXIN_CHANNEL_ID = "pi-deepseek-weixin";
 let autoUpdateEnabled = true;
 let autoUpdateInterval: ReturnType<typeof setInterval> | undefined;
 let skipAutoTitle = false;
@@ -103,6 +111,10 @@ function getTerminalService(): TerminalService {
     });
   }
   return terminalService;
+}
+
+function isConnectPhoneProvider(provider: string): provider is ConnectPhoneProvider {
+  return provider === "weixin" || provider === "feishu";
 }
 
 // Resolve the bundled application icon. In dev the repo's `resources/icon.png`
@@ -952,6 +964,11 @@ app.whenReady().then(async () => {
     },
   });
   await store.initialize();
+  configureLogger({
+    dir: path.join(app.getPath("userData"), "logs"),
+    enabled: true,
+    retentionDays: 3,
+  });
 
   // Check if pi CLI is installed; prompt user if not.
   await checkPiCliAndPrompt();
@@ -974,7 +991,17 @@ app.whenReady().then(async () => {
 
   // Start IM webhook server for WeChat/Feishu message reception
   imWebhookServer = createImWebhookServer(store);
-  imWebhookServer.start().catch(() => {});
+  imWebhookServer.start().catch((error) => {
+    console.error("[IM Webhook] Failed to start:", error);
+  });
+  configureWeixinBridgeRuntimeContextProvider(async () => ({
+    webhookUrl: `http://127.0.0.1:${imWebhookServer?.port ?? 8789}/im/webhook`,
+    webhookSecret: process.env.IM_WEBHOOK_SECRET?.trim() || "",
+    channelId: PI_WEIXIN_CHANNEL_ID,
+  }));
+  ensureWeixinBridgeRpcUrl().catch((error) => {
+    console.error("[Weixin Bridge] Failed to start:", error);
+  });
 
   if (process.env.PI_APP_TEST_MODE) {
     Object.assign(globalThis, {
@@ -1083,6 +1110,12 @@ app.whenReady().then(async () => {
   ipcMain.handle(desktopIpc.setSidebarCollapsed, (_event, collapsed: boolean) =>
     store.setSidebarCollapsed(collapsed),
   );
+  ipcMain.handle(desktopIpc.setWorkspaceCollapsed, (_event, workspaceId: string, collapsed: boolean) =>
+    store.setWorkspaceCollapsed(workspaceId, collapsed),
+  );
+  ipcMain.handle(desktopIpc.setArchivedSectionExpanded, (_event, workspaceId: string, expanded: boolean) =>
+    store.setArchivedSectionExpanded(workspaceId, expanded),
+  );
   ipcMain.handle(desktopIpc.refreshRuntime, (_event, workspaceId?: string) => store.refreshRuntime(workspaceId));
   ipcMain.handle(desktopIpc.setModelSettingsScopeMode, (_event, mode) => store.setModelSettingsScopeMode(mode));
   ipcMain.handle(desktopIpc.setSessionModel, (_event, workspaceId: string, sessionId: string, provider: string, modelId: string) =>
@@ -1134,6 +1167,9 @@ app.whenReady().then(async () => {
     store.removeImChannel(channelId),
   );
   ipcMain.handle(desktopIpc.updateImChannelSession, async (_event, provider: string, sessionId: string) => {
+    if (!isConnectPhoneProvider(provider)) {
+      return store.getState();
+    }
     return store.updateImChannelSession(provider, sessionId);
   });
   ipcMain.handle(desktopIpc.startConnectPhoneQr, async (_event, input: { readonly provider?: string; readonly isLark?: boolean }) => {
@@ -1431,6 +1467,7 @@ app.on("window-all-closed", () => {
     stopPruningTerminals = undefined;
     terminalService?.dispose();
     terminalService = undefined;
+    stopWeixinBridgeRuntime();
     app.quit();
   }
 });
@@ -1447,6 +1484,7 @@ app.on("before-quit", (event) => {
   stopPruningTerminals = undefined;
   terminalService?.dispose();
   terminalService = undefined;
+  stopWeixinBridgeRuntime();
   if (quittingAfterStoreFlush || !store) {
     return;
   }

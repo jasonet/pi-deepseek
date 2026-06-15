@@ -5,6 +5,12 @@ import { homedir } from "node:os";
 const IM_DATA_DIR = join(homedir(), ".pi", "agent", "im", "messages");
 
 export interface ImWebhookMessage {
+  /** Channel ID supplied by the bridge/runtime */
+  channelId?: string;
+  /** Provider that emitted the webhook */
+  provider?: string;
+  /** Account ID supplied by the provider bridge */
+  accountId?: string;
   /** Message text from user */
   text: string;
   /** Sender ID on the IM platform */

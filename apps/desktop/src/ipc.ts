@@ -58,6 +58,8 @@ export const desktopIpc = {
   cancelCurrentRun: "pi-gui:cancel-current-run",
   setActiveView: "pi-gui:set-active-view",
   setSidebarCollapsed: "pi-gui:set-sidebar-collapsed",
+  setWorkspaceCollapsed: "pi-gui:set-workspace-collapsed",
+  setArchivedSectionExpanded: "pi-gui:set-archived-section-expanded",
   refreshRuntime: "pi-gui:refresh-runtime",
   setModelSettingsScopeMode: "pi-gui:set-model-settings-scope-mode",
   setDefaultModel: "pi-gui:set-default-model",
@@ -271,6 +273,8 @@ export interface PiDesktopApi {
   cancelCurrentRun(): Promise<DesktopAppState>;
   setActiveView(view: AppView): Promise<DesktopAppState>;
   setSidebarCollapsed(collapsed: boolean): Promise<DesktopAppState>;
+  setWorkspaceCollapsed(workspaceId: string, collapsed: boolean): Promise<DesktopAppState>;
+  setArchivedSectionExpanded(workspaceId: string, expanded: boolean): Promise<DesktopAppState>;
   refreshRuntime(workspaceId?: string): Promise<DesktopAppState>;
   setModelSettingsScopeMode(mode: ModelSettingsScopeMode): Promise<DesktopAppState>;
   setDefaultModel(workspaceId: string, provider: string, modelId: string): Promise<DesktopAppState>;
@@ -307,6 +311,7 @@ export interface PiDesktopApi {
   setNotificationPreferences(preferences: Partial<NotificationPreferences>): Promise<DesktopAppState>;
   saveImChannel(input: SaveImChannelInput): Promise<DesktopAppState>;
   removeImChannel(channelId: string): Promise<DesktopAppState>;
+  updateImChannelSession(provider: ConnectPhoneQrStartInput["provider"], sessionId: string): Promise<DesktopAppState>;
   startConnectPhoneQr(input: ConnectPhoneQrStartInput): Promise<ConnectPhoneQrStartResult>;
   pollConnectPhoneQr(provider: ConnectPhoneQrStartInput["provider"], deviceCode: string): Promise<ConnectPhoneQrPollResult>;
   setIntegratedTerminalShell(shell: string): Promise<DesktopAppState>;

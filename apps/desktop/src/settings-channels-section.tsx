@@ -13,7 +13,7 @@ const PROVIDERS: readonly { id: ImProvider; label: string; fields: readonly { ke
   { id: "line", label: "LINE", fields: [{ key: "channelAccessToken", label: "Channel access token", secret: true }, { key: "channelSecret", label: "Channel secret", secret: true }] },
 ];
 
-const DEFAULT_PORT = 8788;
+const DEFAULT_PORT = 8789;
 const DEFAULT_PATH = "/im/webhook";
 const DEFAULT_WORKSPACE_ROOT = "~/.deepseekgui/claw";
 

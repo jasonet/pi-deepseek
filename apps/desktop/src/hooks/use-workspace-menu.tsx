@@ -60,6 +60,11 @@ export function useWorkspaceMenu(params: UseWorkspaceMenuParams): WorkspaceMenuS
   const workspaceRenameInputRef = useRef<HTMLInputElement | null>(null);
   const environmentMenuRef = useRef<HTMLDivElement | null>(null);
 
+  useEffect(() => {
+    setExpandedArchivedByWorkspace(snapshot?.expandedArchivedByWorkspace ?? {});
+    setCollapsedWorkspaces(snapshot?.collapsedWorkspaces ?? {});
+  }, [snapshot?.collapsedWorkspaces, snapshot?.expandedArchivedByWorkspace]);
+
   // Focus/select rename input when rename starts
   useEffect(() => {
     if (!workspaceRenameId) {
@@ -149,26 +154,32 @@ export function useWorkspaceMenu(params: UseWorkspaceMenuParams): WorkspaceMenuS
   };
 
   const toggleArchived = (workspaceId: string, open: boolean) => {
-    setExpandedArchivedByWorkspace((current) => {
-      const next = { ...current, [workspaceId]: open };
-      setSnapshot((prev) => prev ? { ...prev, expandedArchivedByWorkspace: next } : prev);
-      return next;
-    });
+    const next = updateBooleanRecord(expandedArchivedByWorkspace, workspaceId, open);
+    setExpandedArchivedByWorkspace(next);
+    setSnapshot((prev) => prev ? { ...prev, expandedArchivedByWorkspace: next } : prev);
+    if (api) {
+      void updateSnapshot(api, setSnapshot, () => api.setArchivedSectionExpanded(workspaceId, open));
+    }
   };
 
   const toggleWorkspaceCollapsed = (workspaceId: string) => {
-    setCollapsedWorkspaces((current) => {
-      const next = { ...current, [workspaceId]: !current[workspaceId] };
-      setSnapshot((prev) => prev ? { ...prev, collapsedWorkspaces: next } : prev);
-      return next;
-    });
+    const collapsed = !collapsedWorkspaces[workspaceId];
+    const next = updateBooleanRecord(collapsedWorkspaces, workspaceId, collapsed);
+    setCollapsedWorkspaces(next);
+    setSnapshot((prev) => prev ? { ...prev, collapsedWorkspaces: next } : prev);
+    if (api) {
+      void updateSnapshot(api, setSnapshot, () => api.setWorkspaceCollapsed(workspaceId, collapsed));
+    }
   };
 
   const expandWorkspace = (workspaceId: string) => {
-    setCollapsedWorkspaces((current) => {
-      if (!current[workspaceId]) return current;
-      return { ...current, [workspaceId]: false };
-    });
+    if (!collapsedWorkspaces[workspaceId]) return;
+    const next = updateBooleanRecord(collapsedWorkspaces, workspaceId, false);
+    setCollapsedWorkspaces(next);
+    setSnapshot((prev) => prev ? { ...prev, collapsedWorkspaces: next } : prev);
+    if (api) {
+      void updateSnapshot(api, setSnapshot, () => api.setWorkspaceCollapsed(workspaceId, false));
+    }
   };
 
   const createWorktree = (workspaceId: string, fromSessionWorkspaceId?: string, fromSessionId?: string) => {
@@ -238,4 +249,16 @@ export function useWorkspaceMenu(params: UseWorkspaceMenuParams): WorkspaceMenuS
     selectWorkspace,
     runWorkspaceMenuAction,
   };
+}
+
+function updateBooleanRecord(record: Readonly<Record<string, boolean>>, key: string, value: boolean): Record<string, boolean> {
+  const normalizedKey = key.trim();
+  if (!normalizedKey) {
+    return { ...record };
+  }
+  if (value) {
+    return { ...record, [normalizedKey]: true };
+  }
+  const { [normalizedKey]: _removed, ...rest } = record;
+  return rest;
 }

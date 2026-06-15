@@ -9,6 +9,9 @@ type FetchLike = (url: string, init?: RequestInit) => Promise<Response>;
 const FEISHU_BASE_URL = "https://accounts.feishu.cn";
 const LARK_BASE_URL = "https://accounts.larksuite.com";
 const DEFAULT_WEIXIN_BRIDGE_RPC_URL = "http://127.0.0.1:18790/api/v1/admin/rpc";
+const DEFAULT_IM_WEBHOOK_PORT = 8789;
+const DEFAULT_IM_WEBHOOK_PATH = "/im/webhook";
+const PI_WEIXIN_CHANNEL_ID = "pi-deepseek-weixin";
 const weixinLoginSessions = new Map<string, string>();
 const feishuDomains = new Map<string, "feishu" | "lark">();
 
@@ -134,6 +137,10 @@ export async function pollWeixinInstall(fetcher: FetchLike, deviceCode: string):
     await requestWeixinBridge(fetcher, "channels.start", {
       channel: "openclaw-weixin",
       accountId,
+      source: "pi-deepseek",
+      webhookUrl: resolveImWebhookUrl(),
+      webhookSecret: process.env.IM_WEBHOOK_SECRET?.trim() || "",
+      channelId: PI_WEIXIN_CHANNEL_ID,
     });
     weixinLoginSessions.delete(deviceCode);
     return {
@@ -197,6 +204,15 @@ function resolveWeixinBridgeUrl(): string {
     process.env.OPENCLAW_GATEWAY_URL?.trim() ||
     DEFAULT_WEIXIN_BRIDGE_RPC_URL
   );
+}
+
+function resolveImWebhookUrl(): string {
+  const explicitUrl = process.env.IM_WEBHOOK_URL?.trim();
+  if (explicitUrl) return explicitUrl;
+  const port = parseInt(process.env.IM_WEBHOOK_PORT || "", 10) || DEFAULT_IM_WEBHOOK_PORT;
+  const rawPath = process.env.IM_WEBHOOK_PATH?.trim() || DEFAULT_IM_WEBHOOK_PATH;
+  const path = rawPath.startsWith("/") ? rawPath : `/${rawPath}`;
+  return `http://127.0.0.1:${port}${path}`;
 }
 
 async function readJsonObject(response: Response): Promise<Record<string, unknown>> {

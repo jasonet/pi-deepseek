@@ -239,6 +239,37 @@ export function PhoneIcon() {
   );
 }
 
+export function WeixinIcon() {
+  return (
+    <Icon>
+      <path
+        d="M8.2 5.1c-2.9 0-5.2 1.85-5.2 4.15 0 1.18.62 2.25 1.62 3l-.35 1.45 1.55-.78c.72.3 1.54.47 2.38.47 2.88 0 5.2-1.85 5.2-4.14S11.08 5.1 8.2 5.1Z"
+        fill="currentColor"
+        opacity="0.9"
+      />
+      <path
+        d="M12.2 8.1c2.65.12 4.75 1.82 4.75 3.9 0 1.05-.54 2-1.42 2.7l.3 1.3-1.38-.68c-.65.27-1.37.42-2.15.42-1.72 0-3.24-.72-4.08-1.82"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.25"
+      />
+      <circle cx="6.6" cy="8.9" r=".55" fill="white" />
+      <circle cx="9.8" cy="8.9" r=".55" fill="white" />
+    </Icon>
+  );
+}
+
+export function ClawIcon() {
+  return (
+    <Icon>
+      <path d="M5.7 4.6 3.8 10l1.8 5.4" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.55" />
+      <path d="M10 3.7 8.5 10l1.5 6.3" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.55" />
+      <path d="M14.3 4.6 16.2 10l-1.8 5.4" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.55" />
+    </Icon>
+  );
+}
+
 export function ModelIcon() {
   return (
     <Icon>

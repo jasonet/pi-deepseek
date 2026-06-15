@@ -18,7 +18,7 @@ interface ConnectPhoneViewProps {
 }
 
 const PROVIDERS: readonly { id: ConnectPhoneProvider; label: string; description: string }[] = [
-  { id: "weixin", label: "微信", description: "微信机器人通过 Tailscale 或局域网 IP 发送消息到本地 webhook。" },
+  { id: "weixin", label: "微信", description: "使用 OpenClaw bridge 生成微信登录二维码。" },
   { id: "feishu", label: "飞书", description: "使用飞书/Lark 官方授权二维码完成个人应用安装。" },
 ];
 
@@ -26,6 +26,7 @@ const FUTURE_PROVIDERS: readonly { id: ImProvider; label: string }[] = [
   { id: "telegram", label: "Telegram" },
   { id: "whatsapp", label: "WhatsApp" },
 ];
+const PI_WEIXIN_CHANNEL_ID = "pi-deepseek-weixin";
 
 type InstallStatus = "idle" | "loading" | "scanning" | "saving" | "connected" | "error";
 
@@ -104,25 +105,6 @@ export function ConnectPhoneView({
       return;
     }
 
-    // WeChat: save channel directly without QR code (use webhook)
-    if (nextProvider === "weixin") {
-      setStatus("saving");
-      await onSaveChannel({
-        provider: "weixin",
-        label: "微信",
-        enabled: true,
-        status: "running",
-        credential: { kind: "weixin", accountId: "direct", sessionKey: "webhook" },
-        agentProfile: { name: "微信", description: "", identity: "", personality: "", userContext: "", replyRules: "" },
-        settings: { enabled: true, provider: "weixin", port: 8789, path: "/im/webhook", secret: "", workspaceRoot: "~/.deepseekgui/claw", model: "auto", mode: "agent", responseTimeoutMs: 120_000 },
-      });
-      setStatus("connected");
-      setMessage(`微信已连接。Webhook: :8789/im/webhook`);
-      onConnected(nextProvider);
-      return;
-    }
-
-    // Feishu: use QR code flow
     setProvider(nextProvider);
     setInstallQr(null);
     setStatus("loading");
@@ -135,7 +117,7 @@ export function ConnectPhoneView({
     }
     setInstallQr(result);
     setStatus("scanning");
-    setMessage("请使用飞书扫码完成授权。");
+    setMessage(nextProvider === "weixin" ? "请使用微信扫码并在手机上确认登录。" : "请使用飞书扫码完成授权。");
   }
 
   function switchProvider(nextProvider: ConnectPhoneProvider) {
@@ -192,7 +174,7 @@ export function ConnectPhoneView({
                 installQr.url.startsWith("data:image/") ? (
                   <img className="connect-phone__qr-image" src={installQr.url} alt={`${selectedProvider.label} 登录二维码`} />
                 ) : (
-                  <QRCodeSVG value={installQr.url} size={400} marginSize={2} level="M" style={{ width: "100%", height: "100%" }} />
+                  <QRCodeSVG className="connect-phone__qr-svg" value={installQr.url} size={400} marginSize={2} level="M" />
                 )
               ) : (
                 <div className="connect-phone__qr-placeholder">
@@ -233,8 +215,12 @@ export function ConnectPhoneView({
                   <strong>{channel.label}</strong>
                   <span>{labelForProvider(channel.provider)} · {channel.enabled ? "enabled" : "disabled"} · {channel.status}</span>
                 </div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button className="button button--primary" style={{ fontSize: 12, padding: "4px 12px" }} type="button" onClick={() => onConnected(channel.provider, channel.sessionId)}>进入会话</button>
+                <div className="connect-phone__channel-actions">
+                  <button className="button button--primary connect-phone__channel-action" type="button" onClick={() => {
+                    if (channel.provider === "weixin" || channel.provider === "feishu") {
+                      onConnected(channel.provider, channel.sessionId);
+                    }
+                  }}>进入会话</button>
                   <button className="button button--secondary" type="button" onClick={() => void onRemoveChannel(channel.id)}>移除</button>
                 </div>
               </div>
@@ -262,8 +248,9 @@ function createChannelInput(
   channels: readonly ImChannel[],
 ): SaveImChannelInput {
   const existing = channels.find((channel) => channel.provider === provider);
+  const channelId = existing?.id ?? (provider === "weixin" ? PI_WEIXIN_CHANNEL_ID : undefined);
   return {
-    ...(existing ? { id: existing.id } : {}),
+    ...(channelId ? { id: channelId } : {}),
     provider,
     label: labelForProvider(provider),
     enabled: true,
@@ -289,7 +276,7 @@ function defaultSettings(provider: ConnectPhoneProvider): ImSettings {
   return {
     enabled: true,
     provider,
-    port: 8788,
+    port: 8789,
     path: "/im/webhook",
     secret: "",
     workspaceRoot: "~/.deepseekgui/claw",

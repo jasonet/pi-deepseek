@@ -1,7 +1,7 @@
 {
   "name": "@pi-gui/desktop",
   "private": true,
-  "version": "0.2.5-1",
+  "version": "0.2.6",
   "author": "Yiding by HKEZ",
   "license": "MIT",
   "description": "Deepseek GUI app for elegant pi coding agent",
@@ -83,6 +83,7 @@
     "@smithy/is-array-buffer": "^2.2.0",
     "@smithy/util-buffer-from": "^2.2.0",
     "@smithy/util-utf8": "^2.3.0",
+    "@tencent-weixin/openclaw-weixin": "2.4.3",
     "@xterm/addon-clipboard": "^0.2.0",
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/addon-web-links": "^0.12.0",

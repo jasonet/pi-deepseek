@@ -7,6 +7,7 @@ import {
   type AppView,
   type ComposerAttachment,
   type ComposerImageAttachment,
+  type ConnectPhoneProvider,
   type DesktopAppState,
   type NewThreadEnvironment,
   type SaveImChannelInput,
@@ -1708,30 +1709,38 @@ export default function App() {
       setActiveView("threads");
       return;
     }
-    // New connection: create session and return to threads
+    // New connection: bind the session the user is currently viewing so the
+    // phone channel syncs with THAT single session. Fall back to creating a
+    // dedicated session only when nothing is currently displayed.
     setActiveView("threads");
-    const label = provider === "weixin" ? "📱微信" : "📱飞书";
+    if (!api) return;
+
+    if (selectedSession && selectedWorkspace) {
+      await updateSnapshot(api, setSnapshot, () => api.updateImChannelSession(provider, selectedSession.id));
+      await updateSnapshot(api, setSnapshot, () =>
+        api.selectSession({ workspaceId: selectedWorkspace.id, sessionId: selectedSession.id }),
+      );
+      return;
+    }
+
+    // Create an empty session and just wait for the phone to send commands —
+    // no auto-message, so nothing runs until a real instruction arrives.
     const workspace = rootWorkspaceOptions[0];
-    if (workspace && api) {
+    if (workspace) {
       const state = await updateSnapshot(api, setSnapshot, () =>
         api.startThread({
           rootWorkspaceId: workspace.id,
           environment: "local",
-          prompt: `📱 ${label} 手机消息`,
         }),
       );
       const newSession = state.workspaces
         .find((w) => w.id === workspace.id)
         ?.sessions?.at(-1);
       if (newSession) {
-        // Select the new session and link it to the channel
-        setSnapshot((prev) => prev ? {
-          ...prev,
-          selectedSessionId: newSession.id,
-          imChannels: prev.imChannels.map((c) =>
-            c.provider === provider ? { ...c, sessionId: newSession.id } : c
-          ),
-        } : prev);
+        await updateSnapshot(api, setSnapshot, () => api.updateImChannelSession(provider, newSession.id));
+        await updateSnapshot(api, setSnapshot, () =>
+          api.selectSession({ workspaceId: workspace.id, sessionId: newSession.id }),
+        );
       }
     }
   };
@@ -2145,6 +2154,7 @@ export default function App() {
           selectedSession={selectedSession}
           visibleWorkspaces={visibleWorkspaces}
           threadGroups={threadGroups}
+          imChannels={snapshot.imChannels}
           linkedWorktreeByWorkspaceId={linkedWorktreeByWorkspaceId}
           wsMenu={wsMenu}
           api={api}

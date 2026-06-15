@@ -2660,6 +2660,11 @@ textarea.settings-input {
   object-fit: contain;
 }
 
+.connect-phone__qr-svg {
+  width: 100%;
+  height: 100%;
+}
+
 .connect-phone__qr-placeholder {
   display: grid;
   place-items: center;
@@ -2732,6 +2737,16 @@ textarea.settings-input {
   display: grid;
   gap: 4px;
   min-width: 0;
+}
+
+.connect-phone__channel-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.connect-phone__channel-action {
+  padding: 4px 12px;
+  font-size: 12px;
 }
 
 .connect-phone__channel strong,

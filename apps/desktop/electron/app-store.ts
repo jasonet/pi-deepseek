@@ -41,6 +41,7 @@ import {
   type ComposerAttachment,
   type ComposerDraftSyncSource,
   type ExtensionCommandCompatibilityRecord,
+  type ImProvider,
   type ModelSettingsScopeMode,
   type SaveImChannelInput,
   createEmptyDesktopAppState,
@@ -58,6 +59,7 @@ import {
 import {
   applyTimelineEvent,
   appendAssistantDelta,
+  appendUserMessage,
   clearActiveAssistantMessage,
 } from "./app-store-timeline";
 import { applySessionEventState, updateSessionRecord } from "./app-store-session-state";
@@ -482,6 +484,42 @@ export class DesktopAppStore implements AppStoreInternals {
     return this.emit();
   }
 
+  async setWorkspaceCollapsed(workspaceId: string, collapsed: boolean): Promise<DesktopAppState> {
+    await this.initialize();
+    const nextCollapsedWorkspaces = updateBooleanRecord(this.state.collapsedWorkspaces, workspaceId, collapsed);
+    if (nextCollapsedWorkspaces === this.state.collapsedWorkspaces) {
+      return structuredClone(this.state);
+    }
+    this.state = {
+      ...this.state,
+      collapsedWorkspaces: nextCollapsedWorkspaces,
+      lastError: undefined,
+      revision: this.state.revision + 1,
+    };
+    await this.persistUiState();
+    return this.emit();
+  }
+
+  async setArchivedSectionExpanded(workspaceId: string, expanded: boolean): Promise<DesktopAppState> {
+    await this.initialize();
+    const nextExpandedArchivedByWorkspace = updateBooleanRecord(
+      this.state.expandedArchivedByWorkspace,
+      workspaceId,
+      expanded,
+    );
+    if (nextExpandedArchivedByWorkspace === this.state.expandedArchivedByWorkspace) {
+      return structuredClone(this.state);
+    }
+    this.state = {
+      ...this.state,
+      expandedArchivedByWorkspace: nextExpandedArchivedByWorkspace,
+      lastError: undefined,
+      revision: this.state.revision + 1,
+    };
+    await this.persistUiState();
+    return this.emit();
+  }
+
   async setNotificationPreferences(preferences: Partial<NotificationPreferences>): Promise<DesktopAppState> {
     await this.initialize();
     this.state = {
@@ -562,12 +600,32 @@ export class DesktopAppStore implements AppStoreInternals {
       credential: input.credential,
       agentProfile: input.agentProfile,
       settings: input.settings,
+      sessionId: input.sessionId ?? existing?.sessionId,
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
     };
     const nextChannels = existing
       ? this.state.imChannels.map((channel) => channel.id === channelId ? nextChannel : channel)
       : [...this.state.imChannels, nextChannel];
+    this.state = {
+      ...this.state,
+      imChannels: nextChannels,
+      lastError: undefined,
+      revision: this.state.revision + 1,
+    };
+    await this.persistUiState();
+    return this.emit();
+  }
+
+  async updateImChannelSession(provider: ImProvider, sessionId: string): Promise<DesktopAppState> {
+    await this.initialize();
+    const normalizedSessionId = sessionId.trim();
+    const now = new Date().toISOString();
+    const nextChannels = this.state.imChannels.map((channel) => (
+      channel.provider === provider
+        ? { ...channel, sessionId: normalizedSessionId || undefined, updatedAt: now }
+        : channel
+    ));
     this.state = {
       ...this.state,
       imChannels: nextChannels,
@@ -1151,6 +1209,16 @@ export class DesktopAppStore implements AppStoreInternals {
 
     this.sessionState.loadedTranscriptKeys.add(key);
     this.sessionState.transcriptCache.set(key, transcript);
+  }
+
+  // Optimistically append an inbound user message (e.g. from the IM webhook)
+  // to the transcript cache, mirroring the composer flow so the message shows
+  // immediately in the bound session before the agent run reconciles it.
+  async appendInboundUserMessage(sessionRef: SessionRef, text: string): Promise<void> {
+    await this.ensureTranscriptLoaded(sessionRef);
+    appendUserMessage(this.sessionState.transcriptCache, sessionRef, text);
+    this.publishSelectedTranscriptFor(sessionRef);
+    this.persistTranscriptCacheForSession(sessionRef);
   }
 
   async reloadTranscriptFromDriver(sessionRef: SessionRef): Promise<void> {
@@ -2562,6 +2630,28 @@ function resolveSelectedWorkspaceIdFromCatalog(
     return preferredWorkspaceId;
   }
   return workspaces[0]?.workspaceId ?? "";
+}
+
+function updateBooleanRecord(
+  record: Readonly<Record<string, boolean>>,
+  key: string,
+  value: boolean,
+): Readonly<Record<string, boolean>> {
+  const normalizedKey = key.trim();
+  if (!normalizedKey) {
+    return record;
+  }
+  if (value) {
+    if (record[normalizedKey] === true) {
+      return record;
+    }
+    return { ...record, [normalizedKey]: true };
+  }
+  if (!(normalizedKey in record)) {
+    return record;
+  }
+  const { [normalizedKey]: _removed, ...rest } = record;
+  return rest;
 }
 
 function shouldReplaceLegacyTranscript(

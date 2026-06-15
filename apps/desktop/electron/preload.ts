@@ -155,6 +155,10 @@ contextBridge.exposeInMainWorld("piApp", {
     ipcRenderer.invoke(desktopIpc.setActiveView, view) as Promise<DesktopAppState>,
   setSidebarCollapsed: (collapsed: boolean) =>
     ipcRenderer.invoke(desktopIpc.setSidebarCollapsed, collapsed) as Promise<DesktopAppState>,
+  setWorkspaceCollapsed: (workspaceId: string, collapsed: boolean) =>
+    ipcRenderer.invoke(desktopIpc.setWorkspaceCollapsed, workspaceId, collapsed) as Promise<DesktopAppState>,
+  setArchivedSectionExpanded: (workspaceId: string, expanded: boolean) =>
+    ipcRenderer.invoke(desktopIpc.setArchivedSectionExpanded, workspaceId, expanded) as Promise<DesktopAppState>,
   refreshRuntime: (workspaceId?: string) =>
     ipcRenderer.invoke(desktopIpc.refreshRuntime, workspaceId) as Promise<DesktopAppState>,
   setModelSettingsScopeMode: (mode: "app-global" | "per-repo") =>
@@ -189,6 +193,8 @@ contextBridge.exposeInMainWorld("piApp", {
     ipcRenderer.invoke(desktopIpc.saveImChannel, input) as Promise<DesktopAppState>,
   removeImChannel: (channelId: string) =>
     ipcRenderer.invoke(desktopIpc.removeImChannel, channelId) as Promise<DesktopAppState>,
+  updateImChannelSession: (provider: ConnectPhoneQrStartInput["provider"], sessionId: string) =>
+    ipcRenderer.invoke(desktopIpc.updateImChannelSession, provider, sessionId) as Promise<DesktopAppState>,
   startConnectPhoneQr: (input: ConnectPhoneQrStartInput) =>
     ipcRenderer.invoke(desktopIpc.startConnectPhoneQr, input) as Promise<ConnectPhoneQrStartResult>,
   pollConnectPhoneQr: (provider: ConnectPhoneQrStartInput["provider"], deviceCode: string) =>

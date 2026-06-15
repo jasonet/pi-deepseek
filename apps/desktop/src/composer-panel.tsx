@@ -105,6 +105,7 @@ export function ComposerPanel({
   modelOnboarding,
   onOpenModelSettings,
   onSubmit,
+  onRetryLast,
   showMentionMenu,
   mentionOptions,
   selectedMentionIndex,

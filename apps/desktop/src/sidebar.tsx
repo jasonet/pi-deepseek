@@ -13,8 +13,8 @@ import {
 } from "@dnd-kit/core";
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import type { AppView, SessionRecord, WorkspaceRecord, WorktreeRecord } from "./desktop-state";
-import { ArchiveIcon, ChevronDownIcon, ExtensionIcon, FolderIcon, PhoneIcon, PlusIcon, RestoreIcon, SettingsIcon, SkillIcon, WorktreeIcon } from "./icons";
+import type { AppView, ImChannel, SessionRecord, WorkspaceRecord, WorktreeRecord } from "./desktop-state";
+import { ArchiveIcon, ChevronDownIcon, ClawIcon, ExtensionIcon, FolderIcon, PhoneIcon, PlusIcon, RestoreIcon, SettingsIcon, SkillIcon, WeixinIcon, WorktreeIcon } from "./icons";
 import type { PiDesktopApi } from "./ipc";
 import { formatRelativeTime } from "./string-utils";
 import type { WorkspaceMenuState } from "./hooks/use-workspace-menu";
@@ -29,6 +29,7 @@ interface SidebarProps {
   readonly selectedSession: SessionRecord | undefined;
   readonly visibleWorkspaces: readonly WorkspaceRecord[];
   readonly threadGroups: readonly ThreadGroup[];
+  readonly imChannels: readonly ImChannel[];
   readonly linkedWorktreeByWorkspaceId: Map<string, WorktreeRecord>;
   readonly wsMenu: WorkspaceMenuState;
   readonly api: PiDesktopApi;
@@ -56,6 +57,7 @@ export function Sidebar(props: SidebarProps) {
     selectedSession,
     visibleWorkspaces,
     threadGroups,
+    imChannels,
     linkedWorktreeByWorkspaceId,
     wsMenu,
     api,
@@ -220,6 +222,7 @@ export function Sidebar(props: SidebarProps) {
                     canDrag={canDrag}
                     selectedWorkspace={selectedWorkspace}
                     selectedSession={selectedSession}
+                    imChannels={imChannels}
                     linkedWorktreeByWorkspaceId={linkedWorktreeByWorkspaceId}
                     wsMenu={wsMenu}
                     api={api}
@@ -235,6 +238,7 @@ export function Sidebar(props: SidebarProps) {
                     canDrag={false}
                     selectedWorkspace={selectedWorkspace}
                     selectedSession={selectedSession}
+                    imChannels={imChannels}
                     linkedWorktreeByWorkspaceId={linkedWorktreeByWorkspaceId}
                     wsMenu={wsMenu}
                     api={api}
@@ -253,6 +257,7 @@ export function Sidebar(props: SidebarProps) {
                     canDrag={false}
                     selectedWorkspace={selectedWorkspace}
                     selectedSession={selectedSession}
+                    imChannels={imChannels}
                     linkedWorktreeByWorkspaceId={linkedWorktreeByWorkspaceId}
                     wsMenu={wsMenu}
                     api={api}
@@ -287,6 +292,7 @@ interface WorkspaceGroupProps {
   readonly canDrag: boolean;
   readonly selectedWorkspace: WorkspaceRecord | undefined;
   readonly selectedSession: SessionRecord | undefined;
+  readonly imChannels: readonly ImChannel[];
   readonly linkedWorktreeByWorkspaceId: Map<string, WorktreeRecord>;
   readonly wsMenu: WorkspaceMenuState;
   readonly api: PiDesktopApi;
@@ -337,6 +343,7 @@ function WorkspaceGroupContent(
     group: { rootWorkspace, threads, archivedThreads },
     selectedWorkspace,
     selectedSession,
+    imChannels,
     linkedWorktreeByWorkspaceId,
     wsMenu,
     api,
@@ -484,6 +491,7 @@ function WorkspaceGroupContent(
                 <ThreadSessionRow
                   key={`${thread.workspaceId}:${thread.session.id}`}
                   active={active}
+                  imBinding={resolveThreadImBinding(thread, imChannels)}
                   thread={thread}
                   onAction={() =>
                     onArchiveSession({
@@ -523,6 +531,7 @@ function WorkspaceGroupContent(
                         key={`${thread.workspaceId}:${thread.session.id}`}
                         active={active}
                         archived
+                        imBinding={resolveThreadImBinding(thread, imChannels)}
                         thread={thread}
                         onAction={() =>
                           onUnarchiveSession({
@@ -559,12 +568,14 @@ function sessionIndicatorVariant(thread: ThreadListEntry): "running" | "unseen" 
 function ThreadSessionRow({
   active,
   archived = false,
+  imBinding,
   thread,
   onAction,
   onSelect,
 }: {
   readonly active: boolean;
   readonly archived?: boolean;
+  readonly imBinding?: ThreadImBinding;
   readonly thread: ThreadListEntry;
   readonly onAction: () => void;
   readonly onSelect: () => void;
@@ -584,6 +595,7 @@ function ThreadSessionRow({
         <span className="session-row__body">
           <span className="session-row__title-line">
             <span className="session-row__title">{thread.session.title}</span>
+            {imBinding ? <SessionImBadges binding={imBinding} /> : null}
           </span>
           {thread.session.preview ? <span className="session-row__preview">{thread.session.preview}</span> : null}
         </span>
@@ -609,5 +621,34 @@ function ThreadSessionRow({
         </button>
       </span>
     </div>
+  );
+}
+
+type ThreadImBinding = "weixin-claw";
+
+function resolveThreadImBinding(
+  thread: ThreadListEntry,
+  channels: readonly ImChannel[],
+): ThreadImBinding | undefined {
+  return channels.some((channel) => (
+    channel.enabled &&
+    channel.provider === "weixin" &&
+    channel.sessionId === thread.session.id
+  ))
+    ? "weixin-claw"
+    : undefined;
+}
+
+function SessionImBadges({ binding }: { readonly binding: ThreadImBinding }) {
+  if (binding !== "weixin-claw") return null;
+  return (
+    <span className="session-row__im-badges" aria-label="微信 Claw 已绑定" title="微信 Claw 已绑定">
+      <span className="session-row__im-badge session-row__im-badge--weixin" aria-hidden="true">
+        <WeixinIcon />
+      </span>
+      <span className="session-row__im-badge session-row__im-badge--claw" aria-hidden="true">
+        <ClawIcon />
+      </span>
+    </span>
   );
 }

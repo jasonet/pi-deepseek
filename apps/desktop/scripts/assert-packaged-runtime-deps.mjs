@@ -13,6 +13,7 @@ const requiredPackages = [
   "@smithy/is-array-buffer",
   "@smithy/util-buffer-from",
   "@smithy/util-utf8",
+  "@tencent-weixin/openclaw-weixin",
   "@xterm/addon-clipboard",
   "@xterm/addon-fit",
   "@xterm/addon-web-links",
@@ -33,6 +34,8 @@ const requiredPackages = [
   "proxy-agent",
   "retry",
   "strip-ansi",
+  "typebox",
+  "yaml",
   "yargs",
 ];
 
@@ -42,7 +45,7 @@ const packagePlatform = (process.env.PI_APP_PACKAGE_PLATFORM ?? process.platform
 const asarPath = resolveAsarPath(desktopDir, packagePlatform);
 const notificationHelperPath =
   packagePlatform === "darwin"
-    ? path.join(desktopDir, "release", "mac-arm64", "pi-gui.app", "Contents", "MacOS", "pi-gui-notification-status-helper")
+    ? resolveMacAppPath(desktopDir, "Contents", "MacOS", "pi-deepseek-notification-status-helper")
     : undefined;
 const pnpmBinary = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 const piCodingAgentPackageName = "@earendil-works/pi-coding-agent";
@@ -51,6 +54,7 @@ const packagedRuntimeImportChecks = [
   ["@earendil-works", "pi-ai", "dist", "providers", "google.js"],
   ["@earendil-works", "pi-ai", "dist", "bedrock-provider.js"],
   ["cli-highlight", "dist", "index.js"],
+  ["@earendil-works", "pi-coding-agent", "dist", "core", "extensions", "loader.js"],
   ["proxy-agent", "dist", "index.js"],
 ];
 
@@ -81,7 +85,7 @@ console.log(`Verified packaged runtime dependencies in ${asarPath}`);
 
 function resolveAsarPath(desktopDir, packagePlatform) {
   if (packagePlatform === "darwin") {
-    return path.join(desktopDir, "release", "mac-arm64", "pi-gui.app", "Contents", "Resources", "app.asar");
+    return resolveMacAppPath(desktopDir, "Contents", "Resources", "app.asar");
   }
 
   if (packagePlatform === "linux") {
@@ -99,6 +103,15 @@ function resolveAsarPath(desktopDir, packagePlatform) {
   }
 
   throw new Error(`Unsupported packaged runtime dependency target: ${packagePlatform}`);
+}
+
+function resolveMacAppPath(desktopDir, ...segments) {
+  const releaseDir = path.join(desktopDir, "release");
+  const appBundlePath = ["mac-arm64", "mac"]
+    .map((directoryName) => path.join(releaseDir, directoryName, "Pi-Deepseek.app"))
+    .find((candidatePath) => existsSync(candidatePath));
+
+  return path.join(appBundlePath ?? path.join(releaseDir, "mac-arm64", "Pi-Deepseek.app"), ...segments);
 }
 
 function verifyRequiredPackages(extractedDir) {

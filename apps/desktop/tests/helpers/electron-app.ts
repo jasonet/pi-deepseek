@@ -1,7 +1,7 @@
 import { execFile, spawn, type ChildProcess } from "node:child_process";
 import { copyFile, cp, mkdir, mkdtemp, readFile, readdir, realpath, rename, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
-import { basename, delimiter, dirname, extname, join, resolve } from "node:path";
+import { basename, delimiter, dirname, extname, join, resolve, sep } from "node:path";
 import { tmpdir } from "node:os";
 import { promisify } from "node:util";
 import { expect, type Page } from "@playwright/test";
@@ -311,7 +311,13 @@ export async function resolvePackagedAppBundle(releaseDir = packagedReleaseDir):
     throw error;
   }
 
-  const appBundle = appBundles.find((candidate) => basename(candidate) === "pi-gui.app") ?? appBundles[0];
+  const preferredDirectoryName =
+    process.platform === "darwin" && process.arch === "arm64" ? `${sep}mac-arm64${sep}` : `${sep}mac${sep}`;
+  const appBundle =
+    appBundles.find((candidate) => basename(candidate) === "Pi-Deepseek.app" && candidate.includes(preferredDirectoryName)) ??
+    appBundles.find((candidate) => basename(candidate) === "Pi-Deepseek.app") ??
+    appBundles.find((candidate) => basename(candidate) === "pi-gui.app") ??
+    appBundles[0];
   if (!appBundle) {
     throw new Error(`No .app bundle found under ${releaseDir}. Run pnpm --filter @pi-gui/desktop run package:dir first.`);
   }

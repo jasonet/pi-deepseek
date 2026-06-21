@@ -1698,50 +1698,30 @@ export default function App() {
     await updateSnapshot(api, setSnapshot, () => api.removeImChannel(channelId));
   };
   const handleImConnected = async (provider: ConnectPhoneProvider, sessionId?: string) => {
-    // If channel already has a valid session, just navigate to it
-    if (sessionId && sessionId !== "none" && sessionId.length > 10) {
-      const workspace = rootWorkspaceOptions[0];
+    if (!api) return;
+
+    const resolvedSessionId = sessionId?.trim();
+    if (resolvedSessionId && resolvedSessionId !== "none") {
+      const workspace = snapshot?.workspaces.find((candidate) =>
+        candidate.sessions.some((session) => session.id === resolvedSessionId),
+      );
       if (workspace) {
         await updateSnapshot(api, setSnapshot, () =>
-          api.selectSession({ workspaceId: workspace.id, sessionId }),
+          api.selectSession({ workspaceId: workspace.id, sessionId: resolvedSessionId }),
         );
       }
       setActiveView("threads");
       return;
     }
-    // New connection: bind the session the user is currently viewing so the
-    // phone channel syncs with THAT single session. Fall back to creating a
-    // dedicated session only when nothing is currently displayed.
-    setActiveView("threads");
-    if (!api) return;
 
+    // A new phone connection is scoped to the currently displayed conversation.
+    setActiveView("threads");
     if (selectedSession && selectedWorkspace) {
       await updateSnapshot(api, setSnapshot, () => api.updateImChannelSession(provider, selectedSession.id));
       await updateSnapshot(api, setSnapshot, () =>
         api.selectSession({ workspaceId: selectedWorkspace.id, sessionId: selectedSession.id }),
       );
       return;
-    }
-
-    // Create an empty session and just wait for the phone to send commands —
-    // no auto-message, so nothing runs until a real instruction arrives.
-    const workspace = rootWorkspaceOptions[0];
-    if (workspace) {
-      const state = await updateSnapshot(api, setSnapshot, () =>
-        api.startThread({
-          rootWorkspaceId: workspace.id,
-          environment: "local",
-        }),
-      );
-      const newSession = state.workspaces
-        .find((w) => w.id === workspace.id)
-        ?.sessions?.at(-1);
-      if (newSession) {
-        await updateSnapshot(api, setSnapshot, () => api.updateImChannelSession(provider, newSession.id));
-        await updateSnapshot(api, setSnapshot, () =>
-          api.selectSession({ workspaceId: workspace.id, sessionId: newSession.id }),
-        );
-      }
     }
   };
 

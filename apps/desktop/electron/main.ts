@@ -35,6 +35,7 @@ import {
   startWeixinInstallQrcode,
 } from "./connect-phone-install";
 import { configureLogger } from "./logger";
+import { ensurePathForGuiLaunch } from "./ensure-path";
 import type { DesktopAppState, ThemeMode } from "../src/desktop-state";
 import { desktopIpc, getDesktopCommandFromShortcut, type OpenDesignStatus } from "../src/ipc";
 import { SUPPORTED_COMPOSER_IMAGE_TYPES } from "../src/composer-attachments";
@@ -937,6 +938,10 @@ app.whenReady().then(async () => {
   if (!hasSingleInstanceLock) {
     return;
   }
+
+  // Restore a full PATH before anything spawns child processes (pi MCP bridge
+  // launches `uvx` for Unity); GUI launches otherwise inherit a stripped PATH.
+  ensurePathForGuiLaunch();
 
   // On macOS, packaged builds already render the dock icon from `icon.icns`
   // in the app bundle. In dev we override the generic Electron dock icon with

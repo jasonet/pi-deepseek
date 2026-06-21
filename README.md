@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/jasonet/pi-deepseek/releases/latest"><img src="https://img.shields.io/github/v/release/jasonet/pi-deepseek?label=v0.2.6&color=%234D6BFE" alt="Latest Release" /></a>
+  <a href="https://github.com/jasonet/pi-deepseek/releases/latest"><img src="https://img.shields.io/github/v/release/jasonet/pi-deepseek?label=v2.6.1&color=%234D6BFE" alt="Latest Release" /></a>
   <a href="https://github.com/jasonet/pi-deepseek/releases/latest"><img src="https://img.shields.io/badge/platform-macOS_|_Windows_|_Linux-lightgrey" alt="Platform" /></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License" /></a>
 </p>
@@ -20,12 +20,12 @@
 
 | 平台 | 架构 | 格式 | 下载 |
 |------|------|------|------|
-| **macOS** | Apple Silicon (M1–M4) | DMG | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v0.2.6/Pi-Deepseek-0.2.6-mac-arm64.dmg) |
-| **macOS** | Intel (x64) | DMG | [![Download](https://img.shields.io/badge/Download-x64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v0.2.6/Pi-Deepseek-0.2.6-mac-x64.dmg) |
-| **Windows** | x64 | 安装版 | [![Download](https://img.shields.io/badge/Download-Setup-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v0.2.6/Pi-Deepseek-0.2.6-win-x64-setup.exe) |
-| **Windows** | x64 | 便携版 | [![Download](https://img.shields.io/badge/Download-Portable-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v0.2.6/Pi-Deepseek-0.2.6-win-x64-portable.exe) |
-| **Linux** | x64 | deb | [![Download](https://img.shields.io/badge/Download-.deb-%234D6BFE?logo=ubuntu)](https://github.com/jasonet/pi-deepseek/releases/download/v0.2.6/Pi-Deepseek-0.2.6-linux-amd64.deb) |
-| **Linux** | x64 | AppImage | [![Download](https://img.shields.io/badge/Download-AppImage-%234D6BFE?logo=linux)](https://github.com/jasonet/pi-deepseek/releases/download/v0.2.6/Pi-Deepseek-0.2.6-linux-x86_64.AppImage) |
+| **macOS** | Apple Silicon (M1–M4) | DMG | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.1/Pi-Deepseek-0.2.6-mac-arm64.dmg) |
+| **macOS** | Intel (x64) | DMG | [![Download](https://img.shields.io/badge/Download-x64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.1/Pi-Deepseek-0.2.6-mac-x64.dmg) |
+| **Windows** | x64 | 安装版 | [![Download](https://img.shields.io/badge/Download-Setup-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.1/Pi-Deepseek-0.2.6-win-x64-setup.exe) |
+| **Windows** | x64 | 便携版 | [![Download](https://img.shields.io/badge/Download-Portable-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.1/Pi-Deepseek-0.2.6-win-x64-portable.exe) |
+| **Linux** | x64 | deb | [![Download](https://img.shields.io/badge/Download-.deb-%234D6BFE?logo=ubuntu)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.1/Pi-Deepseek-0.2.6-linux-amd64.deb) |
+| **Linux** | x64 | AppImage | [![Download](https://img.shields.io/badge/Download-AppImage-%234D6BFE?logo=linux)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.1/Pi-Deepseek-0.2.6-linux-x86_64.AppImage) |
 
 > 💡 **macOS**：下载 `.dmg` 双击挂载，将 `Pi-Deepseek.app` 拖入 `/Applications`。
 > **Windows**：`Setup.exe` 为安装版（推荐），`Portable.exe` 为绿色免安装版。

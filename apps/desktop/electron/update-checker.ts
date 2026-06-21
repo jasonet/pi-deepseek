@@ -1,9 +1,9 @@
 import { app, net, Notification, shell } from "electron";
 
-const RELEASES_URL =
-  "https://api.github.com/repos/jasonet/pi-deepseek/releases?per_page=1";
 const RELEASES_PAGE =
   "https://github.com/jasonet/pi-deepseek/releases/latest";
+const FEED_BASE_URL =
+  "https://github.com/jasonet/pi-deepseek/releases/latest/download";
 
 const CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000; // 4 hours
 const INITIAL_DELAY_MS = 15_000; // 15 seconds after launch
@@ -25,26 +25,24 @@ function showUpdateNotification(currentVersion: string, latestVersion: string): 
 }
 
 export async function checkForUpdate(): Promise<UpdateCheckResult> {
-  const res = await net.fetch(RELEASES_URL, {
-    headers: { Accept: "application/vnd.github.v3+json" },
-  });
+  const feedUrl = `${FEED_BASE_URL}/${getUpdateFeedFileName()}`;
+  const res = await net.fetch(feedUrl);
   if (!res.ok) {
     return {
       status: "error",
-      message: `GitHub Releases returned ${res.status}.`,
+      message: `GitHub release feed returned ${res.status}.`,
     };
   }
 
-  const releases = (await res.json()) as Array<{ tag_name: string }>;
-  const release = releases[0];
-  if (!release?.tag_name) {
+  const feed = await res.text();
+  const latest = readFeedVersion(feed);
+  if (!latest) {
     return {
       status: "error",
-      message: "GitHub Releases did not return any published versions.",
+      message: "GitHub release feed did not return a version.",
     };
   }
 
-  const latest = release.tag_name.replace(/^v/, "");
   const current = app.getVersion();
 
   if (latest !== current) {
@@ -61,6 +59,21 @@ export async function checkForUpdate(): Promise<UpdateCheckResult> {
     currentVersion: current,
     latestVersion: latest,
   };
+}
+
+function getUpdateFeedFileName(): string {
+  if (process.platform === "darwin") {
+    return "latest-mac.yml";
+  }
+  if (process.platform === "win32") {
+    return "latest.yml";
+  }
+  return "latest-linux.yml";
+}
+
+function readFeedVersion(feed: string): string | undefined {
+  const match = /^version:\s*['"]?([^'"\s]+)['"]?\s*$/m.exec(feed);
+  return match?.[1]?.trim().replace(/^v/, "") || undefined;
 }
 
 export function initUpdateChecker(): () => void {

@@ -784,7 +784,15 @@ async function inferExtensionDisplayName(
     }
   }
 
-  return inferExtensionEntryName(filePath);
+  const entryName = inferExtensionEntryName(filePath);
+  if (entryName.toLowerCase() === "index") {
+    const packageDisplayName = await inferPackageDisplayName(dirname(filePath), packageDisplayNameCache);
+    if (packageDisplayName) {
+      return packageDisplayName;
+    }
+  }
+
+  return entryName;
 }
 
 function inferExtensionEntryName(filePath: string): string {

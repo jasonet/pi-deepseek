@@ -21,7 +21,6 @@
 | 平台 | 架构 | 引擎 | 版本 | 格式 | 大小 | 下载 |
 |------|------|------|------|------|------|------|
 | **macOS** | Apple Silicon (M1–M4) | Electron | v2.6.4 | DMG | 136M | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.4/Pi-Deepseek-2.6.4-mac-arm64.dmg) |
-| **macOS** | Apple Silicon (M1–M4) | Tauri | v1.6.5 | DMG | 413M | [![Download](https://img.shields.io/badge/Download-arm64-%237C6BF5?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.4/Pi-Deepseek_1.6.5_aarch64.dmg) |
 | **macOS** | Intel (x64) | Electron | v2.6.4 | DMG | 147M | [![Download](https://img.shields.io/badge/Download-x64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.4/Pi-Deepseek-2.6.4-mac-x64.dmg) |
 | **Windows** | x64 | Electron | v2.6.4 | 安装版 | 121M | [![Download](https://img.shields.io/badge/Download-Setup-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.4/Pi-Deepseek-2.6.4-win-x64-setup.exe) |
 | **Windows** | x64 | Electron | v2.6.4 | 便携版 | 120M | [![Download](https://img.shields.io/badge/Download-Portable-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.4/Pi-Deepseek-2.6.4-win-x64-portable.exe) |
@@ -30,8 +29,6 @@
 
 > 🧭 **两个发行版本，互不替换、互不冲突 / Two coexisting builds:**
 > **Electron `v2.6.4`** 是功能完整、全平台覆盖的成熟版本（推荐日常使用）。
-> **Tauri `v1.6.5`** 是基于 Rust + Tauri 2 的轻量原生版本，目前仅 macOS Apple Silicon，功能与 Electron 对齐中。
-> 两者可同时安装，按需选择。/ Electron `v2.6.4` is the mature, full-platform build (recommended); Tauri `v1.6.5` is the lightweight Rust/Tauri 2 build (macOS Apple Silicon only for now). Both can be installed side by side.
 
 > 💡 **macOS**：下载 `.dmg` 双击挂载，将 `Pi-Deepseek.app` 拖入 `/Applications`。
 > **Windows**：`Setup.exe` 为安装版（推荐），`Portable.exe` 为绿色免安装版。

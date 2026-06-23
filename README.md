@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/jasonet/pi-deepseek/releases/latest"><img src="https://img.shields.io/github/v/release/jasonet/pi-deepseek?label=v2.6.4&color=%234D6BFE" alt="Latest Release" /></a>
+  <a href="https://github.com/jasonet/pi-deepseek/releases/latest"><img src="https://img.shields.io/github/v/release/jasonet/pi-deepseek?label=v2.6.5&color=%234D6BFE" alt="Latest Release" /></a>
   <a href="https://github.com/jasonet/pi-deepseek/releases/latest"><img src="https://img.shields.io/badge/platform-macOS_|_Windows_|_Linux-lightgrey" alt="Platform" /></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License" /></a>
 </p>
@@ -20,15 +20,16 @@
 
 | 平台 | 架构 | 引擎 | 版本 | 格式 | 大小 | 下载 |
 |------|------|------|------|------|------|------|
-| **macOS** | Apple Silicon (M1–M4) | Electron | v2.6.4 | DMG | 136M | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.4/Pi-Deepseek-2.6.4-mac-arm64.dmg) |
-| **macOS** | Intel (x64) | Electron | v2.6.4 | DMG | 147M | [![Download](https://img.shields.io/badge/Download-x64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.4/Pi-Deepseek-2.6.4-mac-x64.dmg) |
-| **Windows** | x64 | Electron | v2.6.4 | 安装版 | 121M | [![Download](https://img.shields.io/badge/Download-Setup-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.4/Pi-Deepseek-2.6.4-win-x64-setup.exe) |
-| **Windows** | x64 | Electron | v2.6.4 | 便携版 | 120M | [![Download](https://img.shields.io/badge/Download-Portable-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.4/Pi-Deepseek-2.6.4-win-x64-portable.exe) |
-| **Linux** | x64 | Electron | v2.6.4 | deb | 146M | [![Download](https://img.shields.io/badge/Download-.deb-%234D6BFE?logo=ubuntu)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.4/Pi-Deepseek-2.6.4-linux-amd64.deb) |
-| **Linux** | x64 | Electron | v2.6.4 | AppImage | 149M | [![Download](https://img.shields.io/badge/Download-AppImage-%234D6BFE?logo=linux)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.4/Pi-Deepseek-2.6.4-linux-x86_64.AppImage) |
+| **macOS** | Apple Silicon (M1–M4) | Electron | v2.6.5 | DMG | 136M | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.5/Pi-Deepseek-2.6.5-mac-arm64.dmg) |
+| **macOS** | Intel (x64) | Electron | v2.6.5 | DMG | 147M | [![Download](https://img.shields.io/badge/Download-x64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.5/Pi-Deepseek-2.6.5-mac-x64.dmg) |
+| **macOS** | Apple Silicon (M1–M4) | Tauri | v1.6.5 | DMG | 86M | [![Download](https://img.shields.io/badge/Download-arm64-%237C6BF5?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.5/Pi-Deepseek_1.6.5_aarch64.dmg) |
+| **Windows** | x64 | Electron | v2.6.5 | 安装版 | 121M | [![Download](https://img.shields.io/badge/Download-Setup-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.4/Pi-Deepseek-2.6.4-win-x64-setup.exe) |
+| **Windows** | x64 | Electron | v2.6.5 | 便携版 | 120M | [![Download](https://img.shields.io/badge/Download-Portable-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.4/Pi-Deepseek-2.6.4-win-x64-portable.exe) |
+| **Linux** | x64 | Electron | v2.6.5 | deb | 146M | [![Download](https://img.shields.io/badge/Download-.deb-%234D6BFE?logo=ubuntu)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.4/Pi-Deepseek-2.6.4-linux-amd64.deb) |
+| **Linux** | x64 | Electron | v2.6.5 | AppImage | 149M | [![Download](https://img.shields.io/badge/Download-AppImage-%234D6BFE?logo=linux)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.4/Pi-Deepseek-2.6.4-linux-x86_64.AppImage) |
 
 > 🧭 **两个发行版本，互不替换、互不冲突 / Two coexisting builds:**
-> **Electron `v2.6.4`** 是功能完整、全平台覆盖的成熟版本（推荐日常使用）。
+> **Electron `v2.6.5`** 是功能完整、全平台覆盖的成熟版本（推荐日常使用）。
 
 > 💡 **macOS**：下载 `.dmg` 双击挂载，将 `Pi-Deepseek.app` 拖入 `/Applications`。
 > **Windows**：`Setup.exe` 为安装版（推荐），`Portable.exe` 为绿色免安装版。

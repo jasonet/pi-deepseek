@@ -1,0 +1,13 @@
+{
+  "$comment": "Higgsfield MCP server bridged into pi by pi-mcp-higgsfield. Tools are namespaced higgsfield__<tool>. ${HIGGSFIELD_TOKEN} is substituted from the environment at connect time.",
+  "connectTimeoutMs": 15000,
+  "servers": {
+    "higgsfield": {
+      "$comment": "Higgsfield AI image/video generation MCP over streamable HTTP. Requires HIGGSFIELD_TOKEN. Disabled by default; opt in from the extensions panel.",
+      "enabled": false,
+      "transport": "http",
+      "url": "https://higgsfield.ai/mcp",
+      "headers": { "Authorization": "Bearer ${HIGGSFIELD_TOKEN}" }
+    }
+  }
+}

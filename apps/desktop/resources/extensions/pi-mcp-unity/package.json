@@ -1,0 +1,14 @@
+{
+  "name": "pi-mcp-unity",
+  "displayName": "Unity MCP (coplaydev-unity-mcp)",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Bridges the CoplayDev open-source Unity MCP into pi. Runs `mcp-for-unity` locally via uvx (stdio); requires the MCPForUnity package in your Unity project and 'Start Server' in the Unity > MCP window. Tools register as coplaydev_unity__*. Run: /unity-mcp for status (or '/unity-mcp reconnect'); /concept-to-scene <concept> for the Higgsfield+Unity closed loop.",
+  "type": "module",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0"
+  },
+  "pi": {
+    "extensions": ["./index.ts"]
+  }
+}

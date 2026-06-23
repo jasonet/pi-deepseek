@@ -31,3 +31,6 @@ index.html
 *-[A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9][A-Za-z0-9].css
 apps/desktop-tauri/src-tauri/target/
 WechatIMG*.jpg
+
+# Staged extension tarball (built by scripts/stage-mcp-bridge.mjs)
+apps/desktop/resources/extensions/*.tgz

@@ -162,9 +162,14 @@ export function ConversationTimeline({
         <div className="timeline" data-testid="transcript">
           <div className="timeline-empty">Send a prompt to start the session.</div>
         </div>
-      ) : shouldVirtualize ? (
-        <VirtualizedTranscriptList
+      ) : (
+        // One stable component for both modes. Toggling `virtualize` only flips a
+        // prop, so React reconciles the keyed rows in place instead of unmounting
+        // and remounting the whole list (which flashed the timeline during
+        // streaming + auto-scroll when shouldVirtualize switched).
+        <TranscriptList
           transcript={transcript}
+          virtualize={shouldVirtualize}
           timelinePaneRef={timelinePaneRef}
           onContentHeightChange={onContentHeightChange}
           measuredHeightsRef={measuredHeightsRef}
@@ -174,19 +179,6 @@ export function ConversationTimeline({
           onToggleToolCall={toggleToolCall}
           onViewFileInDiff={onViewFileInDiff}
         />
-      ) : (
-        <div className="timeline" data-testid="transcript">
-          {transcript.map((item) => (
-            <MeasuredTimelineItem
-              item={item}
-              key={item.id}
-              onHeightChange={updateMeasuredHeight}
-              expandedToolCallIds={expandedToolCallIds}
-              onToggleToolCall={toggleToolCall}
-              onViewFileInDiff={onViewFileInDiff}
-            />
-          ))}
-        </div>
       )}
       {showJumpToLatest ? (
         <button className="timeline-jump" data-testid="timeline-jump" type="button" onClick={onJumpToLatest}>
@@ -197,8 +189,9 @@ export function ConversationTimeline({
   );
 }
 
-function VirtualizedTranscriptList({
+function TranscriptList({
   transcript,
+  virtualize,
   timelinePaneRef,
   onContentHeightChange,
   measuredHeightsRef,
@@ -209,6 +202,7 @@ function VirtualizedTranscriptList({
   onViewFileInDiff,
 }: {
   readonly transcript: readonly TranscriptMessage[];
+  readonly virtualize: boolean;
   readonly timelinePaneRef: MutableRefObject<HTMLDivElement | null>;
   readonly onContentHeightChange: () => void;
   readonly measuredHeightsRef: MutableRefObject<Map<string, number>>;
@@ -222,7 +216,12 @@ function VirtualizedTranscriptList({
   const previousTotalHeightRef = useRef(0);
   void measurementVersion;
 
+  // Viewport tracking (and the per-scroll re-render it triggers) is only needed
+  // while virtualizing; in flow mode every row is already mounted.
   useLayoutEffect(() => {
+    if (!virtualize) {
+      return undefined;
+    }
     const pane = timelinePaneRef.current;
     if (!pane) {
       return undefined;
@@ -249,7 +248,7 @@ function VirtualizedTranscriptList({
       pane.removeEventListener("scroll", syncViewport);
       resizeObserver.disconnect();
     };
-  }, [timelinePaneRef]);
+  }, [timelinePaneRef, virtualize]);
 
   const rowHeights = transcript.map((item) => measuredHeightsRef.current.get(item.id) ?? estimateTimelineItemHeight(item));
   const rowOffsets: number[] = [];
@@ -263,28 +262,41 @@ function VirtualizedTranscriptList({
   }
 
   useLayoutEffect(() => {
+    // Only the virtualized container drives the spacer height; flow layout sizes
+    // itself, matching the prior non-virtualized behavior.
+    if (!virtualize) {
+      return;
+    }
     if (previousTotalHeightRef.current === totalHeight) {
       return;
     }
     previousTotalHeightRef.current = totalHeight;
     onContentHeightChange();
-  }, [onContentHeightChange, totalHeight]);
+  }, [onContentHeightChange, totalHeight, virtualize]);
 
-  const startOffset = Math.max(0, viewport.scrollTop - OVERSCAN_PX);
-  const endOffset = viewport.scrollTop + viewport.height + OVERSCAN_PX;
-  const startIndex = findStartIndex(rowOffsets, rowHeights, startOffset);
-  const endIndex = findEndIndex(rowOffsets, endOffset);
+  let startIndex = 0;
+  let endIndex = transcript.length;
+  if (virtualize) {
+    const startOffset = Math.max(0, viewport.scrollTop - OVERSCAN_PX);
+    const endOffset = viewport.scrollTop + viewport.height + OVERSCAN_PX;
+    startIndex = findStartIndex(rowOffsets, rowHeights, startOffset);
+    endIndex = findEndIndex(rowOffsets, endOffset);
+  }
 
   return (
-    <div className="timeline timeline--virtualized" data-testid="transcript" style={{ height: `${totalHeight}px` }}>
+    <div
+      className={virtualize ? "timeline timeline--virtualized" : "timeline"}
+      data-testid="transcript"
+      style={virtualize ? { height: `${totalHeight}px` } : undefined}
+    >
       {transcript.slice(startIndex, endIndex).map((item, offsetIndex) => {
         const index = startIndex + offsetIndex;
         return (
           <MeasuredTimelineItem
             item={item}
             key={item.id}
-            className="timeline__virtual-row"
-            top={rowOffsets[index] ?? 0}
+            className={virtualize ? "timeline__virtual-row" : undefined}
+            top={virtualize ? (rowOffsets[index] ?? 0) : undefined}
             onHeightChange={onHeightChange}
             expandedToolCallIds={expandedToolCallIds}
             onToggleToolCall={onToggleToolCall}

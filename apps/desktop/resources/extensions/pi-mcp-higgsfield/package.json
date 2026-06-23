@@ -1,0 +1,14 @@
+{
+  "name": "pi-mcp-higgsfield",
+  "displayName": "Higgsfield MCP",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Bridges the Higgsfield MCP into pi over HTTP (https://higgsfield.ai/mcp) for AI image/video generation. Requires HIGGSFIELD_TOKEN in the environment (sent as Authorization: Bearer). Tools register as higgsfield__*. Run: /higgsfield for status (or '/higgsfield reconnect').",
+  "type": "module",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0"
+  },
+  "pi": {
+    "extensions": ["./index.ts"]
+  }
+}

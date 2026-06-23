@@ -1,0 +1,33 @@
+{
+  "name": "pi-understand",
+  "displayName": "Understand-Anything (understand-anything)",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Bridges the Understand-Anything code-comprehension skill into pi. Builds a deterministic knowledge graph of the current project via bundled tree-sitter (WASM) workflow scripts, then answers questions and explains files against it. Tools: /understand (build/refresh the graph via the bundled SKILL.md workflow); /understand-explain <path> (explain a file/dir from the graph); /understand-chat <question> (ask about the codebase). Graph is saved under .understand-anything/. No native toolchain required — parsing uses web-tree-sitter WASM.",
+  "type": "module",
+  "dependencies": {
+    "@understand-anything/core": "file:vendor/ua-core.tgz",
+    "@understand-anything/skill": "file:vendor/ua-skill.tgz",
+    "fuse.js": "^7.1.0",
+    "ignore": "^7.0.5",
+    "yaml": "^2.8.3",
+    "zod": "^4.3.6",
+    "web-tree-sitter": "^0.26.6",
+    "graphology": "~0.26.0",
+    "graphology-communities-louvain": "^2.0.2",
+    "tree-sitter-c": "^0.23.6",
+    "tree-sitter-c-sharp": "^0.23.1",
+    "tree-sitter-cpp": "^0.23.4",
+    "tree-sitter-go": "^0.25.0",
+    "tree-sitter-java": "^0.23.5",
+    "tree-sitter-javascript": "^0.25.0",
+    "tree-sitter-php": "^0.23.11",
+    "tree-sitter-python": "^0.25.0",
+    "tree-sitter-ruby": "^0.23.1",
+    "tree-sitter-rust": "^0.24.0",
+    "tree-sitter-typescript": "^0.23.2"
+  },
+  "pi": {
+    "extensions": ["./index.ts"]
+  }
+}

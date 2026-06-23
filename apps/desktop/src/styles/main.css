@@ -317,7 +317,16 @@
   position: relative;
   max-height: calc(100vh - 320px);
   overflow: auto;
-  scroll-behavior: smooth;
+  /*
+   * Intentionally NOT `scroll-behavior: smooth`. With smooth set, even direct
+   * `scrollTop = scrollHeight` assignments animate. When transcript content
+   * arrives a frame late (e.g. the Tauri sidecar's slower RPC), the pane has
+   * already painted at the top, so the catch-up jump animates top→bottom and
+   * looks like the view is scrolling down on every session entry. Genuine
+   * smooth scrolls (jump-to-latest button, search highlight) pass
+   * `behavior: "smooth"` explicitly via scrollTo/scrollIntoView and still
+   * animate, so dropping the CSS rule only makes the entry/follow jump instant.
+   */
 }
 
 .timeline-pane--thread {
@@ -2796,6 +2805,14 @@ textarea.settings-input {
   background: #fbfcfe;
 }
 
+/* Selected extension card: accent "glow" frame so it matches the detail panel. */
+.skill-card--active {
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent),
+    0 0 18px color-mix(in srgb, var(--accent) 26%, transparent);
+}
+
 .skill-card__title-row {
   display: flex;
   align-items: center;
@@ -2844,6 +2861,13 @@ textarea.settings-input {
   gap: 14px;
   position: sticky;
   top: 0;
+  /* Distinct, accent-tinted surface marking this as the selected detail, with a
+     glow frame in the same accent color as the active card. */
+  background: color-mix(in srgb, var(--accent) 8%, #ffffff);
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent),
+    0 0 26px color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
 .skill-detail__header {
@@ -3690,6 +3714,21 @@ mark.thread-find-active {
 :root.dark .skill-card:hover {
   border-color: rgba(255, 255, 255, 0.1);
   background: var(--surface-muted);
+}
+
+:root.dark .skill-card--active {
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent),
+    0 0 18px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+:root.dark .skill-detail {
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface));
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent),
+    0 0 26px color-mix(in srgb, var(--accent) 24%, transparent);
 }
 
 :root.dark .skill-card__badge,

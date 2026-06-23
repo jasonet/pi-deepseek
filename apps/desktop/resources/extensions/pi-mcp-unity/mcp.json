@@ -1,0 +1,22 @@
+{
+  "$comment": "Unity MCP servers bridged into pi by pi-mcp-unity. Tools are namespaced <server-key>__<tool>. ${ENV_VAR} is substituted from the environment at connect time.",
+  "connectTimeoutMs": 15000,
+  "servers": {
+    "unity": {
+      "$comment": "Commercial Coplay product (coplay-mcp-server, source: CoplayDev/coplay-unity-plugin). Disabled by default in favor of the open-source MCP for Unity below.",
+      "enabled": false,
+      "transport": "stdio",
+      "command": "uvx",
+      "args": ["--python", ">=3.11", "coplay-mcp-server@latest"],
+      "env": { "MCP_TOOL_TIMEOUT": "720000" }
+    },
+    "coplaydev-unity": {
+      "$comment": "Open-source MCP for Unity (CoplayDev/unity-mcp, PyPI: mcpforunityserver, script: mcp-for-unity). Requires the MCPForUnity Unity package installed and 'Start Server' in the Unity MCP window. Tools register as coplaydev_unity__*. Disabled by default; opt in from the extensions panel.",
+      "enabled": false,
+      "transport": "stdio",
+      "command": "uvx",
+      "args": ["--python", ">=3.11", "--from", "mcpforunityserver@latest", "mcp-for-unity", "--transport", "stdio"],
+      "env": { "MCP_TOOL_TIMEOUT": "720000" }
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "pi-sidecar-runtime",
+  "version": "2.6.6",
+  "private": true,
+  "dependencies": {
+    "@earendil-works/pi-coding-agent": "0.74.0",
+    "node-pty": "1.1.0"
+  }
+}

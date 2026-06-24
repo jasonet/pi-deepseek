@@ -32,5 +32,14 @@ index.html
 apps/desktop-tauri/src-tauri/target/
 WechatIMG*.jpg
 
+# Self-contained sidecar runtime staged by scripts/stage-runtime.mjs
+# (bundled Node binary + node_modules + server.mjs; ~395M build artifact)
+apps/desktop-tauri/src-tauri/sidecar/
+apps/desktop-tauri/sidecar/dist/
+apps/desktop-tauri/sidecar/staging/node_modules/
+
+# Internal-only developer docs (build/release runbook); not published publicly
+docs/dev/
+
 # Staged extension tarball (built by scripts/stage-mcp-bridge.mjs)
 apps/desktop/resources/extensions/*.tgz

@@ -1,0 +1,105 @@
+name: Release Desktop (Pi-Deepseek)
+
+# Fork-specific 3-platform release for jasonet/pi-deepseek.
+# Manual dispatch avoids colliding with the inherited upstream `release.yml`
+# (which is tag-triggered, mac+linux only, and syncs an upstream Homebrew tap).
+#
+# Usage: Actions tab -> "Release Desktop (Pi-Deepseek)" -> Run workflow ->
+#   version: 2.6.5            (Electron, builds all 3 OSes)
+#   tauri:   true / false     (also build the macOS Tauri sidecar app -> v1.6.x)
+#
+# electron-builder reads `publish:` from apps/desktop/electron-builder.yml
+# (owner jasonet / repo pi-deepseek). `--publish always` uploads the installers
+# PLUS latest*.yml + *.blockmap so the in-app Auto Update keeps working.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Electron version, no leading v (e.g. 2.6.5)"
+        required: true
+      tauri_version:
+        description: "Tauri version, no leading v (e.g. 1.6.5). Leave blank to skip."
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  electron:
+    name: Electron (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            args: "--mac"
+          - os: windows-latest
+            args: "--win"
+          - os: ubuntu-latest
+            args: "--linux"
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build renderer
+        run: pnpm --filter @pi-gui/desktop run build
+
+      - name: Package + publish
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd apps/desktop
+          pnpm exec electron-builder ${{ matrix.args }} \
+            --publish always \
+            "-c.extraMetadata.version=${{ inputs.version }}" \
+            "-c.buildVersion=${{ inputs.version }}"
+
+  tauri:
+    name: Tauri (macOS)
+    if: ${{ inputs.tauri_version != '' }}
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build self-contained app (bundles node + sidecar)
+        working-directory: apps/desktop-tauri
+        run: pnpm exec tauri build
+
+      - name: Upload Tauri dmg to v${{ inputs.tauri_version }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DMG=$(ls apps/desktop-tauri/src-tauri/target/release/bundle/dmg/*.dmg | head -1)
+          gh release create "v${{ inputs.tauri_version }}" "$DMG" \
+            --repo "${{ github.repository }}" \
+            --title "Pi-Deepseek v${{ inputs.tauri_version }} (Tauri)" \
+            --notes "Self-contained Tauri build (bundled Node runtime + pi sidecar). macOS Apple Silicon." \
+          || gh release upload "v${{ inputs.tauri_version }}" "$DMG" \
+            --repo "${{ github.repository }}" --clobber

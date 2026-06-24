@@ -55,9 +55,19 @@ fn resolve_server_path(app: &tauri::AppHandle) -> Result<std::path::PathBuf, Str
 
 /// Locate a usable `node` binary. A GUI-launched .app inherits only a minimal
 /// PATH (/usr/bin:/bin:...), which usually lacks Homebrew/nvm/fnm, so `node`
-/// won't be found via PATH alone. Try, in order: an explicit override env var,
-/// a PATH lookup, then well-known install locations.
-fn resolve_node_path() -> String {
+/// won't be found via PATH alone. Try, in order: the self-contained Node binary
+/// bundled inside the app (so the shipped build needs no system Node at all),
+/// an explicit override env var, a PATH lookup, then well-known install
+/// locations.
+fn resolve_node_path(app: &tauri::AppHandle) -> String {
+    use tauri::path::BaseDirectory;
+    // Prefer the Node binary bundled at Resources/sidecar/node. Present only in
+    // packaged builds; dev runs fall through to the host's node.
+    if let Ok(bundled) = app.path().resolve("sidecar/node", BaseDirectory::Resource) {
+        if bundled.exists() {
+            return bundled.to_string_lossy().into_owned();
+        }
+    }
     if let Ok(explicit) = std::env::var("PI_TAURI_NODE") {
         if !explicit.is_empty() && std::path::Path::new(&explicit).exists() {
             return explicit;
@@ -103,7 +113,7 @@ fn resolve_node_path() -> String {
 /// pending requests and forwards events to the webview.
 fn start_sidecar(app: &tauri::AppHandle) -> Result<Sidecar, String> {
     let server = resolve_server_path(app)?;
-    let node = resolve_node_path();
+    let node = resolve_node_path(app);
 
     // Ensure the spawned node (and any node-pty children it starts) can find the
     // node bin dir on PATH even under a minimal GUI environment.

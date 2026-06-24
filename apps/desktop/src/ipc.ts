@@ -139,6 +139,7 @@ export const desktopIpc = {
 export const desktopCommands = {
   openSettings: "open-settings",
   openNewThread: "open-new-thread",
+  openConnectPhone: "open-connect-phone",
   toggleTerminal: "toggle-terminal",
   toggleSidebar: "toggle-sidebar",
 } as const;
@@ -220,6 +221,8 @@ export function getDesktopCommandFromShortcut(input: DesktopShortcutInput): PiDe
   const isComma = input.key === "," || input.code === "Comma";
   const isB = lowerKey === "b" || input.code === "KeyB";
   const isJ = lowerKey === "j" || input.code === "KeyJ";
+  const isN = lowerKey === "n" || input.code === "KeyN";
+  const isM = lowerKey === "m" || input.code === "KeyM";
   const isShiftO = input.shift && (lowerKey === "o" || input.code === "KeyO");
 
   if (!input.shift && isComma) {
@@ -234,8 +237,14 @@ export function getDesktopCommandFromShortcut(input: DesktopShortcutInput): PiDe
     return desktopCommands.toggleSidebar;
   }
 
-  if (isShiftO) {
+  // Cmd/Ctrl+N starts a new session. Cmd/Ctrl+Shift+O is kept as a legacy alias.
+  if ((!input.shift && isN) || isShiftO) {
     return desktopCommands.openNewThread;
+  }
+
+  // Cmd/Ctrl+M opens the Connect Phone view.
+  if (!input.shift && isM) {
+    return desktopCommands.openConnectPhone;
   }
 
   return undefined;

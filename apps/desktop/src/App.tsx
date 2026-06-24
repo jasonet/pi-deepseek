@@ -977,6 +977,9 @@ export default function App() {
       } else if (command === desktopCommands.openNewThread) {
         openNewThreadSurface(selectedWorkspace?.rootWorkspaceId ?? selectedWorkspace?.id);
         return true;
+      } else if (command === desktopCommands.openConnectPhone) {
+        openConnectPhone();
+        return true;
       } else if (command === desktopCommands.toggleTerminal) {
         toggleTerminal();
         return true;
@@ -1005,6 +1008,16 @@ export default function App() {
           handleCommand(command);
         }
         return;
+      }
+      // Esc leaves the full-screen Settings / Connect Phone views and returns to
+      // the main app surface. Uses the live ref so the captured view is never stale.
+      if (event.key === "Escape" && !event.metaKey && !event.ctrlKey && !event.altKey) {
+        const currentView = sidebarToggleStateRef.current.activeView;
+        if (currentView === "settings" || currentView === "connect-phone") {
+          event.preventDefault();
+          setActiveView("threads");
+          return;
+        }
       }
       // Cmd+F toggles thread search
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "f" && !event.shiftKey) {

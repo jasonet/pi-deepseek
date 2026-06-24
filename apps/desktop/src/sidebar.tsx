@@ -15,6 +15,7 @@ import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } 
 import { CSS } from "@dnd-kit/utilities";
 import type { AppView, ImChannel, SessionRecord, WorkspaceRecord, WorktreeRecord } from "./desktop-state";
 import { ArchiveIcon, ChevronDownIcon, ClawIcon, ExtensionIcon, FolderIcon, PhoneIcon, PlusIcon, RestoreIcon, SettingsIcon, SkillIcon, WeixinIcon, WorktreeIcon } from "./icons";
+import { getDesktopShortcutLabel } from "./ipc";
 import type { PiDesktopApi } from "./ipc";
 import { formatRelativeTime } from "./string-utils";
 import type { WorkspaceMenuState } from "./hooks/use-workspace-menu";
@@ -134,6 +135,7 @@ export function Sidebar(props: SidebarProps) {
         >
           <PlusIcon />
           <span>{t("sidebar.newThread")}</span>
+          <kbd className="sidebar__new-kbd">{getDesktopShortcutLabel(api.platform, "N")}</kbd>
         </button>
 
         <div className="sidebar__nav">

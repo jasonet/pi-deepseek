@@ -169,7 +169,7 @@
   font-family: var(--font-sans);
   font-size: 11px;
   font-weight: 650;
-  line-height: 1.2;
+  line-height: 1.1;
   text-align: center;
 }
 
@@ -269,7 +269,7 @@
   font-size: 18px;
   font-weight: 610;
   letter-spacing: -0.03em;
-  line-height: 1.15;
+  line-height: 1.08;
 }
 
 .chat-header__status {
@@ -552,7 +552,7 @@
 .timeline-tool__label {
   color: var(--muted-strong);
   font-size: 13px;
-  line-height: 1.45;
+  line-height: 1.23;
 }
 
 .timeline-tool__diff-stats {
@@ -624,7 +624,7 @@
   padding: 8px 12px;
   font-family: var(--font-mono);
   font-size: 12px;
-  line-height: 1.5;
+  line-height: 1.25;
   white-space: pre-wrap;
   word-break: break-word;
   color: var(--ink);
@@ -645,7 +645,7 @@
   padding: 0;
   font-family: var(--font-mono);
   font-size: 12px;
-  line-height: 1.6;
+  line-height: 1.3;
 }
 
 .diff-line {
@@ -1037,7 +1037,7 @@
   color: var(--text-strong);
   display: grid;
   gap: 9px;
-  line-height: 1.65;
+  line-height: 1.33;
 }
 
 .message__content > :first-child {
@@ -1207,7 +1207,7 @@
   resize: none;
   background: transparent;
   color: var(--text-strong);
-  line-height: 1.5;
+  line-height: 1.25;
   font-size: 15px;
   min-height: 24px;
   max-height: 220px;
@@ -1264,7 +1264,7 @@
 .model-onboarding-notice__description {
   color: var(--muted);
   font-size: 12px;
-  line-height: 1.35;
+  line-height: 1.18;
 }
 
 .model-onboarding-notice__action {
@@ -1384,7 +1384,7 @@
 .model-selector__empty {
   padding: 0 10px 8px;
   font-size: 12px;
-  line-height: 1.4;
+  line-height: 1.2;
   color: var(--muted);
 }
 
@@ -1512,7 +1512,7 @@
   flex: 1;
   color: var(--text-strong);
   font-size: 14px;
-  line-height: 1.45;
+  line-height: 1.23;
   white-space: pre-wrap;
 }
 
@@ -1922,7 +1922,7 @@
 
 .slash-menu__empty-description {
   font-size: 13px;
-  line-height: 1.4;
+  line-height: 1.2;
 }
 
 .enable-transparency .composer__surface,
@@ -1960,7 +1960,7 @@
   padding: 6px 10px;
   font-family: var(--font-mono);
   font-size: 13px;
-  line-height: 1.4;
+  line-height: 1.2;
   border: none;
   border-radius: 4px;
   background: none;
@@ -2099,7 +2099,7 @@
   color: var(--text-strong);
   font: inherit;
   font-size: 18px;
-  line-height: 1.6;
+  line-height: 1.3;
 }
 
 .new-thread__textarea:focus {
@@ -2171,7 +2171,7 @@
   max-width: 640px;
   color: var(--muted-strong);
   font-size: 14px;
-  line-height: 1.6;
+  line-height: 1.3;
 }
 
 .view-header__actions {
@@ -2214,7 +2214,7 @@
   margin: 8px 0 0;
   max-width: 620px;
   color: var(--muted-strong);
-  line-height: 1.5;
+  line-height: 1.25;
 }
 
 .open-design-status {
@@ -2297,7 +2297,7 @@
 .settings-section__description {
   font-size: 12px;
   color: var(--muted-soft);
-  line-height: 1.3;
+  line-height: 1.15;
 }
 
 .settings-group {
@@ -2343,7 +2343,7 @@
 .settings-row__description {
   font-size: 12px;
   color: var(--muted-soft);
-  line-height: 1.3;
+  line-height: 1.15;
 }
 
 .settings-row__control {
@@ -2371,7 +2371,7 @@
 
 textarea.settings-input {
   resize: vertical;
-  line-height: 1.45;
+  line-height: 1.23;
 }
 
 .settings-inline-fields {
@@ -2610,7 +2610,7 @@ textarea.settings-input {
 .connect-phone__channel span,
 .connect-phone__future-row span:last-child {
   font-size: 12px;
-  line-height: 1.45;
+  line-height: 1.23;
   color: var(--muted);
 }
 
@@ -2635,7 +2635,7 @@ textarea.settings-input {
 .connect-phone__future h2 {
   margin: 0;
   font-size: 16px;
-  line-height: 1.25;
+  line-height: 1.13;
   color: var(--text-strong);
 }
 
@@ -2643,7 +2643,7 @@ textarea.settings-input {
   margin: 6px 0 0;
   max-width: 480px;
   font-size: 13px;
-  line-height: 1.45;
+  line-height: 1.23;
   color: var(--muted);
 }
 
@@ -2699,7 +2699,7 @@ textarea.settings-input {
   margin: 0;
   color: var(--muted);
   font-size: 13px;
-  line-height: 1.5;
+  line-height: 1.25;
   text-align: center;
 }
 
@@ -2829,7 +2829,7 @@ textarea.settings-input {
 .skill-card__description {
   color: var(--muted-strong);
   font-size: 13px;
-  line-height: 1.55;
+  line-height: 1.28;
 }
 
 .skill-card__meta {
@@ -2894,7 +2894,7 @@ textarea.settings-input {
 .skill-detail__path {
   color: var(--muted-strong);
   font-size: 14px;
-  line-height: 1.6;
+  line-height: 1.3;
   word-break: break-word;
 }
 
@@ -2991,7 +2991,7 @@ textarea.settings-input {
   color: var(--muted-strong);
   font-family: var(--font-mono);
   font-size: 12px;
-  line-height: 1.5;
+  line-height: 1.25;
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -3028,7 +3028,7 @@ textarea.settings-input {
   margin: 0;
   color: var(--muted-strong);
   font-size: 14px;
-  line-height: 1.65;
+  line-height: 1.33;
 }
 
 .extension-dialog__options {
@@ -3159,7 +3159,7 @@ textarea.settings-input {
 .tree-modal__summary-copy {
   color: var(--muted-strong);
   font-size: 13px;
-  line-height: 1.6;
+  line-height: 1.3;
 }
 
 .tree-modal__list {
@@ -3246,7 +3246,7 @@ textarea.settings-input {
   color: var(--muted-strong);
   font-family: var(--font-mono);
   font-size: 12px;
-  line-height: 1.55;
+  line-height: 1.28;
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -3292,7 +3292,7 @@ textarea.settings-input {
 .tree-summary-option__description {
   color: var(--muted-strong);
   font-size: 13px;
-  line-height: 1.55;
+  line-height: 1.28;
 }
 
 .tree-modal__custom-instructions {

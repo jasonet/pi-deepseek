@@ -906,7 +906,23 @@ function installApplicationMenu(): void {
     },
     { role: "editMenu" },
     { role: "viewMenu" },
-    { role: "windowMenu" },
+    {
+      // Custom Window submenu so Cmd+M is freed from the default Minimize
+      // accelerator and can drive the in-app Connect Phone shortcut instead.
+      // Minimize stays available as a (shortcut-less) menu item.
+      role: "windowMenu",
+      submenu: [
+        {
+          label: "Minimize",
+          click: () => {
+            BrowserWindow.getFocusedWindow()?.minimize();
+          },
+        },
+        { role: "zoom" },
+        { type: "separator" },
+        { role: "front" },
+      ],
+    },
   ];
 
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));

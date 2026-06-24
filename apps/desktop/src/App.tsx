@@ -187,6 +187,9 @@ export default function App() {
   });
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const newThreadComposerRef = useRef<HTMLTextAreaElement | null>(null);
+  // Guards against a second new-thread submit firing while the first startThread
+  // round-trip is still in flight (which otherwise creates a duplicate session).
+  const startingThreadRef = useRef(false);
   const timelinePaneRef = useRef<HTMLDivElement | null>(null);
   const lastTranscriptMarkerRef = useRef("");
   const pinnedToBottomRef = useRef(true);
@@ -1802,6 +1805,12 @@ export default function App() {
   };
 
   const handleStartThread = () => {
+    // Synchronous re-entry guard: block a second submit while the first
+    // startThread round-trip is still in flight, so one prompt never spawns two
+    // sessions (e.g. a fast double-Enter or an IME-composed duplicate Enter).
+    if (startingThreadRef.current) {
+      return;
+    }
     if (!newThreadRootWorkspaceId || (!newThreadPrompt.trim() && newThreadAttachments.length === 0)) {
       return;
     }
@@ -1817,9 +1826,11 @@ export default function App() {
       setNewThreadComposerError("/tree is only available inside an existing session.");
       return;
     }
+    const submittedPrompt = newThreadPrompt;
+    const submittedAttachments = newThreadAttachments;
     const modelConfig = {
-      prompt: newThreadPrompt,
-      attachments: newThreadAttachments,
+      prompt: submittedPrompt,
+      attachments: submittedAttachments,
       provider: resolvedNewThreadProvider,
       modelId: resolvedNewThreadModelId,
       thinkingLevel: resolvedNewThreadThinkingLevel,
@@ -1829,16 +1840,25 @@ export default function App() {
       environment: newThreadEnvironment,
       ...modelConfig,
     };
+    startingThreadRef.current = true;
+    // Optimistically clear the composer before the await (mirrors the in-session
+    // submit path) so the next keystroke cannot resubmit the same prompt.
+    setNewThreadPrompt("");
+    setNewThreadAttachments([]);
     wsMenu.expandWorkspace(newThreadRootWorkspaceId);
     void updateSnapshot(api, setSnapshot, () =>
       api.startThread(input),
     ).then(() => {
-      setNewThreadPrompt("");
-      setNewThreadAttachments([]);
       setNewThreadProvider(undefined);
       setNewThreadModelId(undefined);
       setNewThreadThinkingLevel(undefined);
       setNewThreadEnvironment("local");
+    }).catch(() => {
+      // Restore the prompt so a failed start doesn't silently lose user input.
+      setNewThreadPrompt(submittedPrompt);
+      setNewThreadAttachments(submittedAttachments);
+    }).finally(() => {
+      startingThreadRef.current = false;
     });
   };
 

@@ -60,15 +60,15 @@ export async function generateThreadTitle(
     tools: [],
   };
   if (options.model) {
-    const selectedModel = deps.modelRegistry.find(options.model.provider, options.model.modelId);
+    const selectedModel = resolveTitleModel(deps.modelRegistry, options.model);
     if (!selectedModel) {
       return null;
     }
     createOptions.model = selectedModel;
   }
-  if (options.thinkingLevel) {
-    createOptions.thinkingLevel = options.thinkingLevel as NonNullable<CreateAgentSessionOptions["thinkingLevel"]>;
-  }
+  // Titles never need reasoning. We intentionally ignore options.thinkingLevel and
+  // leave thinking at the session default so a brand-new thread does not fire a
+  // second full reasoning pass concurrently with the user's real first prompt.
 
   const { session } = await createAgentSession(createOptions);
   const handleAbort = () => {
@@ -93,6 +93,35 @@ export async function generateThreadTitle(
     options.signal?.removeEventListener("abort", handleAbort);
     session.dispose();
   }
+}
+
+/**
+ * Pick the cheapest model for title generation. Prefer a non-reasoning ("flash")
+ * variant from the same provider as the user's selection so we never burn a full
+ * reasoning model just to name a thread. Falls back to the user's selection.
+ */
+function resolveTitleModel(
+  modelRegistry: ModelRegistry,
+  preferred: SessionModelSelection,
+): ReturnType<ModelRegistry["find"]> {
+  const fallback = modelRegistry.find(preferred.provider, preferred.modelId);
+  let available: ReturnType<ModelRegistry["getAvailable"]>;
+  try {
+    available = modelRegistry.getAvailable();
+  } catch {
+    return fallback;
+  }
+  const sameProvider = available.filter((model) => model.provider === preferred.provider);
+  if (sameProvider.length === 0) {
+    return fallback;
+  }
+  const flash =
+    sameProvider.find((model) => /flash/i.test(model.id) && !model.reasoning) ??
+    sameProvider.find((model) => !model.reasoning);
+  if (!flash) {
+    return fallback;
+  }
+  return modelRegistry.find(flash.provider, flash.id) ?? fallback;
 }
 
 function createThreadTitleResourceLoader(): ResourceLoader {

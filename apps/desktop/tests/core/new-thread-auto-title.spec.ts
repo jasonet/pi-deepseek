@@ -32,8 +32,9 @@ test("auto-titles a brand-new local thread after showing the placeholder first",
       prompt: "Refactor the session title flow and keep sidebar state in sync",
     });
 
-    const placeholderRow = window.locator(".session-row__select", { hasText: "New thread" }).first();
-    await expect(window.locator(".topbar__session")).toHaveText("New thread");
+    const instantTitle = "Refactor the session title flow and…";
+    const placeholderRow = window.locator(".session-row__select", { hasText: instantTitle }).first();
+    await expect(window.locator(".topbar__session")).toHaveText(instantTitle);
     await expect(placeholderRow).toBeVisible();
 
     await resolveDeferredThreadTitleEventually(harness, "Refactor title flow");
@@ -66,8 +67,9 @@ test("auto-titles a brand-new worktree thread after showing the placeholder firs
       prompt: "Fix the worktree rename race before shipping",
     });
 
-    const placeholderRow = window.locator(".session-row__select", { hasText: "New thread" }).first();
-    await expect(window.locator(".topbar__session")).toHaveText("New thread");
+    const instantTitle = "Fix the worktree rename race before…";
+    const placeholderRow = window.locator(".session-row__select", { hasText: instantTitle }).first();
+    await expect(window.locator(".topbar__session")).toHaveText(instantTitle);
     await expect(placeholderRow).toBeVisible();
 
     await resolveDeferredThreadTitleEventually(harness, "Fix worktree rename");
@@ -97,7 +99,7 @@ test("switching away does not cancel a pending auto-title", async () => {
       prompt: "Keep auto title alive after switching views",
     });
 
-    await expect(window.locator(".topbar__session")).toHaveText("New thread");
+    await expect(window.locator(".topbar__session")).toHaveText("Keep auto title alive after…");
     await selectSession(window, "Existing thread");
     await expect.poll(async () => (await getDesktopState(window)).selectedWorkspaceId).toBe(workspace.id);
 
@@ -136,9 +138,10 @@ test("manual rename beats a delayed auto-title result", async () => {
       prompt: "Build a deferred thread title test seam",
     });
 
+    const instantTitle = "Build a deferred thread title test…";
     const composer = window.getByTestId("composer");
-    await expect(window.locator(".topbar__session")).toHaveText("New thread");
-    await expect(window.locator(".session-row__select", { hasText: "New thread" }).first()).toBeVisible();
+    await expect(window.locator(".topbar__session")).toHaveText(instantTitle);
+    await expect(window.locator(".session-row__select", { hasText: instantTitle }).first()).toBeVisible();
     await waitForComposerReadyForNextSubmit(window);
 
     await composer.fill("/name Manual title wins");
@@ -173,7 +176,8 @@ test("later sends do not retrigger auto-title generation", async () => {
       prompt: "Track a one-shot title request token",
     });
 
-    await expect(window.locator(".topbar__session")).toHaveText("New thread");
+    // Prompt is exactly the limit length, so the instant title is the full text.
+    await expect(window.locator(".topbar__session")).toHaveText("Track a one-shot title request token");
     await resolveDeferredThreadTitleEventually(harness, "Track title token");
     await expect(window.locator(".topbar__session")).toHaveText("Track title token");
     await expect(window.locator(".session-row__select", { hasText: "Track title token" }).first()).toBeVisible();
@@ -212,7 +216,7 @@ test("reopen heals a stale placeholder catalog title after auto-title finished",
       prompt: "Verify the app heals stale placeholder titles on reopen",
     });
 
-    await expect(window.locator(".topbar__session")).toHaveText("New thread");
+    await expect(window.locator(".topbar__session")).toHaveText("Verify the app heals stale…");
     await resolveDeferredThreadTitleEventually(harness, generatedTitle);
     await expect(window.locator(".topbar__session")).toHaveText(generatedTitle);
     await expect(window.locator(".session-row__select", { hasText: generatedTitle }).first()).toBeVisible();

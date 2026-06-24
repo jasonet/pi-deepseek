@@ -97,9 +97,13 @@ export async function startThread(store: AppStoreInternals, input: StartThreadIn
         ? { provider: input.provider, modelId: input.modelId }
         : createOptions.initialModel;
     const initialThinkingLevel = input.thinkingLevel ?? createOptions.initialThinkingLevel;
+    // Show an instant, locally-derived title so the sidebar names the thread the
+    // moment it is created (0.2.x behavior). A lightweight Flash refinement runs
+    // later and only replaces this if the user has not renamed it meanwhile.
+    const localTitle = instantThreadTitle(prompt) ?? NEW_THREAD_PLACEHOLDER_TITLE;
     const session = await store.driver.createSession(targetWorkspace, {
       ...createOptions,
-      title: NEW_THREAD_PLACEHOLDER_TITLE,
+      title: localTitle,
       ...(initialModel ? { initialModel } : {}),
       ...(initialThinkingLevel ? { initialThinkingLevel } : {}),
     });
@@ -142,13 +146,20 @@ export async function startThread(store: AppStoreInternals, input: StartThreadIn
       });
     }
     if (prompt) {
-      void generateAndApplyAutoTitle(store, session.ref, targetWorkspace, {
-        prompt,
-        requestToken: pendingAutoTitle.requestToken,
-        signal: autoTitleAbortController.signal,
-        ...(initialModel ? { model: initialModel } : {}),
-        ...(initialThinkingLevel ? { thinkingLevel: initialThinkingLevel } : {}),
-      });
+      // Defer the AI title refinement so the user's real first prompt gets the
+      // network and event-loop priority. The title call is cheap (Flash, no
+      // thinking) and the sidebar already shows the instant local title, so the
+      // short delay is invisible. Abort cancellation still applies via the signal.
+      const titleTimer = setTimeout(() => {
+        void generateAndApplyAutoTitle(store, session.ref, targetWorkspace, {
+          prompt,
+          requestToken: pendingAutoTitle.requestToken,
+          placeholderTitle: localTitle,
+          signal: autoTitleAbortController.signal,
+          ...(initialModel ? { model: initialModel } : {}),
+        });
+      }, 1500);
+      autoTitleAbortController.signal.addEventListener("abort", () => clearTimeout(titleTimer), { once: true });
     } else {
       store.clearPendingAutoTitle(session.ref);
     }
@@ -285,6 +296,7 @@ async function generateAndApplyAutoTitle(
   options: {
     readonly prompt: string;
     readonly requestToken: string;
+    readonly placeholderTitle: string;
     readonly signal: AbortSignal;
     readonly model?: { provider: string; modelId: string };
     readonly thinkingLevel?: string;
@@ -313,7 +325,10 @@ async function generateAndApplyAutoTitle(
     if (
       !pendingAutoTitle ||
       pendingAutoTitle.requestToken !== options.requestToken ||
-      currentSession?.title !== NEW_THREAD_PLACEHOLDER_TITLE
+      // Only replace the title if it still matches the instant local title (or the
+      // legacy placeholder). If it differs, the user renamed the thread — leave it.
+      (currentSession?.title !== options.placeholderTitle &&
+        currentSession?.title !== NEW_THREAD_PLACEHOLDER_TITLE)
     ) {
       return;
     }
@@ -323,6 +338,27 @@ async function generateAndApplyAutoTitle(
   } catch {
     clearMatchingPendingTitle();
   }
+}
+
+/**
+ * Derive an instant thread title from the first prompt so a brand-new thread is
+ * named the moment it is created — no model round-trip on the critical path.
+ * Truncates on a word boundary (single ellipsis) to stay readable; the Flash
+ * auto-title refinement may replace it shortly after.
+ */
+const INSTANT_THREAD_TITLE_LIMIT = 36;
+function instantThreadTitle(prompt: string): string | undefined {
+  const oneLine = prompt.replace(/\s+/g, " ").trim();
+  if (!oneLine) {
+    return undefined;
+  }
+  if (oneLine.length <= INSTANT_THREAD_TITLE_LIMIT) {
+    return oneLine;
+  }
+  const cut = oneLine.slice(0, INSTANT_THREAD_TITLE_LIMIT);
+  const lastSpace = cut.lastIndexOf(" ");
+  const base = (lastSpace > INSTANT_THREAD_TITLE_LIMIT / 2 ? cut.slice(0, lastSpace) : cut).trimEnd();
+  return `${base}…`;
 }
 
 function sessionTitleForWorktree(store: AppStoreInternals, workspaceId: string, sessionId: string): string | undefined {

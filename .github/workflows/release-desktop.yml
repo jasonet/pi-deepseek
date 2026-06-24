@@ -5,8 +5,8 @@ name: Release Desktop (Pi-Deepseek)
 # (which is tag-triggered, mac+linux only, and syncs an upstream Homebrew tap).
 #
 # Usage: Actions tab -> "Release Desktop (Pi-Deepseek)" -> Run workflow ->
-#   version: 2.6.5            (Electron, builds all 3 OSes)
-#   tauri:   true / false     (also build the macOS Tauri sidecar app -> v1.6.x)
+#   version: 2.6.6            (Electron, builds all 3 OSes)
+#   tauri:   true / false     (also build the macOS Tauri sidecar app -> v2.6.6)
 #
 # electron-builder reads `publish:` from apps/desktop/electron-builder.yml
 # (owner jasonet / repo pi-deepseek). `--publish always` uploads the installers
@@ -16,10 +16,10 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Electron version, no leading v (e.g. 2.6.5)"
+        description: "Electron version, no leading v (e.g. 2.6.6)"
         required: true
       tauri_version:
-        description: "Tauri version, no leading v (e.g. 1.6.5). Leave blank to skip."
+        description: "Tauri version, no leading v (e.g. 2.6.6). Leave blank to skip."
         required: false
         default: ""
 

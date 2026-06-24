@@ -36,7 +36,14 @@ for (const { id, sentinel } of EXTENSIONS) {
     const hasLock = existsSync(path.join(extDir, "package-lock.json"));
     const args = hasLock ? ["ci", "--omit=dev"] : ["install", "--omit=dev"];
     console.log(`[stage-mcp-bridge] npm ${args.join(" ")} in ${extDir}`);
-    const install = spawnSync("npm", args, { cwd: extDir, stdio: "inherit" });
+    // `shell: true` is required on Windows: npm is `npm.cmd`, and Node refuses
+    // to spawn `.cmd`/`.bat` without a shell (CVE-2024-27980 hardening), so a
+    // plain spawnSync("npm") fails with ENOENT before npm ever runs.
+    const install = spawnSync("npm", args, { cwd: extDir, stdio: "inherit", shell: true });
+    if (install.error) {
+      console.error(`[stage-mcp-bridge] failed to launch npm: ${install.error.message}`);
+      process.exit(1);
+    }
     if ((install.status ?? 1) !== 0) process.exit(install.status ?? 1);
   } else {
     console.log(`[stage-mcp-bridge] ${id}: node_modules already present.`);

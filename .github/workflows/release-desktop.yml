@@ -64,6 +64,7 @@ jobs:
           cd apps/desktop
           pnpm exec electron-builder ${{ matrix.args }} \
             --publish always \
+            "-c.publish.releaseType=release" \
             "-c.extraMetadata.version=${{ inputs.version }}" \
             "-c.buildVersion=${{ inputs.version }}"
 

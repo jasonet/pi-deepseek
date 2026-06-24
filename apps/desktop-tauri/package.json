@@ -1,12 +1,14 @@
 {
   "name": "pi-deepseek-tauri",
   "private": true,
-  "version": "1.6.4",
+  "version": "2.6.6",
   "scripts": {
     "dev": "vite",
     "build:sidecar": "node sidecar/build.mjs",
     "build:renderer": "vite build",
     "build": "npm run build:sidecar && npm run build:renderer",
+    "stage:runtime": "node scripts/stage-runtime.mjs",
+    "build:bundle": "npm run stage:runtime && npm run build:renderer",
     "tauri": "tauri"
   },
   "dependencies": {

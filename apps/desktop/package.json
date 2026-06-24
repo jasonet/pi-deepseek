@@ -1,7 +1,7 @@
 {
   "name": "@pi-gui/desktop",
   "private": true,
-  "version": "2.6.4",
+  "version": "2.6.6",
   "author": "Yiding by HKEZ",
   "license": "MIT",
   "description": "Deepseek GUI app for elegant pi coding agent",
@@ -19,6 +19,8 @@
     "bun:preview": "bun run bun:build:deps && bun run build:notification-helper && electron-vite preview",
     "start": "pnpm run preview",
     "package": "pnpm run build && electron-builder --mac --publish never",
+    "package:win": "pnpm run build && electron-builder --win --publish never",
+    "package:all": "pnpm run build && electron-builder --mac --win --linux --publish never",
     "bun:package": "bun run bun:build && bun run scripts/bun-package-wrapper.mjs electron-builder --mac --publish never",
     "package:dir": "pnpm run build && electron-builder --mac --dir --publish never",
     "bun:package:dir": "bun run bun:build && bun run scripts/bun-package-wrapper.mjs electron-builder --mac --dir --publish never",

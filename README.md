@@ -50,6 +50,8 @@
 
 `Pi-Deepseek` 利用 Pi coding agent 充分发挥 DeepSeek V4 Pro 的性价比（体验接近 Claude Opus 4.7，成本仅为其 N 分之一），一个面向本地 AI 编程工作流的桌面客户端。现已支持 macOS / Windows / Linux 三平台，为 `pi` 会话提供深推理、无提示词的 Codex 级工程自动交互体验。
 
+![dual-pane](./docs/readme/dual-pane.jpg)
+
 本项目在 [`pi-gui`](https://github.com/minghinmatthewlam/pi-gui) 的基础上持续开发，并通过 `@earendil-works/pi-coding-agent` 接入上游 `pi` 运行时。
 
 ![pi-deepseek demo](./docs/readme/demo.gif)

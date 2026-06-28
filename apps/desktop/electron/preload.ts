@@ -80,6 +80,8 @@ contextBridge.exposeInMainWorld("piApp", {
   },
   getSelectedTranscript: () =>
     ipcRenderer.invoke(desktopIpc.selectedTranscriptRequest) as Promise<SelectedTranscriptRecord | null>,
+  getTranscriptFor: (target: WorkspaceSessionTarget) =>
+    ipcRenderer.invoke(desktopIpc.transcriptForRequest, target) as Promise<SelectedTranscriptRecord | null>,
   onSelectedTranscriptChanged: (listener: (payload: SelectedTranscriptRecord | null) => void) => {
     const handle = (_event: Electron.IpcRendererEvent, payload: SelectedTranscriptRecord | null) => {
       listener(payload);
@@ -286,6 +288,12 @@ contextBridge.exposeInMainWorld("piApp", {
     ipcRenderer.invoke(desktopIpc.updateComposerDraft, composerDraft) as Promise<DesktopAppState>,
   submitComposer: (text: string, options?: { readonly deliverAs?: "steer" | "followUp" }) =>
     ipcRenderer.invoke(desktopIpc.submitComposer, text, options) as Promise<DesktopAppState>,
+  submitComposerFor: (
+    target: WorkspaceSessionTarget,
+    text: string,
+    options?: { readonly deliverAs?: "steer" | "followUp" },
+  ) =>
+    ipcRenderer.invoke(desktopIpc.submitComposerFor, target, text, options) as Promise<DesktopAppState>,
   getSessionTree: (target: WorkspaceSessionTarget) =>
     ipcRenderer.invoke(desktopIpc.getSessionTree, target) as Promise<SessionTreeSnapshot>,
   navigateSessionTree: (target: WorkspaceSessionTarget, targetId: string, options?: NavigateSessionTreeOptions) =>

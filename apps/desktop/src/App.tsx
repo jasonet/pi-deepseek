@@ -288,6 +288,158 @@ export default function App() {
   const selectedSession = snapshot
     ? (getSelectedSession(snapshot) ?? selectedWorkspace?.sessions.find((session) => !session.archivedAt))
     : undefined;
+
+  // Dual-pane (side-by-side sessions). The secondary pane shows the *other* most
+  // recent session in the SAME project/workspace as the primary, and appears
+  // automatically whenever the selected project has a second session. Both panes
+  // therefore share one working directory: reads are always safe, but concurrent
+  // writes to the same files can race — surfaced via the hint when both run.
+  const [secondarySessionId, setSecondarySessionId] = useState<string | undefined>(undefined);
+  const [secondaryWorkspaceId, setSecondaryWorkspaceId] = useState<string | undefined>(undefined);
+  // Global toggle (⌘D) to hide/show the auto-paired second column.
+  const [dualPaneEnabled, setDualPaneEnabled] = useState(true);
+  const [activePaneIndex, setActivePaneIndex] = useState(0);
+  const [splitRatio, setSplitRatio] = useState(0.5);
+  // When the user explicitly clicks the partner session in the sidebar, we pin it
+  // to the RIGHT pane instead of switching the primary. This records {primaryId,
+  // secondaryId} so the auto-pick effect honors that choice while the same primary
+  // stays selected, and falls back to most-recent pairing once the primary changes.
+  const manualSecondaryRef = useRef<{ primaryId: string; secondaryId: string } | null>(null);
+  const secondaryWorkspace = secondaryWorkspaceId && snapshot
+    ? snapshot.workspaces.find((w) => w.id === secondaryWorkspaceId)
+    : undefined;
+  const secondarySession = secondarySessionId && secondaryWorkspace
+    ? secondaryWorkspace.sessions.find((s) => s.id === secondarySessionId && !s.archivedAt)
+    : undefined;
+  // A valid dual-pane is any secondary session distinct from the primary.
+  const isInDualPane = Boolean(
+    secondarySession && selectedSession && secondarySession.id !== selectedSession.id,
+  );
+
+  const [secondaryDraft, setSecondaryDraft] = useState("");
+  const secondaryComposerRef = useRef<HTMLTextAreaElement>(null);
+  const secondaryTimelinePaneRef = useRef<HTMLDivElement | null>(null);
+  const secondaryThreadSearch = useThreadSearch(secondaryTimelinePaneRef);
+  // The secondary pane renders a *read-only* transcript fetched by id. Reading a
+  // non-selected session never mutates state, so this is conflict-free even while
+  // the primary pane streams. Re-fetched on every snapshot tick so the secondary
+  // stays live as its session progresses.
+  const [secondaryTranscript, setSecondaryTranscript] = useState<SelectedTranscriptRecord | null>(null);
+
+  const clearSecondary = useCallback(() => {
+    setSecondarySessionId(undefined);
+    setSecondaryWorkspaceId(undefined);
+    setActivePaneIndex(0);
+    manualSecondaryRef.current = null;
+  }, []);
+
+  // Auto-pair the secondary pane with the OTHER most-recent non-archived session
+  // in the selected project. Runs on every snapshot tick: it only writes state
+  // when the chosen partner actually changes, so a stable 2-session project never
+  // jitters. Clears the secondary when the toggle is off, there's no selection, or
+  // the project has no second session — which also serves as the validity guard.
+  useEffect(() => {
+    if (!dualPaneEnabled || !selectedWorkspace || !selectedSession) {
+      if (secondarySessionId) clearSecondary();
+      return;
+    }
+    // Honor a manual partner pick (sidebar click) while the same primary is
+    // selected and the chosen session is still a valid non-archived partner.
+    const manual = manualSecondaryRef.current;
+    const candidates = [...selectedWorkspace.sessions]
+      .filter((s) => !s.archivedAt && s.id !== selectedSession.id)
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    if (manual && manual.primaryId !== selectedSession.id) {
+      manualSecondaryRef.current = null;
+    }
+    const stillValidManual =
+      manualSecondaryRef.current &&
+      manualSecondaryRef.current.primaryId === selectedSession.id &&
+      candidates.some((s) => s.id === manualSecondaryRef.current!.secondaryId);
+    const partner = stillValidManual
+      ? candidates.find((s) => s.id === manualSecondaryRef.current!.secondaryId)
+      : candidates[0];
+    if (!partner) {
+      if (secondarySessionId) clearSecondary();
+      return;
+    }
+    if (secondarySessionId !== partner.id || secondaryWorkspaceId !== selectedWorkspace.id) {
+      setSecondaryWorkspaceId(selectedWorkspace.id);
+      setSecondarySessionId(partner.id);
+    }
+  }, [dualPaneEnabled, selectedWorkspace, selectedSession, secondarySessionId, secondaryWorkspaceId, clearSecondary]);
+
+  // Keep the secondary pane's transcript fresh. Read-only fetch by id; re-runs on
+  // snapshot ticks so new messages in the secondary session flow in live.
+  useEffect(() => {
+    if (!api || !secondarySessionId || !secondaryWorkspaceId) {
+      setSecondaryTranscript(null);
+      return;
+    }
+    let cancelled = false;
+    void api
+      .getTranscriptFor({ workspaceId: secondaryWorkspaceId, sessionId: secondarySessionId })
+      .then((record) => { if (!cancelled) setSecondaryTranscript(record); })
+      .catch(() => { if (!cancelled) setSecondaryTranscript(null); });
+    return () => { cancelled = true; };
+  }, [api, secondaryWorkspaceId, secondarySessionId, snapshot]);
+
+  // Stick the secondary (right) pane to the latest message, mirroring the primary
+  // pane. Stays pinned to the bottom as new text streams in unless the user
+  // scrolls up; a freshly opened secondary session starts pinned.
+  const secondaryPinnedRef = useRef(true);
+  useEffect(() => {
+    secondaryPinnedRef.current = true;
+  }, [secondarySessionId]);
+  const handleSecondaryTimelineScroll = useCallback(() => {
+    const pane = secondaryTimelinePaneRef.current;
+    if (pane) secondaryPinnedRef.current = isNearBottom(pane);
+  }, []);
+  useEffect(() => {
+    if (!secondaryPinnedRef.current) return;
+    const pane = secondaryTimelinePaneRef.current;
+    if (!pane) return;
+    const align = (remaining: number) => {
+      pane.scrollTop = pane.scrollHeight;
+      if (remaining <= 0) return;
+      window.requestAnimationFrame(() => align(remaining - 1));
+    };
+    align(3);
+  }, [secondaryTranscript, secondarySessionId]);
+
+  // Draggable divider. The handlers are registered once per dual-pane mount
+  // (keyed on isInDualPane so they attach when the divider appears and detach
+  // when it leaves). Crucially they do NOT depend on `splitRatio` — reading the
+  // live ratio from a ref instead — otherwise every drag-driven setSplitRatio
+  // would tear down and re-create the listeners, resetting the `dragging` flag
+  // and freezing the drag after a single move.
+  const dividerRef = useRef<HTMLDivElement>(null);
+  const splitRatioRef = useRef(splitRatio);
+  useEffect(() => { splitRatioRef.current = splitRatio; }, [splitRatio]);
+  useEffect(() => {
+    const el = dividerRef.current; if (!el) return;
+    let dragging = false, sx = 0, sr = 0.5;
+    const down = (e: MouseEvent) => { dragging = true; sx = e.clientX; sr = splitRatioRef.current; e.preventDefault(); };
+    const move = (e: MouseEvent) => {
+      if (!dragging) return;
+      const p = el.parentElement; if (!p) return;
+      const w = p.getBoundingClientRect().width - 10;
+      setSplitRatio(Math.min(0.8, Math.max(0.2, sr + (e.clientX - sx) / w)));
+    };
+    const up = () => { dragging = false; };
+    const reset = () => setSplitRatio(0.5);
+    el.addEventListener('mousedown', down);
+    el.addEventListener('dblclick', reset);
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+    return () => {
+      el.removeEventListener('mousedown', down);
+      el.removeEventListener('dblclick', reset);
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', up);
+    };
+  }, [isInDualPane]);
+
   const {
     activeWorktrees,
     linkedWorktreeByWorkspaceId,
@@ -337,6 +489,19 @@ export default function App() {
   const selectedRuntime = selectedWorkspace ? snapshot?.runtimeByWorkspace[selectedWorkspace.id] : undefined;
   const selectedModelRuntime = snapshot ? getEffectiveModelRuntime(snapshot, selectedWorkspace) : undefined;
   const selectedWorktree = selectedWorkspace ? linkedWorktreeByWorkspaceId.get(selectedWorkspace.id) : undefined;
+  const secondaryWorktree = secondaryWorkspace ? linkedWorktreeByWorkspaceId.get(secondaryWorkspace.id) : undefined;
+  const secondaryRootWorkspace = secondaryWorkspace && snapshot
+    ? snapshot.workspaces.find(
+        (w) => w.id === (resolveRepoWorkspaceId(snapshot.workspaces, secondaryWorkspace.id) ?? secondaryWorkspace.id),
+      )
+    : undefined;
+  // Both paired sessions running at once is the moment the write-conflict caution
+  // is relevant: the two sessions share one project directory, so concurrent
+  // writes to the same files can race. Reads are always safe.
+  const bothPanesRunning =
+    isInDualPane &&
+    selectedSession?.status === "running" &&
+    secondarySession?.status === "running";
   const settingsWorkspace = settingsWorkspaceId
     ? rootWorkspaceOptions.find((workspace) => workspace.id === settingsWorkspaceId)
     : undefined;
@@ -402,6 +567,18 @@ export default function App() {
     selectedTranscript.workspaceId !== selectedWorkspace?.id ||
     selectedTranscript.sessionId !== selectedSession?.id
   );
+  const secondaryTranscriptMessages =
+    secondaryTranscript &&
+    secondaryTranscript.workspaceId === secondaryWorkspaceId &&
+    secondaryTranscript.sessionId === secondarySessionId
+      ? secondaryTranscript.transcript
+      : [];
+  const isSecondaryTranscriptLoading =
+    Boolean(secondarySession) && secondaryTranscriptMessages.length === 0 && (
+      !secondaryTranscript ||
+      secondaryTranscript.workspaceId !== secondaryWorkspaceId ||
+      secondaryTranscript.sessionId !== secondarySessionId
+    );
   const selectedSessionCommands = selectedSession ? snapshot?.sessionCommandsBySession[selectedSessionKey] ?? [] : [];
   const selectedExtensionUi = selectedSession ? snapshot?.sessionExtensionUiBySession[selectedSessionKey] : undefined;
   const selectedWorkspaceCommandCompatibility = selectedWorkspace
@@ -985,6 +1162,12 @@ export default function App() {
         return true;
       } else if (command === desktopCommands.toggleSidebar) {
         return handleTogglePrimarySidebar();
+      } else if (command === desktopCommands.toggleDualPane) {
+        // Toggle the auto-paired second column on/off (global preference). The
+        // auto-pick effect fills or clears the secondary pane accordingly.
+        if (sidebarToggleStateRef.current.activeView !== "threads") return false;
+        setDualPaneEnabled((value) => !value);
+        return true;
       }
       return false;
     };
@@ -1011,6 +1194,30 @@ export default function App() {
       }
       // Esc leaves the full-screen Settings / Connect Phone views and returns to
       // the main app surface. Uses the live ref so the captured view is never stale.
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "w" && !event.shiftKey) {
+        if (sidebarToggleStateRef.current.activeView === "threads" && secondarySessionId) {
+          event.preventDefault();
+          // If the user was focused on the secondary pane, promote that session
+          // (in its own workspace) to be the sole selection as we collapse.
+          if (activePaneIndex === 1 && secondaryWorkspaceId && api) {
+            const sid = secondarySessionId;
+            const wid = secondaryWorkspaceId;
+            clearSecondary();
+            void updateSnapshot(api, setSnapshot, () => api.selectSession({ workspaceId: wid, sessionId: sid }));
+          } else { clearSecondary(); }
+          return;
+        }
+        return;
+      }
+      // Cmd/Ctrl+D (toggle dual-pane) is handled via the main before-input-event
+      // command path (desktopCommands.toggleDualPane), like every other app
+      // shortcut, so the physical keystroke is captured reliably.
+      if ((event.metaKey || event.ctrlKey) && !event.shiftKey) {
+        if ((event.key === "[" || event.code === "BracketLeft") && secondarySessionId && activePaneIndex === 1)
+          { event.preventDefault(); setActivePaneIndex(0); return; }
+        if ((event.key === "]" || event.code === "BracketRight") && secondarySessionId && activePaneIndex === 0)
+          { event.preventDefault(); setActivePaneIndex(1); return; }
+      }
       if (event.key === "Escape" && !event.metaKey && !event.ctrlKey && !event.altKey) {
         const currentView = sidebarToggleStateRef.current.activeView;
         if (currentView === "settings" || currentView === "connect-phone") {
@@ -1029,8 +1236,8 @@ export default function App() {
         }
         return;
       }
-      // Cmd+D toggles diff panel
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "d" && !event.shiftKey) {
+      // Cmd+Shift+D toggles diff panel (Cmd+D is now dual-pane).
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "d" && event.shiftKey) {
         event.preventDefault();
         toggleDiffPanel();
         return;
@@ -1078,6 +1285,10 @@ export default function App() {
     toggleDiffPanel,
     toggleTerminal,
     handleTogglePrimarySidebar,
+    secondarySessionId,
+    secondaryWorkspaceId,
+    activePaneIndex,
+    clearSecondary,
   ]);
 
   useLayoutEffect(() => {
@@ -1320,6 +1531,7 @@ export default function App() {
     "main",
     diffVisibleInCurrentView ? "main--with-diff" : "",
     terminalVisibleInCurrentView ? "main--with-terminal" : "",
+    isInDualPane ? "main--dual-pane" : "",
     showTerminalTakeover ? "main--terminal-takeover" : "",
   ].filter(Boolean).join(" ");
   const terminalPanel = terminalVisibleInCurrentView && selectedWorkspace ? (
@@ -1437,6 +1649,25 @@ export default function App() {
       setComposerDraft(previousDraft);
       setAttachmentsClearedOnSubmit(false);
     });
+  };
+
+  const handleSecondarySubmit = () => {
+    if (!secondarySession || !secondaryWorkspaceId || !api || !secondaryDraft.trim()) return;
+    // Deliver straight to the secondary session via a targeted submit — no
+    // selection toggle, so the primary pane keeps focus and the split never
+    // collapses/flickers mid-send.
+    const target = { workspaceId: secondaryWorkspaceId, sessionId: secondarySession.id };
+    const draft = secondaryDraft;
+    setSecondaryDraft("");
+    void updateSnapshot(api, setSnapshot, () => api.submitComposerFor(target, draft))
+      .catch(() => { setSecondaryDraft(draft); });
+  };
+
+  const handleSecondaryComposerKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+      e.preventDefault();
+      handleSecondarySubmit();
+    }
   };
 
   const handlePickAttachments = () => {
@@ -1778,6 +2009,26 @@ export default function App() {
   };
 
   const handleSelectSession = (target: { workspaceId: string; sessionId: string }) => {
+    // In dual-pane, clicking the *other* session in the same project updates only
+    // the RIGHT pane — the left pane keeps its session — and makes the right pane
+    // the active one with its composer focused for input.
+    if (
+      isInDualPane &&
+      selectedSession &&
+      selectedWorkspace &&
+      target.workspaceId === selectedWorkspace.id &&
+      target.sessionId !== selectedSession.id
+    ) {
+      manualSecondaryRef.current = { primaryId: selectedSession.id, secondaryId: target.sessionId };
+      setSecondaryWorkspaceId(target.workspaceId);
+      setSecondarySessionId(target.sessionId);
+      setActivePaneIndex(1);
+      window.requestAnimationFrame(() => secondaryComposerRef.current?.focus());
+      return;
+    }
+    // Selecting the left/primary session: make the left pane active and focus its
+    // composer so it's immediately ready for input.
+    setActivePaneIndex(0);
     setOpenTerminalSessionKey("");
     setTakeoverTerminalSessionKey("");
     void updateSnapshot(api, setSnapshot, () => api.selectSession(target)).then(() => {
@@ -2269,6 +2520,176 @@ export default function App() {
           )
         ) : selectedWorkspace && selectedSession ? (
           <>
+{isInDualPane && secondarySession ? (
+            <div className="dual-pane">
+              <div className={`dual-pane__col${activePaneIndex === 0 ? " dual-pane__col--active" : ""}`}
+                   style={{ flex: `0 0 ${splitRatio * 100}%` }}
+                   onClick={() => setActivePaneIndex(0)}>
+                <section className="canvas canvas--thread">
+              <div className="conversation conversation--thread">
+                <div className="chat-header">
+                  <div className="chat-header__eyebrow">
+                    {selectedWorkspace.kind === "worktree"
+                      ? `${rootWorkspace?.name ?? selectedWorkspace.name} · ${selectedWorktree?.name ?? selectedWorkspace.branchName ?? "Worktree"}`
+                      : `${selectedWorkspace.name} · Local`}
+                  </div>
+                  <div className="chat-header__row">
+                    <h1 className="chat-header__title">{displayedSessionTitle}</h1>
+                    <div className="chat-header__status">
+                      {selectedSession.status === "running" ? runningLabel : formatRelativeTime(selectedSession.updatedAt)}
+                    </div>
+                  </div>
+                </div>
+
+                <ConversationTimeline
+                  transcript={activeTranscript}
+                  isTranscriptLoading={isTranscriptLoading}
+                  timelinePaneRef={timelinePaneRef}
+                  timelinePaneElementRef={setTimelinePaneElement}
+                  disableVirtualization={disableTimelineVirtualization}
+                  onDisableVirtualizationReady={finalizeTimelineVirtualizationDisable}
+                  onTimelineScroll={handleTimelineScroll}
+                  threadSearch={threadSearch}
+                  showJumpToLatest={showJumpToLatest}
+                  onJumpToLatest={jumpToLatest}
+                  onContentHeightChange={handleTimelineContentHeightChange}
+                  onViewFileInDiff={handleViewFileInDiff}
+                />
+              </div>
+            </section>
+                <ComposerPanel
+                  key={selectedSessionKey}
+                  activeSlashCommand={slashMenu.activeSlashFlow?.command}
+                  activeSlashCommandMeta={slashMenu.activeSlashFlow?.command?.description}
+                  attachments={composerAttachments}
+                  queuedMessages={queuedComposerMessages}
+                  editingQueuedMessageId={editingQueuedMessageId}
+                  composerDraft={composerDraft}
+                  setComposerDraft={setComposerDraft}
+                  composerRef={composerRef}
+                  runtime={selectedModelRuntime}
+                  provider={resolvedSessionProvider}
+                  modelId={resolvedSessionModelId}
+                  thinkingLevel={resolvedSessionThinkingLevel}
+                  onClearSlashCommand={slashMenu.resetSlashUi}
+                  onComposerKeyDown={handleComposerKeyDown}
+                  onComposerPaste={handleComposerPaste}
+                  onComposerDrop={handleComposerDrop}
+                  onPickAttachments={handlePickAttachments}
+                  onRemoveAttachment={handleRemoveAttachment}
+                  onEditQueuedMessage={handleEditQueuedMessage}
+                  onCancelQueuedEdit={handleCancelQueuedEdit}
+                  onRemoveQueuedMessage={handleRemoveQueuedMessage}
+                  onSteerQueuedMessage={handleSteerQueuedMessage}
+                  onSelectSlashCommand={(cmd) => { slashMenu.applySlashCommandSelection(cmd, "click"); }}
+                  onSelectSlashOption={(opt) => { slashMenu.applySlashOptionSelection(opt); }}
+                  onSetModel={handleSetSessionModel}
+                  onSetThinking={handleSetSessionThinking}
+                  modelOnboarding={selectedSessionModelOnboarding}
+                  onOpenModelSettings={(section) => openSettings(selectedWorkspace?.rootWorkspaceId ?? selectedWorkspace?.id, section)}
+                  onSubmit={submitComposerDraft}
+                  runningLabel={runningLabel}
+                  selectedSession={selectedSession}
+                  lastError={snapshot?.lastError}
+                  selectedSlashCommand={slashMenu.activeSlashOptionCommand ?? slashMenu.selectedSlashCommand}
+                  selectedSlashOption={slashMenu.selectedSlashOption}
+                  slashOptionEmptyState={slashMenu.slashOptionEmptyState}
+                  showSlashOptionMenu={slashMenu.showSlashOptionMenu}
+                  showSlashMenu={slashMenu.showSlashMenu}
+                  slashOptions={slashMenu.slashOptions}
+                  slashSections={slashMenu.slashSections}
+                  showMentionMenu={mentionMenu.showMentionMenu}
+                  mentionOptions={mentionMenu.mentionOptions}
+                  selectedMentionIndex={mentionMenu.selectedIndex}
+                  onSelectMention={mentionMenu.insertMention}
+                  extensionDock={selectedExtensionDock}
+                  extensionDockExpanded={isSelectedExtensionDockExpanded}
+                  onToggleExtensionDock={handleToggleExtensionDock}
+                />
+              </div>
+              <div className="dual-pane__divider" ref={dividerRef} />
+              <div className={`dual-pane__col${activePaneIndex === 1 ? " dual-pane__col--active" : ""}`}
+                   style={{ flex: "1 1 0%", minWidth: 0 }}
+                   onClick={() => setActivePaneIndex(1)}>
+                <section className="canvas canvas--thread">
+                  <div className="conversation conversation--thread">
+                    <div className="chat-header">
+                      <div className="chat-header__eyebrow">
+                        {secondaryWorkspace && secondaryWorkspace.kind === "worktree"
+                          ? `${secondaryRootWorkspace?.name ?? secondaryWorkspace.name} · ${secondaryWorktree?.name ?? secondaryWorkspace.branchName ?? "Worktree"}`
+                          : `${secondaryWorkspace?.name ?? "Workspace"} · Local`}
+                      </div>
+                      <div className="chat-header__row">
+                        <h1 className="chat-header__title">{secondarySession.title ?? "Session"}</h1>
+                        <div className="chat-header__status">
+                          {secondarySession.status === "running" ? runningLabel : formatRelativeTime(secondarySession.updatedAt)}
+                        </div>
+                      </div>
+                    </div>
+                    <ConversationTimeline
+                      transcript={secondaryTranscriptMessages}
+                      isTranscriptLoading={isSecondaryTranscriptLoading}
+                      timelinePaneRef={secondaryTimelinePaneRef}
+                      onTimelineScroll={handleSecondaryTimelineScroll}
+                      threadSearch={secondaryThreadSearch}
+                      showJumpToLatest={false}
+                      onJumpToLatest={() => {}}
+                      onContentHeightChange={() => {}}
+                      onViewFileInDiff={handleViewFileInDiff}
+                    />
+                  </div>
+                </section>
+                <ComposerPanel
+                  key={secondarySession?.id || "secondary"}
+                  selectedSession={secondarySession!}
+                  composerDraft={secondaryDraft}
+                  setComposerDraft={setSecondaryDraft}
+                  composerRef={secondaryComposerRef}
+                  runningLabel={runningLabel}
+                  attachments={[]}
+                  queuedMessages={[]}
+                  provider={resolvedSessionProvider}
+                  modelId={resolvedSessionModelId}
+                  thinkingLevel={resolvedSessionThinkingLevel}
+                  slashSections={[]}
+                  slashOptions={[]}
+                  showSlashMenu={false}
+                  showSlashOptionMenu={false}
+                  onClearSlashCommand={() => {}}
+                  onComposerKeyDown={handleSecondaryComposerKeyDown}
+                  onComposerPaste={handleComposerPaste}
+                  onComposerDrop={handleComposerDrop}
+                  onPickAttachments={() => {}}
+                  onRemoveAttachment={() => {}}
+                  onEditQueuedMessage={() => {}}
+                  onCancelQueuedEdit={() => {}}
+                  onRemoveQueuedMessage={() => {}}
+                  onSteerQueuedMessage={() => {}}
+                  onSelectSlashCommand={() => {}}
+                  onSelectSlashOption={() => {}}
+                  onSetModel={() => {}}
+                  onSetThinking={() => {}}
+                  modelOnboarding={selectedSessionModelOnboarding}
+                  onOpenModelSettings={(section: any) => openSettings(selectedWorkspace?.rootWorkspaceId ?? selectedWorkspace?.id, section)}
+                  onSubmit={handleSecondarySubmit}
+                  showMentionMenu={false}
+                  mentionOptions={[]}
+                  selectedMentionIndex={0}
+                  onSelectMention={() => {}}
+                  lastError={snapshot?.lastError}
+                  extensionDockExpanded={false}
+                  onToggleExtensionDock={() => {}}
+                  runtime={selectedModelRuntime}
+                />
+              </div>
+              {bothPanesRunning ? (
+                <div className="dual-pane__hint" role="status">
+                  <span className="dual-pane__hint-dot" />
+                  {"两个会话在同一项目目录并行运行 · 读取互不影响；请避免两个会话同时写入相同文件（如同时运行 / push）"}
+                </div>
+              ) : null}
+            </div>
+          ) : (
             <section className="canvas canvas--thread">
               <div className="conversation conversation--thread">
                 <div className="chat-header">
@@ -2301,6 +2722,7 @@ export default function App() {
                 />
               </div>
             </section>
+          )}
             <ComposerPanel
               key={selectedSessionKey}
               activeSlashCommand={slashMenu.activeSlashFlow?.command}

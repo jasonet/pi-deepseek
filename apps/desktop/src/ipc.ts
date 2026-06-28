@@ -35,6 +35,8 @@ export const desktopIpc = {
   stateChanged: "pi-gui:state-changed",
   selectedTranscriptRequest: "pi-gui:selected-transcript-request",
   selectedTranscriptChanged: "pi-gui:selected-transcript-changed",
+  transcriptForRequest: "pi-gui:transcript-for-request",
+  submitComposerFor: "pi-gui:submit-composer-for",
   appCommand: "pi-gui:app-command",
   workspacePicked: "pi-gui:workspace-picked",
   clipboardImagePasted: "pi-gui:clipboard-image-pasted",
@@ -142,6 +144,7 @@ export const desktopCommands = {
   openConnectPhone: "open-connect-phone",
   toggleTerminal: "toggle-terminal",
   toggleSidebar: "toggle-sidebar",
+  toggleDualPane: "toggle-dual-pane",
 } as const;
 
 export function getDesktopShortcutLabel(platform: NodeJS.Platform, key: string): string {
@@ -223,6 +226,7 @@ export function getDesktopCommandFromShortcut(input: DesktopShortcutInput): PiDe
   const isJ = lowerKey === "j" || input.code === "KeyJ";
   const isN = lowerKey === "n" || input.code === "KeyN";
   const isM = lowerKey === "m" || input.code === "KeyM";
+  const isD = lowerKey === "d" || input.code === "KeyD";
   const isShiftO = input.shift && (lowerKey === "o" || input.code === "KeyO");
 
   if (!input.shift && isComma) {
@@ -247,6 +251,14 @@ export function getDesktopCommandFromShortcut(input: DesktopShortcutInput): PiDe
     return desktopCommands.openConnectPhone;
   }
 
+  // Cmd/Ctrl+D toggles the dual-pane (split) view. Routed through the main
+  // before-input-event path like every other app shortcut so the physical key
+  // is captured natively; a renderer-only window keydown listener was missing
+  // these presses. (Cmd+Shift+D is reserved for the diff panel.)
+  if (!input.shift && isD) {
+    return desktopCommands.toggleDualPane;
+  }
+
   return undefined;
 }
 
@@ -257,6 +269,7 @@ export interface PiDesktopApi {
   getState(): Promise<DesktopAppState>;
   onStateChanged(listener: PiDesktopStateListener): () => void;
   getSelectedTranscript(): Promise<SelectedTranscriptRecord | null>;
+  getTranscriptFor(target: WorkspaceSessionTarget): Promise<SelectedTranscriptRecord | null>;
   onSelectedTranscriptChanged(listener: PiDesktopSelectedTranscriptListener): () => void;
   onCommand(listener: (command: PiDesktopCommand) => void): () => void;
   onWorkspacePicked(listener: (workspaceId: string) => void): () => void;
@@ -378,6 +391,11 @@ export interface PiDesktopApi {
   steerQueuedComposerMessage(messageId: string): Promise<DesktopAppState>;
   updateComposerDraft(composerDraft: string): Promise<DesktopAppState>;
   submitComposer(text: string, options?: { readonly deliverAs?: "steer" | "followUp" }): Promise<DesktopAppState>;
+  submitComposerFor(
+    target: WorkspaceSessionTarget,
+    text: string,
+    options?: { readonly deliverAs?: "steer" | "followUp" },
+  ): Promise<DesktopAppState>;
   getSessionTree(target: WorkspaceSessionTarget): Promise<SessionTreeSnapshot>;
   navigateSessionTree(
     target: WorkspaceSessionTarget,

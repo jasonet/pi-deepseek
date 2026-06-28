@@ -67,7 +67,7 @@
   align-items: center;
   gap: 9px;
   color: var(--muted-strong);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 560;
   border: 1px solid transparent;
 }
@@ -100,7 +100,7 @@
   gap: 8px;
 }
 
-.sidebar__new-kbd {
+.sidebar__shortcut-kbd {
   margin-left: auto;
   flex: 0 0 auto;
   font: inherit;

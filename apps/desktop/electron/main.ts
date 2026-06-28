@@ -70,6 +70,12 @@ try {
 }
 
 const isDev = Boolean(process.env.ELECTRON_RENDERER_URL);
+// Opt-in remote debugging for local verification only. Off unless PI_GUI_REMOTE_DEBUG
+// is set, so packaged/normal dev runs are unaffected.
+if (process.env.PI_GUI_REMOTE_DEBUG) {
+  app.commandLine.appendSwitch("remote-debugging-port", process.env.PI_GUI_REMOTE_DEBUG);
+  app.commandLine.appendSwitch("remote-allow-origins", "*");
+}
 const PI_WEIXIN_CHANNEL_ID = "pi-deepseek-weixin";
 let autoUpdateEnabled = true;
 let autoUpdateInterval: ReturnType<typeof setInterval> | undefined;
@@ -1101,6 +1107,9 @@ app.whenReady().then(async () => {
   });
   ipcMain.handle(desktopIpc.stateRequest, () => store.getState());
   ipcMain.handle(desktopIpc.selectedTranscriptRequest, () => store.getSelectedTranscript());
+  ipcMain.handle(desktopIpc.transcriptForRequest, (_event, target: WorkspaceSessionTarget) =>
+    store.getTranscriptFor(target),
+  );
   ipcMain.handle(desktopIpc.addWorkspacePath, (_event, workspacePath: string) => store.addWorkspace(workspacePath));
   ipcMain.handle(desktopIpc.pickWorkspace, () => pickWorkspaceViaDialog());
   ipcMain.handle(desktopIpc.selectWorkspace, (_event, workspaceId: string) => store.selectWorkspace(workspaceId));
@@ -1408,6 +1417,11 @@ app.whenReady().then(async () => {
   ipcMain.handle(
     desktopIpc.submitComposer,
     (_event, text: string, options?: { readonly deliverAs?: "steer" | "followUp" }) => store.submitComposer(text, options),
+  );
+  ipcMain.handle(
+    desktopIpc.submitComposerFor,
+    (_event, target: WorkspaceSessionTarget, text: string, options?: { readonly deliverAs?: "steer" | "followUp" }) =>
+      store.submitComposerFor(target, text, options),
   );
   ipcMain.handle(desktopIpc.getSessionTree, (_event, target: WorkspaceSessionTarget) =>
     store.getSessionTree(target),

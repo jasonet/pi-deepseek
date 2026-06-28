@@ -135,7 +135,7 @@ export function Sidebar(props: SidebarProps) {
         >
           <PlusIcon />
           <span>{t("sidebar.newThread")}</span>
-          <kbd className="sidebar__new-kbd">{getDesktopShortcutLabel(api.platform, "N")}</kbd>
+          <kbd className="sidebar__shortcut-kbd">{getDesktopShortcutLabel(api.platform, "N")}</kbd>
         </button>
 
         <div className="sidebar__nav">
@@ -170,6 +170,7 @@ export function Sidebar(props: SidebarProps) {
           >
             <PhoneIcon />
             <span>{t("sidebar.connectPhone")}</span>
+            <kbd className="sidebar__shortcut-kbd">{getDesktopShortcutLabel(api.platform, "M")}</kbd>
           </button>
           <button
             className="sidebar__nav-item"
@@ -281,6 +282,7 @@ export function Sidebar(props: SidebarProps) {
         >
           <span className="sidebar__settings-mark"><PhoneIcon /></span>
           <span>{t("sidebar.connectPhone")}</span>
+          <kbd className="sidebar__shortcut-kbd">{getDesktopShortcutLabel(api.platform, "M")}</kbd>
         </button>
       </div>
     </aside>

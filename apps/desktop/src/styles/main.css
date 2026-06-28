@@ -3860,3 +3860,133 @@ mark.thread-find-active {
   background: rgba(224, 84, 103, 0.12);
   border-color: rgba(224, 84, 103, 0.2);
 }
+
+/* ── Dual-pane layout (flex, jitter-free) ── */
+.dual-pane {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  gap: 0;
+}
+
+/* Contextual advisory shown only while both paired sessions run concurrently.
+   The panes already live in separate worktrees (isolated files), so this is a
+   soft caution against having both agents push the same branch / shared remote
+   at once — i.e. the "single-YOLO" guidance, surfaced exactly when it matters. */
+.dual-pane__hint {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 70%;
+  padding: 5px 12px;
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--muted-soft);
+  background: var(--main);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  pointer-events: none;
+  opacity: 0.92;
+}
+
+.dual-pane__hint-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent, #4D6BFE);
+  flex-shrink: 0;
+}
+
+.dual-pane__col {
+  flex: 1;
+  min-width: 0;
+  /* Mirror .main's row model: scrollable canvas + always-visible composer.
+     Grid (not flex) guarantees the composer row keeps its height even when the
+     timeline is tall, so the left pane's composer never gets clipped. */
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  overflow: hidden;
+  border-radius: 6px;
+  transition: box-shadow 0.15s ease;
+}
+
+.dual-pane__col--active {
+  box-shadow: inset 0 0 0 1.5px #2ea043;
+}
+
+/* Canvas occupies the flexible row and scrolls internally; min-height:0 lets it
+   shrink below content size instead of pushing the composer out of view. */
+.dual-pane__col > .canvas--thread {
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Composer sits in the auto row; never shrinks. */
+.dual-pane__col > .composer {
+  min-height: 0;
+}
+
+.dual-pane__divider {
+  width: 6px;
+  flex-shrink: 0;
+  cursor: col-resize;
+  background: var(--line);
+  border-radius: 3px;
+  margin: 4px 2px;
+  transition: background 0.15s;
+}
+
+.dual-pane__divider:hover {
+  background: var(--muted-soft);
+}
+
+.dual-pane__placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--muted-soft);
+  font-size: 13px;
+}
+
+/* Secondary composer in dual-pane right column */
+.dual-pane__composer {
+  padding: 8px 12px;
+  border-top: 1px solid var(--line);
+  background: var(--main);
+}
+
+.dual-pane__composer-input {
+  width: 100%;
+  background: var(--input-bg, rgba(0,0,0,0.04));
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text);
+  resize: none;
+  outline: none;
+  line-height: 1.4;
+}
+
+.dual-pane__composer-input:focus {
+  border-color: var(--accent, #4D6BFE);
+}
+
+.dual-pane__composer-input::placeholder {
+  color: var(--muted-soft);
+}
+
+/* Hide standalone composer in dual-pane mode */
+.main--dual-pane > .composer {
+  display: none;
+}

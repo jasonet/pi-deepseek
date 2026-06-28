@@ -216,6 +216,37 @@ export class DesktopAppStore implements AppStoreInternals {
     return { ...record, transcript: truncated };
   }
 
+  /**
+   * Read-only transcript fetch for an arbitrary session (not necessarily the
+   * selected one). Used by the dual-pane secondary column, which renders a
+   * second session's transcript side-by-side. Reading never mutates session
+   * state, so this is safe to call for any cached session regardless of which
+   * one is "selected".
+   */
+  async getTranscriptFor(
+    target: { workspaceId: string; sessionId: string },
+  ): Promise<SelectedTranscriptRecord | null> {
+    await this.initialize();
+    if (!target.workspaceId || !target.sessionId) {
+      return null;
+    }
+    const sessionRef = toSessionRef(target);
+    await this.ensureTranscriptLoaded(sessionRef);
+    const record = this.buildSelectedTranscriptRecord(sessionRef);
+    if (!record) return null;
+    // Limit transcript size to avoid IPC deserialization crash (mirror getSelectedTranscript).
+    const MAX_TRANSCRIPT_SIZE = 500 * 1024; // 500KB
+    let size = 0;
+    const truncated = [];
+    for (const item of record.transcript) {
+      const itemSize = JSON.stringify(item).length;
+      if (size + itemSize > MAX_TRANSCRIPT_SIZE) break;
+      truncated.push(item);
+      size += itemSize;
+    }
+    return { ...record, transcript: truncated };
+  }
+
   async flushPersistence(): Promise<void> {
     await this.initialize();
     if (this.persistUiStateTimer) {
@@ -379,6 +410,22 @@ export class DesktopAppStore implements AppStoreInternals {
     options?: { readonly deliverAs?: "steer" | "followUp" },
   ): Promise<DesktopAppState> {
     return composer.submitComposer(this, textInput, options);
+  }
+
+  /**
+   * Submit a message to an explicit session without touching the global
+   * selection. Backs the dual-pane secondary composer (see submitComposer's
+   * `targetRef`). The primary pane keeps focus and never flickers.
+   */
+  async submitComposerFor(
+    target: WorkspaceSessionTarget,
+    textInput: string,
+    options?: { readonly deliverAs?: "steer" | "followUp" },
+  ): Promise<DesktopAppState> {
+    if (!target.workspaceId || !target.sessionId) {
+      return this.getState();
+    }
+    return composer.submitComposer(this, textInput, { ...options, targetRef: toSessionRef(target) });
   }
 
   async editQueuedComposerMessage(messageId: string, currentDraft?: string): Promise<DesktopAppState> {

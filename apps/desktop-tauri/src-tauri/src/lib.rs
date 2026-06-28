@@ -14,6 +14,7 @@ use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
+use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
 use tauri::{Emitter, Manager};
 use tokio::sync::oneshot;
 
@@ -240,6 +241,90 @@ pub fn main() {
                     eprintln!("[pi-tauri] sidecar failed to start: {error}");
                 }
             }
+            // ── Custom native menu (free Cmd+M from Minimize, register Cmd+N) ──
+            // On macOS the default menu binds Cmd+M to Minimize and Cmd+N to
+            // New Window, which prevents the DOM-level keyboard shortcuts from
+            // reaching the renderer. We build a full custom menu that removes
+            // those system accelerators so the React App.tsx handler can own
+            // Cmd+N (New Thread) and Cmd+M (Connect Phone).
+            {
+                let handle = app.handle().clone();
+
+                let new_thread = MenuItemBuilder::with_id("new_thread", "New Thread")
+                    .accelerator("CmdOrCtrl+N")
+                    .build(&handle)
+                    .expect("new_thread menu item");
+
+                let connect_phone = MenuItemBuilder::with_id("connect_phone", "Connect Phone")
+                    .accelerator("CmdOrCtrl+M")
+                    .build(&handle)
+                    .expect("connect_phone menu item");
+
+                // Custom Minimize WITHOUT the Cmd+M accelerator (free it for
+                // Connect Phone). The predefined minimize item comes with
+                // Cmd+M by default on macOS, so we use a plain MenuItem.
+                let minimize = MenuItemBuilder::with_id("minimize", "Minimize")
+                    .build(&handle)
+                    .expect("minimize item");
+
+                let file_menu = SubmenuBuilder::new(&handle, "File")
+                    .item(&new_thread)
+                    .item(&connect_phone)
+                    .separator()
+                    .item(&PredefinedMenuItem::close_window(&handle, None).expect("close"))
+                    .build()
+                    .expect("file menu");
+
+                // Edit menu built from individual predefined items.
+                let edit_menu = SubmenuBuilder::new(&handle, "Edit")
+                    .item(&PredefinedMenuItem::undo(&handle, None).expect("undo"))
+                    .item(&PredefinedMenuItem::redo(&handle, None).expect("redo"))
+                    .separator()
+                    .item(&PredefinedMenuItem::cut(&handle, None).expect("cut"))
+                    .item(&PredefinedMenuItem::copy(&handle, None).expect("copy"))
+                    .item(&PredefinedMenuItem::paste(&handle, None).expect("paste"))
+                    .item(&PredefinedMenuItem::select_all(&handle, None).expect("select_all"))
+                    .build()
+                    .expect("edit menu");
+
+                let window_menu = SubmenuBuilder::new(&handle, "Window")
+                    .item(&minimize)
+                    .item(&PredefinedMenuItem::maximize(&handle, None).expect("maximize"))
+                    .separator()
+                    .item(&PredefinedMenuItem::bring_all_to_front(&handle, None).expect("front"))
+                    .build()
+                    .expect("window menu");
+
+                let menu = MenuBuilder::new(&handle)
+                    .item(&file_menu)
+                    .item(&edit_menu)
+                    .item(&window_menu)
+                    .build()
+                    .expect("menu");
+
+                app.set_menu(menu).expect("set_menu");
+
+                // Forward menu clicks to the renderer so App.tsx can handle them
+                // via its onCommand listener.
+                app.on_menu_event(move |app, event| {
+                    let cmd = match event.id().as_ref() {
+                        "new_thread" => "open-new-thread",
+                        "connect_phone" => "open-connect-phone",
+                        "minimize" => {
+                            if let Some(w) = app.get_webview_window("main") {
+                                let _ = w.minimize();
+                            }
+                            return;
+                        }
+                        _ => return,
+                    };
+                    let _ = app.emit(
+                        "pi://event",
+                        serde_json::json!({ "event": "command", "payload": cmd }),
+                    );
+                });
+            }
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

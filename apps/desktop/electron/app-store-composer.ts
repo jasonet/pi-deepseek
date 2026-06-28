@@ -262,11 +262,18 @@ export async function submitComposer(
   textInput: string,
   options: {
     readonly deliverAs?: "steer" | "followUp";
+    /**
+     * Deliver to an explicit session instead of the globally-selected one.
+     * Used by the dual-pane secondary composer so sending a message never has
+     * to flip the global selection (which would briefly collapse the split view
+     * and flicker the primary pane). All downstream logic is keyed by this ref.
+     */
+    readonly targetRef?: SessionRef;
   } = {},
 ): Promise<DesktopAppState> {
   await store.initialize();
   const text = textInput.trim();
-  const sessionRef = store.selectedSessionRef();
+  const sessionRef = options.targetRef ?? store.selectedSessionRef();
   const attachments = sessionRef
     ? store.sessionState.composerAttachmentsBySession.get(sessionKey(sessionRef)) ?? []
     : [];

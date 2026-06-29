@@ -8,7 +8,19 @@ import {
   type AgentSessionRuntime,
   type CreateAgentSessionOptions,
   type CreateAgentSessionRuntimeResult,
+  type CreateAgentSessionServicesOptions,
 } from "@earendil-works/pi-coding-agent";
+
+/**
+ * Session creation options plus the SDK's supported `resourceLoaderOptions`
+ * passthrough. The SDK builds the session's own `DefaultResourceLoader` from
+ * these options inside `createAgentSessionServices`, so this is the zero-fork
+ * seam for contributing e.g. `appendSystemPromptOverride` without owning the
+ * loader. Defaulting to no override keeps prompt assembly byte-identical.
+ */
+export type CreateAgentSessionOptionsWithResourceLoader = CreateAgentSessionOptions & {
+  resourceLoaderOptions?: CreateAgentSessionServicesOptions["resourceLoaderOptions"];
+};
 
 export function isGlobalNpmLookupError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
@@ -43,7 +55,10 @@ export function createSettingsManagerWithoutNpmPackages(current: SettingsManager
 async function createAgentSessionServicesWithNpmFallback(
   cwd: string,
   agentDir: string,
-  options?: Pick<CreateAgentSessionOptions, "authStorage" | "settingsManager" | "modelRegistry">,
+  options?: Pick<
+    CreateAgentSessionOptionsWithResourceLoader,
+    "authStorage" | "settingsManager" | "modelRegistry" | "resourceLoaderOptions"
+  >,
 ) {
   try {
     return await createAgentSessionServices({
@@ -52,6 +67,7 @@ async function createAgentSessionServicesWithNpmFallback(
       ...(options?.authStorage ? { authStorage: options.authStorage } : {}),
       ...(options?.settingsManager ? { settingsManager: options.settingsManager } : {}),
       ...(options?.modelRegistry ? { modelRegistry: options.modelRegistry } : {}),
+      ...(options?.resourceLoaderOptions ? { resourceLoaderOptions: options.resourceLoaderOptions } : {}),
     });
   } catch (error) {
     if (!isGlobalNpmLookupError(error)) {
@@ -76,6 +92,7 @@ async function createAgentSessionServicesWithNpmFallback(
       ...(options?.authStorage ? { authStorage: options.authStorage } : {}),
       settingsManager: fallbackSettingsManager,
       ...(options?.modelRegistry ? { modelRegistry: options.modelRegistry } : {}),
+      ...(options?.resourceLoaderOptions ? { resourceLoaderOptions: options.resourceLoaderOptions } : {}),
     });
   }
 }
@@ -84,7 +101,7 @@ async function createAgentSessionResultWithNpmFallback(
   cwd: string,
   agentDir: string,
   sessionManager: SessionManager,
-  options?: CreateAgentSessionOptions,
+  options?: CreateAgentSessionOptionsWithResourceLoader,
 ): Promise<CreateAgentSessionRuntimeResult> {
   const services = await createAgentSessionServicesWithNpmFallback(cwd, agentDir, options);
   return {
@@ -103,7 +120,7 @@ async function createAgentSessionResultWithNpmFallback(
   };
 }
 
-export async function createAgentSessionWithNpmFallback(options?: CreateAgentSessionOptions) {
+export async function createAgentSessionWithNpmFallback(options?: CreateAgentSessionOptionsWithResourceLoader) {
   const cwd = options?.cwd ?? process.cwd();
   const agentDir = options?.agentDir ?? getAgentDir();
   const sessionManager = options?.sessionManager ?? SessionManager.create(cwd);
@@ -111,7 +128,7 @@ export async function createAgentSessionWithNpmFallback(options?: CreateAgentSes
 }
 
 export async function createAgentSessionRuntimeWithNpmFallback(
-  options?: CreateAgentSessionOptions,
+  options?: CreateAgentSessionOptionsWithResourceLoader,
 ): Promise<AgentSessionRuntime> {
   const cwd = options?.cwd ?? process.cwd();
   const agentDir = options?.agentDir ?? getAgentDir();

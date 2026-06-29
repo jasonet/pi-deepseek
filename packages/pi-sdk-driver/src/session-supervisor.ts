@@ -70,12 +70,26 @@ import {
   workspaceToRef,
 } from "./session-supervisor-utils.js";
 import type { SessionTranscriptMessage } from "./transcript.js";
-import { createAgentSessionRuntimeWithNpmFallback } from "./npm-package-fallback.js";
+import {
+  createAgentSessionRuntimeWithNpmFallback,
+  type CreateAgentSessionOptionsWithResourceLoader,
+} from "./npm-package-fallback.js";
+import { SystemPromptComposer, type PromptComposeContext } from "./system-prompt-composer.js";
 
 export interface PiSdkDriverOptions {
   readonly catalogFilePath?: string;
-  readonly createAgentSessionRuntimeImpl?: (options?: CreateAgentSessionOptions) => Promise<AgentSessionRuntime>;
+  readonly createAgentSessionRuntimeImpl?: (
+    options?: CreateAgentSessionOptionsWithResourceLoader,
+  ) => Promise<AgentSessionRuntime>;
   readonly modelRegistry?: ModelRegistry;
+  /**
+   * Optional composer for harness-contributed system-prompt sections. When
+   * omitted, a fresh (empty) composer is used and prompt assembly is unchanged:
+   * with no registered sections the supervisor passes no `resourceLoaderOptions`
+   * to the SDK at all, so session prompts are byte-identical to the SDK default.
+   * Hosts opt in by registering sections via {@link SessionSupervisor.systemPromptComposer}.
+   */
+  readonly systemPromptComposer?: SystemPromptComposer;
   readonly generateThreadTitleOverride?: (
     workspace: WorkspaceRef,
     options: import("./thread-title-generator.js").GenerateThreadTitleOptions,
@@ -144,8 +158,11 @@ interface SkillAdapter {
 
 export class SessionSupervisor {
   private readonly catalogs: SessionFileCatalogStorage;
-  private readonly createAgentSessionRuntimeImpl: (options?: CreateAgentSessionOptions) => Promise<AgentSessionRuntime>;
+  private readonly createAgentSessionRuntimeImpl: (
+    options?: CreateAgentSessionOptionsWithResourceLoader,
+  ) => Promise<AgentSessionRuntime>;
   private readonly modelRegistry: ModelRegistry | undefined;
+  private readonly composer: SystemPromptComposer;
   private readonly records = new Map<string, ManagedSessionRecord>();
 
   constructor(options: PiSdkDriverOptions = {}) {
@@ -155,6 +172,34 @@ export class SessionSupervisor {
     this.createAgentSessionRuntimeImpl =
       options.createAgentSessionRuntimeImpl ?? ((createOptions) => createAgentSessionRuntimeWithNpmFallback(createOptions));
     this.modelRegistry = options.modelRegistry;
+    this.composer = options.systemPromptComposer ?? new SystemPromptComposer();
+  }
+
+  /**
+   * The composer used to contribute harness system-prompt sections. Inert by
+   * default (no sections ⇒ no prompt change); hosts register sections to opt in.
+   */
+  get systemPromptComposer(): SystemPromptComposer {
+    return this.composer;
+  }
+
+  /**
+   * Build the SDK `resourceLoaderOptions` for a session in {@link workspace}.
+   * Returns `undefined` when the composer has no registered sections, so the
+   * inert path passes nothing to the SDK and prompt assembly is unchanged.
+   */
+  private buildResourceLoaderOptions(
+    workspace: WorkspaceRef,
+  ): CreateAgentSessionOptionsWithResourceLoader["resourceLoaderOptions"] | undefined {
+    if (this.composer.size === 0) {
+      return undefined;
+    }
+    const context: PromptComposeContext = {
+      cwd: workspace.path,
+      now: new Date(),
+      ...(workspace.displayName ? { workspaceName: workspace.displayName } : {}),
+    };
+    return { appendSystemPromptOverride: this.composer.toAppendSystemPromptOverride(context) };
   }
 
   listWorkspaces(): Promise<WorkspaceCatalogSnapshot> {
@@ -297,10 +342,12 @@ export class SessionSupervisor {
     const initialModel = options?.initialModel
       ? this.resolveModel(options.initialModel.provider, options.initialModel.modelId)
       : undefined;
-    const createOptions: CreateAgentSessionOptions = {
+    const resourceLoaderOptions = this.buildResourceLoaderOptions(workspace);
+    const createOptions: CreateAgentSessionOptionsWithResourceLoader = {
       cwd: workspace.path,
       sessionManager: SessionManager.create(workspace.path),
       ...(this.modelRegistry ? { modelRegistry: this.modelRegistry } : {}),
+      ...(resourceLoaderOptions ? { resourceLoaderOptions } : {}),
     };
     if (initialModel) {
       createOptions.model = initialModel;
@@ -648,10 +695,12 @@ export class SessionSupervisor {
       throw new Error(`Session ${key} cannot be reopened because no session file is tracked.`);
     }
 
+    const reopenResourceLoaderOptions = this.buildResourceLoaderOptions(workspaceToRef(workspace));
     const runtime = await this.createAgentSessionRuntimeImpl({
       cwd: workspace.path,
       sessionManager: SessionManager.open(sessionFile),
       ...(this.modelRegistry ? { modelRegistry: this.modelRegistry } : {}),
+      ...(reopenResourceLoaderOptions ? { resourceLoaderOptions: reopenResourceLoaderOptions } : {}),
     });
     const session = runtime.session;
 

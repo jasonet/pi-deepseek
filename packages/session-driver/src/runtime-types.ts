@@ -111,6 +111,53 @@ export interface RuntimeSnapshot {
   readonly settings: RuntimeSettingsSnapshot;
 }
 
+/**
+ * A configured extension/resource package source (npm/git/local), as tracked by
+ * the runtime's package manager. Mirrors the SDK's ConfiguredPackage but is a
+ * GUI-owned shape so the renderer never imports the pi runtime SDK directly —
+ * keeping the harness↔runtime seam loosely coupled for Pi self-upgrades.
+ */
+export interface RuntimePackageRecord {
+  readonly source: string;
+  readonly scope: "user" | "project";
+  readonly filtered: boolean;
+  readonly installedPath?: string;
+}
+
+/** An available update for a configured npm/git package source. */
+export interface RuntimePackageUpdate {
+  readonly source: string;
+  readonly displayName: string;
+  readonly type: "npm" | "git";
+  readonly scope: "user" | "project";
+}
+
+/**
+ * One discoverable APPEND_SYSTEM.md file (project- or user-scoped). The pi
+ * runtime appends this file's content to the session system prompt. Surfacing
+ * it here keeps the file-based prompt seam editable from the harness UI without
+ * the harness owning prompt assembly.
+ */
+export interface RuntimeAppendSystemPromptFile {
+  /** Absolute path of the file (whether or not it currently exists). */
+  readonly path: string;
+  /** Current file content; empty string when the file does not exist. */
+  readonly content: string;
+  /** Whether the file currently exists on disk. */
+  readonly exists: boolean;
+}
+
+/**
+ * Project- and user-scoped APPEND_SYSTEM.md files plus which one the runtime
+ * actually uses. The runtime prefers the project file when it exists, otherwise
+ * the user (global) file; `activeScope` reflects that precedence.
+ */
+export interface RuntimeAppendSystemPrompt {
+  readonly project: RuntimeAppendSystemPromptFile;
+  readonly global: RuntimeAppendSystemPromptFile;
+  readonly activeScope: "project" | "global" | "none";
+}
+
 export interface RuntimeLoginAuthInfo {
   readonly url: string;
   readonly instructions?: string;

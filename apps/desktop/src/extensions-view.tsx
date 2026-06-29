@@ -1,5 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
-import type { RuntimeExtensionRecord, RuntimeSnapshot } from "@pi-gui/session-driver/runtime-types";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type {
+  RuntimeAppendSystemPrompt,
+  RuntimeExtensionRecord,
+  RuntimePackageRecord,
+  RuntimePackageUpdate,
+  RuntimeSnapshot,
+} from "@pi-gui/session-driver/runtime-types";
 import type { ExtensionCommandCompatibilityRecord, WorkspaceRecord } from "./desktop-state";
 import { RefreshIcon } from "./icons";
 import { useT } from "./i18n";
@@ -12,11 +18,23 @@ interface ExtensionsViewProps {
   readonly onRefresh: () => void;
   readonly onOpenExtensionFolder: (filePath: string) => void;
   readonly onToggleExtension: (filePath: string, enabled: boolean) => void;
+  readonly onListPackages: () => Promise<readonly RuntimePackageRecord[]>;
+  readonly onCheckForPackageUpdates: () => Promise<readonly RuntimePackageUpdate[]>;
+  readonly onInstallPackage: (source: string) => Promise<void>;
+  readonly onRemovePackage: (source: string) => Promise<void>;
+  readonly onUpdatePackages: (source?: string) => Promise<void>;
+  readonly onGetAppendSystemPrompt: () => Promise<RuntimeAppendSystemPrompt | null>;
+  readonly onSetAppendSystemPrompt: (
+    scope: "project" | "global",
+    content: string,
+  ) => Promise<RuntimeAppendSystemPrompt | null>;
 }
 
 export function ExtensionsView({
   workspace, runtime, commandCompatibility = [],
   onRefresh, onOpenExtensionFolder, onToggleExtension,
+  onListPackages, onCheckForPackageUpdates, onInstallPackage, onRemovePackage, onUpdatePackages,
+  onGetAppendSystemPrompt, onSetAppendSystemPrompt,
 }: ExtensionsViewProps) {
   const t = useT();
   useEffect(() => { onRefresh(); }, []); // Auto-refresh on first open
@@ -135,8 +153,251 @@ export function ExtensionsView({
             )}
           </div>
         </div>
+
+        <PackagesSection
+          onListPackages={onListPackages}
+          onCheckForPackageUpdates={onCheckForPackageUpdates}
+          onInstallPackage={onInstallPackage}
+          onRemovePackage={onRemovePackage}
+          onUpdatePackages={onUpdatePackages}
+        />
+
+        <AppendSystemPromptSection
+          onGetAppendSystemPrompt={onGetAppendSystemPrompt}
+          onSetAppendSystemPrompt={onSetAppendSystemPrompt}
+        />
       </div>
     </section>
+  );
+}
+
+function PackagesSection({
+  onListPackages, onCheckForPackageUpdates, onInstallPackage, onRemovePackage, onUpdatePackages,
+}: {
+  readonly onListPackages: () => Promise<readonly RuntimePackageRecord[]>;
+  readonly onCheckForPackageUpdates: () => Promise<readonly RuntimePackageUpdate[]>;
+  readonly onInstallPackage: (source: string) => Promise<void>;
+  readonly onRemovePackage: (source: string) => Promise<void>;
+  readonly onUpdatePackages: (source?: string) => Promise<void>;
+}) {
+  const t = useT();
+  const [packages, setPackages] = useState<readonly RuntimePackageRecord[]>([]);
+  const [updates, setUpdates] = useState<readonly RuntimePackageUpdate[]>([]);
+  const [installSource, setInstallSource] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | undefined>();
+
+  const refresh = useCallback(async () => {
+    try {
+      setPackages(await onListPackages());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }, [onListPackages]);
+
+  useEffect(() => { void refresh(); }, [refresh]);
+
+  const run = (fn: () => Promise<void>) => {
+    setBusy(true);
+    setError(undefined);
+    void (async () => {
+      try {
+        await fn();
+        await refresh();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+      } finally {
+        setBusy(false);
+      }
+    })();
+  };
+
+  const handleCheck = () => run(async () => { setUpdates(await onCheckForPackageUpdates()); });
+  const handleInstall = () => {
+    const source = installSource.trim();
+    if (!source) return;
+    run(async () => { await onInstallPackage(source); setInstallSource(""); setUpdates([]); });
+  };
+  const handleUpdateAll = () => run(async () => { await onUpdatePackages(); setUpdates([]); });
+  const handleUpdateOne = (source: string) => run(async () => { await onUpdatePackages(source); setUpdates([]); });
+  const handleRemove = (source: string) => run(async () => { await onRemovePackage(source); setUpdates([]); });
+
+  const updatable = useMemo(() => new Set(updates.map((u) => u.source)), [updates]);
+
+  return (
+    <div className="packages-section">
+      <div className="packages-section__header">
+        <div>
+          <h2>{t("extensions.packages")}</h2>
+          <p className="skill-detail__description">{t("extensions.packagesHint")}</p>
+        </div>
+        <div className="view-header__actions">
+          <button className="button button--secondary" type="button" disabled={busy} onClick={handleCheck}>
+            {t("extensions.checkUpdates")}
+          </button>
+          <button className="button button--secondary" type="button" disabled={busy || updates.length === 0} onClick={handleUpdateAll}>
+            {t("extensions.updateAll")}
+          </button>
+        </div>
+      </div>
+
+      <div className="packages-section__install">
+        <input
+          aria-label={t("extensions.install")}
+          className="skills-search"
+          placeholder={t("extensions.installPlaceholder")}
+          value={installSource}
+          disabled={busy}
+          onChange={(e) => setInstallSource(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") handleInstall(); }}
+        />
+        <button className="button" type="button" disabled={busy || installSource.trim().length === 0} onClick={handleInstall}>
+          {t("extensions.install")}
+        </button>
+      </div>
+
+      {busy ? <div className="skill-detail__description">{t("extensions.packageBusy")}</div> : null}
+      {error ? <div className="activity-item activity-item--error"><div className="activity-item__text">{error}</div></div> : null}
+      {updates.length > 0 ? (
+        <div className="skill-detail__description">{t("extensions.updatesAvailable", { count: String(updates.length) })}</div>
+      ) : null}
+
+      {packages.length === 0 ? (
+        <div className="skill-detail__description">{t("extensions.noPackages")}</div>
+      ) : (
+        <div className="packages-list">
+          {packages.map((pkg) => (
+            <div className="packages-row" key={`${pkg.scope}:${pkg.source}`}>
+              <div className="packages-row__info">
+                <span className="packages-row__source">{pkg.source}</span>
+                <span className="skill-card__meta">
+                  <span>{pkg.scope}</span>
+                  {pkg.filtered ? <span>{t("extensions.packageFiltered")}</span> : null}
+                  {updatable.has(pkg.source) ? <span className="slash-menu__skill-badge slash-menu__skill-badge--warning">{t("extensions.update")}</span> : null}
+                </span>
+              </div>
+              <div className="packages-row__actions">
+                {updatable.has(pkg.source) ? (
+                  <button className="button button--secondary" type="button" disabled={busy} onClick={() => handleUpdateOne(pkg.source)}>
+                    {t("extensions.update")}
+                  </button>
+                ) : null}
+                <button className="button button--secondary" type="button" disabled={busy} onClick={() => handleRemove(pkg.source)}>
+                  {t("extensions.remove")}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AppendSystemPromptSection({
+  onGetAppendSystemPrompt, onSetAppendSystemPrompt,
+}: {
+  readonly onGetAppendSystemPrompt: () => Promise<RuntimeAppendSystemPrompt | null>;
+  readonly onSetAppendSystemPrompt: (
+    scope: "project" | "global",
+    content: string,
+  ) => Promise<RuntimeAppendSystemPrompt | null>;
+}) {
+  const t = useT();
+  const [data, setData] = useState<RuntimeAppendSystemPrompt | null>(null);
+  const [projectDraft, setProjectDraft] = useState("");
+  const [globalDraft, setGlobalDraft] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | undefined>();
+
+  const apply = useCallback((next: RuntimeAppendSystemPrompt | null) => {
+    setData(next);
+    setProjectDraft(next?.project.content ?? "");
+    setGlobalDraft(next?.global.content ?? "");
+  }, []);
+
+  const refresh = useCallback(async () => {
+    try {
+      apply(await onGetAppendSystemPrompt());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }, [apply, onGetAppendSystemPrompt]);
+
+  useEffect(() => { void refresh(); }, [refresh]);
+
+  const save = (scope: "project" | "global", content: string) => {
+    setBusy(true);
+    setError(undefined);
+    void (async () => {
+      try {
+        apply(await onSetAppendSystemPrompt(scope, content));
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+      } finally {
+        setBusy(false);
+      }
+    })();
+  };
+
+  const scopes: ReadonlyArray<{
+    readonly scope: "project" | "global";
+    readonly label: string;
+    readonly file: RuntimeAppendSystemPrompt["project"] | undefined;
+    readonly draft: string;
+    readonly setDraft: (value: string) => void;
+  }> = [
+    { scope: "project", label: t("extensions.appendSystemProject"), file: data?.project, draft: projectDraft, setDraft: setProjectDraft },
+    { scope: "global", label: t("extensions.appendSystemGlobal"), file: data?.global, draft: globalDraft, setDraft: setGlobalDraft },
+  ];
+
+  return (
+    <div className="packages-section">
+      <div className="packages-section__header">
+        <div>
+          <h2>{t("extensions.appendSystem")}</h2>
+          <p className="skill-detail__description">{t("extensions.appendSystemHint")}</p>
+        </div>
+      </div>
+
+      {error ? <div className="activity-item activity-item--error"><div className="activity-item__text">{error}</div></div> : null}
+
+      {scopes.map(({ scope, label, file, draft, setDraft }) => {
+        const active = data?.activeScope === scope;
+        const dirty = file ? draft !== file.content : draft.length > 0;
+        return (
+          <div className="append-system-scope" key={scope}>
+            <div className="append-system-scope__head">
+              <span className="skill-detail__meta-label">{label}</span>
+              {active ? (
+                <span className="slash-menu__skill-badge">{t("extensions.appendSystemActive")}</span>
+              ) : (
+                <span className="skill-card__meta"><span>{t("extensions.appendSystemInactive")}</span></span>
+              )}
+            </div>
+            {file ? <div className="skill-detail__path">{file.path}</div> : null}
+            <textarea
+              className="append-system-scope__textarea"
+              placeholder={t("extensions.appendSystemPlaceholder")}
+              value={draft}
+              disabled={busy}
+              rows={4}
+              onChange={(e) => setDraft(e.target.value)}
+            />
+            <div className="packages-row__actions">
+              <button
+                className="button"
+                type="button"
+                disabled={busy || !dirty}
+                onClick={() => save(scope, draft)}
+              >
+                {t("extensions.appendSystemSave")}
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 

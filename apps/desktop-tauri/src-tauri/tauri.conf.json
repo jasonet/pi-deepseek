@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/nicepkg/vscode-tauri/main/schemas/tauri.conf.schema.json",
   "productName": "Pi-Deepseek",
-  "version": "2.6.7",
+  "version": "2.6.8",
   "identifier": "com.pi-deepseek.desktop",
   "build": {
     "frontendDist": "../dist",

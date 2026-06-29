@@ -19,7 +19,12 @@ import type {
 import type {
   HostUiResponse,
 } from "@pi-gui/session-driver";
-import type { RuntimeSettingsSnapshot } from "@pi-gui/session-driver/runtime-types";
+import type {
+  RuntimeAppendSystemPrompt,
+  RuntimePackageRecord,
+  RuntimePackageUpdate,
+  RuntimeSettingsSnapshot,
+} from "@pi-gui/session-driver/runtime-types";
 import type {
   AppView,
   ComposerAttachment,
@@ -187,6 +192,20 @@ contextBridge.exposeInMainWorld("piApp", {
     ipcRenderer.invoke(desktopIpc.setSkillEnabled, workspaceId, filePath, enabled) as Promise<DesktopAppState>,
   setExtensionEnabled: (workspaceId: string, filePath: string, enabled: boolean) =>
     ipcRenderer.invoke(desktopIpc.setExtensionEnabled, workspaceId, filePath, enabled) as Promise<DesktopAppState>,
+  listPackages: (workspaceId?: string) =>
+    ipcRenderer.invoke(desktopIpc.listPackages, workspaceId) as Promise<readonly RuntimePackageRecord[]>,
+  checkForPackageUpdates: (workspaceId?: string) =>
+    ipcRenderer.invoke(desktopIpc.checkForPackageUpdates, workspaceId) as Promise<readonly RuntimePackageUpdate[]>,
+  installPackage: (workspaceId: string, source: string) =>
+    ipcRenderer.invoke(desktopIpc.installPackage, workspaceId, source) as Promise<DesktopAppState>,
+  removePackage: (workspaceId: string, source: string) =>
+    ipcRenderer.invoke(desktopIpc.removePackage, workspaceId, source) as Promise<DesktopAppState>,
+  updatePackages: (workspaceId: string, source?: string) =>
+    ipcRenderer.invoke(desktopIpc.updatePackages, workspaceId, source) as Promise<DesktopAppState>,
+  getAppendSystemPrompt: (workspaceId?: string) =>
+    ipcRenderer.invoke(desktopIpc.getAppendSystemPrompt, workspaceId) as Promise<RuntimeAppendSystemPrompt | null>,
+  setAppendSystemPrompt: (workspaceId: string, scope: "project" | "global", content: string) =>
+    ipcRenderer.invoke(desktopIpc.setAppendSystemPrompt, workspaceId, scope, content) as Promise<RuntimeAppendSystemPrompt | null>,
   respondToHostUiRequest: (workspaceId: string, sessionId: string, response: HostUiResponse) =>
     ipcRenderer.invoke(desktopIpc.respondToHostUiRequest, workspaceId, sessionId, response) as Promise<DesktopAppState>,
   setNotificationPreferences: (preferences: Partial<NotificationPreferences>) =>

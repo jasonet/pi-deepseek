@@ -1189,6 +1189,29 @@ app.whenReady().then(async () => {
   ipcMain.handle(desktopIpc.setExtensionEnabled, (_event, workspaceId: string, filePath: string, enabled: boolean) =>
     store.setExtensionEnabled(workspaceId, filePath, enabled),
   );
+  ipcMain.handle(desktopIpc.listPackages, (_event, workspaceId?: string) =>
+    store.listPackages(workspaceId),
+  );
+  ipcMain.handle(desktopIpc.checkForPackageUpdates, (_event, workspaceId?: string) =>
+    store.checkForPackageUpdates(workspaceId),
+  );
+  ipcMain.handle(desktopIpc.installPackage, (_event, workspaceId: string, source: string) =>
+    store.installPackage(workspaceId, source),
+  );
+  ipcMain.handle(desktopIpc.removePackage, (_event, workspaceId: string, source: string) =>
+    store.removePackage(workspaceId, source),
+  );
+  ipcMain.handle(desktopIpc.updatePackages, (_event, workspaceId: string, source?: string) =>
+    store.updatePackages(workspaceId, source),
+  );
+  ipcMain.handle(desktopIpc.getAppendSystemPrompt, (_event, workspaceId?: string) =>
+    store.getAppendSystemPrompt(workspaceId),
+  );
+  ipcMain.handle(
+    desktopIpc.setAppendSystemPrompt,
+    (_event, workspaceId: string, scope: "project" | "global", content: string) =>
+      store.setAppendSystemPrompt(workspaceId, scope, content),
+  );
   ipcMain.handle(desktopIpc.respondToHostUiRequest, (_event, workspaceId: string, sessionId: string, response) =>
     store.respondToHostUiRequest({ workspaceId, sessionId }, response),
   );

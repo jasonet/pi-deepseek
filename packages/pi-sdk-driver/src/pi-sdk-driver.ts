@@ -50,6 +50,15 @@ export class PiSdkDriver implements SessionDriver {
     this.runtimeSupervisor = new RuntimeSupervisor({ ...options, ...deps });
   }
 
+  /**
+   * Harness system-prompt composer for this driver. Inert by default — hosts
+   * register sections to contribute dynamic system-prompt content; with no
+   * sections, session prompts are unchanged from the SDK default.
+   */
+  get systemPromptComposer(): SessionSupervisor["systemPromptComposer"] {
+    return this.supervisor.systemPromptComposer;
+  }
+
   createSession(workspace: WorkspaceRef, options?: CreateSessionOptions): Promise<SessionSnapshot> {
     return this.supervisor.createSession(workspace, options);
   }

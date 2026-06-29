@@ -43,7 +43,7 @@ asarUnpack:
   - "**/node_modules/.pnpm/node-pty*/node_modules/node-pty/**/*"
 
 artifactName: ${productName}-${version}-${os}-${arch}.${ext}
-buildVersion: 2.6.7
+buildVersion: 2.6.8
 
 electronLanguages:
   - en-US
@@ -55,8 +55,8 @@ electronLanguages:
 
 mac:
   artifactName: ${productName}-${version}-${os}-${arch}.${ext}
-  bundleShortVersion: 2.6.7
-  bundleVersion: 2.6.7
+  bundleShortVersion: 2.6.8
+  bundleVersion: 2.6.8
   category: public.app-category.developer-tools
   hardenedRuntime: true
   gatekeeperAssess: false

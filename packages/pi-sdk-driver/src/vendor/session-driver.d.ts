@@ -429,6 +429,32 @@ declare module "@pi-gui/session-driver/runtime-types" {
     readonly settings: RuntimeSettingsSnapshot;
   }
 
+  export interface RuntimePackageRecord {
+    readonly source: string;
+    readonly scope: "user" | "project";
+    readonly filtered: boolean;
+    readonly installedPath?: string;
+  }
+
+  export interface RuntimePackageUpdate {
+    readonly source: string;
+    readonly displayName: string;
+    readonly type: "npm" | "git";
+    readonly scope: "user" | "project";
+  }
+
+  export interface RuntimeAppendSystemPromptFile {
+    readonly path: string;
+    readonly content: string;
+    readonly exists: boolean;
+  }
+
+  export interface RuntimeAppendSystemPrompt {
+    readonly project: RuntimeAppendSystemPromptFile;
+    readonly global: RuntimeAppendSystemPromptFile;
+    readonly activeScope: "project" | "global" | "none";
+  }
+
   export interface RuntimeResourceDriver {
     getRuntimeSnapshot(workspace: WorkspaceRef): Promise<RuntimeSnapshot>;
     refreshRuntime(workspace: WorkspaceRef): Promise<RuntimeSnapshot>;

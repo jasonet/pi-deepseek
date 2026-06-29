@@ -1,7 +1,7 @@
 {
   "name": "pi-deepseek-tauri",
   "private": true,
-  "version": "2.6.7",
+  "version": "2.6.8",
   "scripts": {
     "dev": "vite",
     "build:sidecar": "node sidecar/build.mjs",

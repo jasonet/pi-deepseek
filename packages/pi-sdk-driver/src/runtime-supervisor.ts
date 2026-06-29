@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import {
   DefaultPackageManager,
@@ -12,10 +12,14 @@ import {
   type ResolvedResource,
 } from "@earendil-works/pi-coding-agent";
 import type {
+  RuntimeAppendSystemPrompt,
+  RuntimeAppendSystemPromptFile,
   RuntimeLoginCallbacks,
   RuntimeExtensionDiagnostic,
   RuntimeExtensionRecord,
   RuntimeModelRecord,
+  RuntimePackageRecord,
+  RuntimePackageUpdate,
   RuntimeProviderRecord,
   RuntimeResourceDriver,
   RuntimeSettingsSnapshot,
@@ -284,6 +288,109 @@ export class RuntimeSupervisor implements RuntimeResourceDriver {
     await context.settingsManager.flush();
     await context.resourceLoader.reload();
     return this.buildSnapshot(context);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Package self-upgrade surface.
+  //
+  // These thinly expose the runtime's own DefaultPackageManager so the desktop
+  // Extensions UI can install / remove / update / check extension packages at
+  // runtime — i.e. let Pi self-upgrade its capabilities — without the GUI ever
+  // touching the pi SDK directly. Each result is mapped to a GUI-owned shape;
+  // mutations re-resolve and return a fresh RuntimeSnapshot like every other op.
+  // ---------------------------------------------------------------------------
+
+  /** List the configured extension/resource package sources for a workspace. */
+  async listPackages(workspace: WorkspaceRef): Promise<readonly RuntimePackageRecord[]> {
+    const context = await this.ensureContext(workspace);
+    return context.packageManager.listConfiguredPackages().map(toRuntimePackageRecord);
+  }
+
+  /** Check configured npm/git package sources for available updates. */
+  async checkForPackageUpdates(workspace: WorkspaceRef): Promise<readonly RuntimePackageUpdate[]> {
+    const context = await this.ensureContext(workspace);
+    const updates = await context.packageManager.checkForAvailableUpdates();
+    return updates.map(toRuntimePackageUpdate);
+  }
+
+  /** Install (and persist) a new package source, then refresh the snapshot. */
+  async installPackage(workspace: WorkspaceRef, source: string): Promise<RuntimeSnapshot> {
+    const context = await this.ensureContext(workspace);
+    const normalized = source.trim();
+    if (!normalized) {
+      throw new Error("Package source is required.");
+    }
+    await context.packageManager.installAndPersist(normalized);
+    context.settingsManager.reload();
+    await context.resourceLoader.reload();
+    return this.buildSnapshot(context);
+  }
+
+  /** Remove (and persist) a package source, then refresh the snapshot. */
+  async removePackage(workspace: WorkspaceRef, source: string): Promise<RuntimeSnapshot> {
+    const context = await this.ensureContext(workspace);
+    const normalized = source.trim();
+    if (!normalized) {
+      throw new Error("Package source is required.");
+    }
+    await context.packageManager.removeAndPersist(normalized);
+    context.settingsManager.reload();
+    await context.resourceLoader.reload();
+    return this.buildSnapshot(context);
+  }
+
+  /** Update one package source (or all when omitted), then refresh the snapshot. */
+  async updatePackages(workspace: WorkspaceRef, source?: string): Promise<RuntimeSnapshot> {
+    const context = await this.ensureContext(workspace);
+    const normalized = source?.trim();
+    await context.packageManager.update(normalized || undefined);
+    context.settingsManager.reload();
+    await context.resourceLoader.reload();
+    return this.buildSnapshot(context);
+  }
+
+  /**
+   * Read the project- and user-scoped APPEND_SYSTEM.md files for {@link workspace}.
+   * Paths mirror the pi runtime's discovery: `<cwd>/.pi/APPEND_SYSTEM.md`
+   * (project) and `<agentDir>/APPEND_SYSTEM.md` (user/global). The runtime
+   * prefers the project file when present, otherwise the global file.
+   */
+  async getAppendSystemPrompt(workspace: WorkspaceRef): Promise<RuntimeAppendSystemPrompt> {
+    const projectPath = join(workspace.path, ".pi", "APPEND_SYSTEM.md");
+    const globalPath = join(this.agentDir, "APPEND_SYSTEM.md");
+    const [project, global] = await Promise.all([
+      readAppendSystemPromptFile(projectPath),
+      readAppendSystemPromptFile(globalPath),
+    ]);
+    const activeScope: RuntimeAppendSystemPrompt["activeScope"] = project.exists
+      ? "project"
+      : global.exists
+        ? "global"
+        : "none";
+    return { project, global, activeScope };
+  }
+
+  /**
+   * Write the APPEND_SYSTEM.md file for the given scope. An empty/whitespace-only
+   * body removes the file so it stops contributing to the prompt and stops
+   * shadowing the other scope. Reloads the resource loader so the change is
+   * reflected without restarting the workspace.
+   */
+  async setAppendSystemPrompt(
+    workspace: WorkspaceRef,
+    scope: "project" | "global",
+    content: string,
+  ): Promise<RuntimeAppendSystemPrompt> {
+    const targetPath =
+      scope === "project"
+        ? join(workspace.path, ".pi", "APPEND_SYSTEM.md")
+        : join(this.agentDir, "APPEND_SYSTEM.md");
+    await writeAppendSystemPromptFile(targetPath, content);
+    const context = this.contexts.get(workspace.workspaceId);
+    if (context) {
+      await context.resourceLoader.reload();
+    }
+    return this.getAppendSystemPrompt(workspace);
   }
 
   private async ensureContext(workspace: WorkspaceRef): Promise<RuntimeContext> {
@@ -724,6 +831,26 @@ async function readJsonRecord(filePath: string): Promise<Record<string, unknown>
   }
 }
 
+async function readAppendSystemPromptFile(filePath: string): Promise<RuntimeAppendSystemPromptFile> {
+  try {
+    const content = await readFile(filePath, "utf8");
+    return { path: filePath, content, exists: true };
+  } catch {
+    return { path: filePath, content: "", exists: false };
+  }
+}
+
+async function writeAppendSystemPromptFile(filePath: string, content: string): Promise<void> {
+  if (content.trim().length === 0) {
+    // Empty body ⇒ remove the file so it neither contributes to the prompt nor
+    // shadows the other scope. Missing file is not an error.
+    await rm(filePath, { force: true });
+    return;
+  }
+  await mkdir(dirname(filePath), { recursive: true });
+  await writeFile(filePath, content, "utf8");
+}
+
 function replaceResourcePattern(patterns: readonly string[], resourcePattern: string, enabled: boolean): string[] {
   const next = patterns.filter((pattern) => stripPrefix(pattern) !== resourcePattern);
   next.push(`${enabled ? "+" : "-"}${resourcePattern}`);
@@ -890,6 +1017,36 @@ function toRuntimeSourceInfo(path: string, metadata: PathMetadata): RuntimeSourc
 
 function titleForResourceKind(kind: ToggleableResourceKind): string {
   return kind === "skill" ? "Skill" : "Extension";
+}
+
+/** Map the SDK's ConfiguredPackage to the GUI-owned RuntimePackageRecord. */
+function toRuntimePackageRecord(pkg: {
+  source: string;
+  scope: "user" | "project";
+  filtered: boolean;
+  installedPath?: string;
+}): RuntimePackageRecord {
+  return {
+    source: pkg.source,
+    scope: pkg.scope,
+    filtered: pkg.filtered,
+    ...(pkg.installedPath ? { installedPath: pkg.installedPath } : {}),
+  };
+}
+
+/** Map the SDK's PackageUpdate to the GUI-owned RuntimePackageUpdate. */
+function toRuntimePackageUpdate(update: {
+  source: string;
+  displayName: string;
+  type: "npm" | "git";
+  scope: "user" | "project";
+}): RuntimePackageUpdate {
+  return {
+    source: update.source,
+    displayName: update.displayName,
+    type: update.type,
+    scope: update.scope,
+  };
 }
 
 function toModelSettingsSnapshot(settings: Record<string, unknown>): ModelSettingsSnapshot {

@@ -1912,6 +1912,41 @@ export default function App() {
     void api.openExtensionInFinder(extensionsWorkspace.id, filePath);
   };
 
+  const handleListPackages = () =>
+    extensionsWorkspace ? api.listPackages(extensionsWorkspace.id) : Promise.resolve([] as const);
+
+  const handleCheckForPackageUpdates = () =>
+    extensionsWorkspace ? api.checkForPackageUpdates(extensionsWorkspace.id) : Promise.resolve([] as const);
+
+  const handleInstallPackage = (source: string) => {
+    if (!extensionsWorkspace) {
+      return Promise.resolve();
+    }
+    return updateSnapshot(api, setSnapshot, () => api.installPackage(extensionsWorkspace.id, source)).then(() => undefined);
+  };
+
+  const handleRemovePackage = (source: string) => {
+    if (!extensionsWorkspace) {
+      return Promise.resolve();
+    }
+    return updateSnapshot(api, setSnapshot, () => api.removePackage(extensionsWorkspace.id, source)).then(() => undefined);
+  };
+
+  const handleUpdatePackages = (source?: string) => {
+    if (!extensionsWorkspace) {
+      return Promise.resolve();
+    }
+    return updateSnapshot(api, setSnapshot, () => api.updatePackages(extensionsWorkspace.id, source)).then(() => undefined);
+  };
+
+  const handleGetAppendSystemPrompt = () =>
+    extensionsWorkspace ? api.getAppendSystemPrompt(extensionsWorkspace.id) : Promise.resolve(null);
+
+  const handleSetAppendSystemPrompt = (scope: "project" | "global", content: string) =>
+    extensionsWorkspace
+      ? api.setAppendSystemPrompt(extensionsWorkspace.id, scope, content)
+      : Promise.resolve(null);
+
   const handleTrySkill = (command: string) => {
     void updateSnapshot(api, setSnapshot, () => api.setActiveView("threads"));
     slashMenu.fillComposerFromSlash(command);
@@ -2393,6 +2428,13 @@ export default function App() {
             void updateSnapshot(api, setSnapshot, () => api.refreshRuntime(extensionsWorkspace.id));
           }}
           onToggleExtension={handleToggleExtension}
+          onListPackages={handleListPackages}
+          onCheckForPackageUpdates={handleCheckForPackageUpdates}
+          onInstallPackage={handleInstallPackage}
+          onRemovePackage={handleRemovePackage}
+          onUpdatePackages={handleUpdatePackages}
+          onGetAppendSystemPrompt={handleGetAppendSystemPrompt}
+          onSetAppendSystemPrompt={handleSetAppendSystemPrompt}
         />
       </SecondarySurface>
       </LocaleProvider>

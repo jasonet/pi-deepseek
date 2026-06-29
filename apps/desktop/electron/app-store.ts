@@ -7,6 +7,7 @@ import { join } from "node:path";
 import {
   applyHostUiRequestToExtensionUiState,
   type GenerateThreadTitleOptions,
+  environmentPreambleSection,
   isExtensionUiDialogRequest,
   JsonCatalogStore,
   PiSdkDriver,
@@ -31,8 +32,11 @@ import type {
 } from "@pi-gui/session-driver";
 import type {
   ModelSettingsSnapshot,
+  RuntimeAppendSystemPrompt,
   RuntimeCommandRecord,
   RuntimeLoginCallbacks,
+  RuntimePackageRecord,
+  RuntimePackageUpdate,
   RuntimeSettingsSnapshot,
   RuntimeSnapshot,
 } from "@pi-gui/session-driver/runtime-types";
@@ -168,6 +172,10 @@ export class DesktopAppStore implements AppStoreInternals {
     };
 
     this.driver = new PiSdkDriver(driverOptions);
+    // Contribute a compact environment preamble (workspace/cwd/date) to every
+    // session's system prompt. Registering here is the harness opt-in; the
+    // composer is otherwise inert (see SystemPromptComposer).
+    this.driver.systemPromptComposer.register(environmentPreambleSection());
     this.catalogStore = new JsonCatalogStore({ catalogFilePath });
     this.worktreeManager = new GitWorktreeManager({ catalogStorage: this.catalogStore });
     this.uiStateFilePath = join(options.userDataDir, "ui-state.json");
@@ -920,6 +928,71 @@ export class DesktopAppStore implements AppStoreInternals {
       this.driver.runtimeSupervisor.setExtensionEnabled(ws, filePath, enabled),
       { reloadSessions: true },
     );
+  }
+
+  /* ── Extension package self-upgrade ─────────────────────── */
+
+  async listPackages(workspaceId?: string): Promise<readonly RuntimePackageRecord[]> {
+    await this.initialize();
+    const ws = this.workspaceRefFromState(workspaceId || this.state.selectedWorkspaceId);
+    if (!ws) {
+      return [];
+    }
+    return this.driver.runtimeSupervisor.listPackages(ws);
+  }
+
+  async checkForPackageUpdates(workspaceId?: string): Promise<readonly RuntimePackageUpdate[]> {
+    await this.initialize();
+    const ws = this.workspaceRefFromState(workspaceId || this.state.selectedWorkspaceId);
+    if (!ws) {
+      return [];
+    }
+    return this.driver.runtimeSupervisor.checkForPackageUpdates(ws);
+  }
+
+  async installPackage(workspaceId: string, source: string): Promise<DesktopAppState> {
+    return this.withRuntimeUpdate(workspaceId, (ws) =>
+      this.driver.runtimeSupervisor.installPackage(ws, source),
+      { reloadSessions: true },
+    );
+  }
+
+  async removePackage(workspaceId: string, source: string): Promise<DesktopAppState> {
+    return this.withRuntimeUpdate(workspaceId, (ws) =>
+      this.driver.runtimeSupervisor.removePackage(ws, source),
+      { reloadSessions: true },
+    );
+  }
+
+  async updatePackages(workspaceId: string, source?: string): Promise<DesktopAppState> {
+    return this.withRuntimeUpdate(workspaceId, (ws) =>
+      this.driver.runtimeSupervisor.updatePackages(ws, source),
+      { reloadSessions: true },
+    );
+  }
+
+  /* ── APPEND_SYSTEM.md prompt files ──────────────────────── */
+
+  async getAppendSystemPrompt(workspaceId?: string): Promise<RuntimeAppendSystemPrompt | null> {
+    await this.initialize();
+    const ws = this.workspaceRefFromState(workspaceId || this.state.selectedWorkspaceId);
+    if (!ws) {
+      return null;
+    }
+    return this.driver.runtimeSupervisor.getAppendSystemPrompt(ws);
+  }
+
+  async setAppendSystemPrompt(
+    workspaceId: string,
+    scope: "project" | "global",
+    content: string,
+  ): Promise<RuntimeAppendSystemPrompt | null> {
+    await this.initialize();
+    const ws = this.workspaceRefFromState(workspaceId);
+    if (!ws) {
+      return null;
+    }
+    return this.driver.runtimeSupervisor.setAppendSystemPrompt(ws, scope, content);
   }
 
   private async withRuntimeUpdate(

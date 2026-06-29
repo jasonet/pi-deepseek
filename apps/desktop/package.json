@@ -1,7 +1,7 @@
 {
   "name": "@pi-gui/desktop",
   "private": true,
-  "version": "2.6.7",
+  "version": "2.6.8",
   "author": "Yiding by HKEZ",
   "license": "MIT",
   "description": "Deepseek GUI app for elegant pi coding agent",

@@ -1,4 +1,9 @@
-import type { RuntimeSettingsSnapshot } from "@pi-gui/session-driver/runtime-types";
+import type {
+  RuntimeAppendSystemPrompt,
+  RuntimePackageRecord,
+  RuntimePackageUpdate,
+  RuntimeSettingsSnapshot,
+} from "@pi-gui/session-driver/runtime-types";
 import type {
   NavigateSessionTreeOptions,
   NavigateSessionTreeResult,
@@ -75,6 +80,13 @@ export const desktopIpc = {
   setScopedModelPatterns: "pi-gui:set-scoped-model-patterns",
   setSkillEnabled: "pi-gui:set-skill-enabled",
   setExtensionEnabled: "pi-gui:set-extension-enabled",
+  listPackages: "pi-gui:list-packages",
+  checkForPackageUpdates: "pi-gui:check-for-package-updates",
+  installPackage: "pi-gui:install-package",
+  removePackage: "pi-gui:remove-package",
+  updatePackages: "pi-gui:update-packages",
+  getAppendSystemPrompt: "pi-gui:get-append-system-prompt",
+  setAppendSystemPrompt: "pi-gui:set-append-system-prompt",
   respondToHostUiRequest: "pi-gui:respond-to-host-ui-request",
   setNotificationPreferences: "pi-gui:set-notification-preferences",
   saveImChannel: "pi-gui:save-im-channel",
@@ -322,6 +334,17 @@ export interface PiDesktopApi {
   setScopedModelPatterns(workspaceId: string, patterns: readonly string[]): Promise<DesktopAppState>;
   setSkillEnabled(workspaceId: string, filePath: string, enabled: boolean): Promise<DesktopAppState>;
   setExtensionEnabled(workspaceId: string, filePath: string, enabled: boolean): Promise<DesktopAppState>;
+  listPackages(workspaceId?: string): Promise<readonly RuntimePackageRecord[]>;
+  checkForPackageUpdates(workspaceId?: string): Promise<readonly RuntimePackageUpdate[]>;
+  installPackage(workspaceId: string, source: string): Promise<DesktopAppState>;
+  removePackage(workspaceId: string, source: string): Promise<DesktopAppState>;
+  updatePackages(workspaceId: string, source?: string): Promise<DesktopAppState>;
+  getAppendSystemPrompt(workspaceId?: string): Promise<RuntimeAppendSystemPrompt | null>;
+  setAppendSystemPrompt(
+    workspaceId: string,
+    scope: "project" | "global",
+    content: string,
+  ): Promise<RuntimeAppendSystemPrompt | null>;
   respondToHostUiRequest(
     workspaceId: string,
     sessionId: string,

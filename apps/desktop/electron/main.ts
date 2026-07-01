@@ -64,8 +64,8 @@ let autoUpdater: any;
 try {
   const mod = require("electron-updater");
   autoUpdater = mod.autoUpdater;
-} catch {
-  // electron-updater not available in packaged build — auto-update disabled
+} catch (err: any) {
+  console.error("electron-updater not available — auto-update disabled:", err?.message ?? err);
   autoUpdater = null;
 }
 
@@ -868,12 +868,13 @@ async function runManualUpdateCheck(): Promise<void> {
 }
 
 function installApplicationMenu(): void {
-  if (process.platform !== "darwin") {
-    return;
-  }
+  const isMac = process.platform === "darwin";
 
-  const template: MenuItemConstructorOptions[] = [
-    {
+  const template: MenuItemConstructorOptions[] = [];
+
+  // ---- macOS app menu (name + About + Check for Updates + services + quit) ----
+  if (isMac) {
+    template.push({
       label: app.name,
       submenu: [
         { role: "about" },
@@ -894,28 +895,35 @@ function installApplicationMenu(): void {
         { type: "separator" },
         { role: "quit" },
       ],
-    },
-    {
-      label: "File",
-      submenu: [
-        {
-          id: OPEN_FOLDER_MENU_ITEM_ID,
-          label: "Open Folder…",
-          accelerator: "Command+O",
-          click: () => {
-            void pickWorkspaceViaDialog();
-          },
+    });
+  }
+
+  // ---- File menu (all platforms) ----
+  template.push({
+    label: "File",
+    submenu: [
+      {
+        id: OPEN_FOLDER_MENU_ITEM_ID,
+        label: "Open Folder…",
+        accelerator: isMac ? "Command+O" : "Ctrl+O",
+        click: () => {
+          void pickWorkspaceViaDialog();
         },
-        { type: "separator" },
-        { role: "close" },
-      ],
-    },
-    { role: "editMenu" },
-    { role: "viewMenu" },
-    {
-      // Custom Window submenu so Cmd+M is freed from the default Minimize
-      // accelerator and can drive the in-app Connect Phone shortcut instead.
-      // Minimize stays available as a (shortcut-less) menu item.
+      },
+      { type: "separator" },
+      { role: "close" },
+    ],
+  });
+
+  // ---- Edit menu (all platforms) ----
+  template.push({ role: "editMenu" });
+
+  // ---- View menu (all platforms) ----
+  template.push({ role: "viewMenu" });
+
+  // ---- macOS Window menu (customised so Cmd+M is free for Connect Phone) ----
+  if (isMac) {
+    template.push({
       role: "windowMenu",
       submenu: [
         {
@@ -928,8 +936,37 @@ function installApplicationMenu(): void {
         { type: "separator" },
         { role: "front" },
       ],
-    },
-  ];
+    });
+  }
+
+  // ---- Help menu (Windows / Linux — About + Check for Updates live here) ----
+  if (!isMac) {
+    template.push({
+      label: "Help",
+      submenu: [
+        {
+          label: "About Pi-Deepseek",
+          click: () => {
+            dialog.showMessageBox({
+              type: "info",
+              title: "About Pi-Deepseek",
+              message: `Pi-Deepseek v${app.getVersion()}`,
+              detail: "Codex-level engineering auto-interaction experience.\n\n© 2026 Yiding by HKEZ",
+              buttons: ["OK"],
+            });
+          },
+        },
+        { type: "separator" },
+        {
+          id: CHECK_FOR_UPDATES_MENU_ITEM_ID,
+          label: "Check for Updates…",
+          click: () => {
+            void runManualUpdateCheck();
+          },
+        },
+      ],
+    });
+  }
 
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }

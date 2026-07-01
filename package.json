@@ -1,7 +1,7 @@
 {
   "name": "pi-deepseek",
   "private": true,
-  "version": "2.6.8",
+  "version": "2.6.9",
   "license": "MIT",
   "packageManager": "pnpm@10.25.0",
   "scripts": {

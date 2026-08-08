@@ -47,8 +47,24 @@ export default defineConfig(({ command }) => {
       build: {
         outDir: "out/renderer",
         emptyOutDir: true,
+        target: "esnext",
+        cssMinify: true,
         rollupOptions: {
           input: path.resolve(projectRoot, "index.html"),
+          output: {
+            manualChunks: {
+              // React core + DOM (~130KB)
+              "vendor-react": ["react", "react-dom"],
+              // Markdown rendering (~230KB)
+              "vendor-markdown": ["react-markdown", "remark-gfm"],
+              // Syntax highlighting (~150KB)
+              "vendor-highlight": ["highlight.js"],
+              // xterm terminal (~280KB)
+              "vendor-xterm": ["@xterm/xterm", "@xterm/addon-fit", "@xterm/addon-clipboard", "@xterm/addon-web-links"],
+              // Shared workspace packages
+              "vendor-pi-sdk": ["@pi-gui/pi-sdk-driver", "@pi-gui/session-driver", "@pi-gui/catalogs"],
+            },
+          },
         },
       },
     },

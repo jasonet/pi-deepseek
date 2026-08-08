@@ -249,6 +249,7 @@ const translations: Record<Locale, Record<string, string>> = {
     "extensions.guiCompatible": "GUI-compatible",
     "extensions.terminalOnly": "Terminal-only",
     "extensions.unknown": "Unknown",
+    "extensions.disconnectMCP": "Disconnect",
     "extensions.packages": "Packages",
     "extensions.packagesHint": "Install, update, or remove npm / git / local packages for this workspace.",
     "extensions.checkUpdates": "Check for updates",

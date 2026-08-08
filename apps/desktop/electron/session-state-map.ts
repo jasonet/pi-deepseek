@@ -25,6 +25,15 @@ export interface QueuedComposerEditState {
   readonly restoreAttachments: readonly ComposerAttachment[];
 }
 
+/** Maximum number of sessions whose full transcripts are kept in memory.
+ * Beyond this limit, the oldest (least recently used) transcript is evicted
+ * and must be reloaded from disk on next access. */
+const TRANSCRIPT_CACHE_MAX_SIZE = 12;
+
+/** Maximum length of a single cached transcript. Prevents unbounded growth
+ * from runaway sessions generating thousands of messages. */
+const TRANSCRIPT_MAX_ITEMS = 500;
+
 /**
  * Consolidates all per-session Maps (and one Set) that DesktopAppStore
  * maintains for runtime session state.  Having them in a single class
@@ -33,6 +42,8 @@ export interface QueuedComposerEditState {
  */
 export class SessionStateMap {
   readonly transcriptCache = new Map<string, TranscriptMessage[]>();
+  /** LRU order for transcript cache eviction. Front = most recently used. */
+  private readonly transcriptCacheOrder: string[] = [];
   readonly composerDraftsBySession = new Map<string, string>();
   readonly composerAttachmentsBySession = new Map<string, ComposerAttachment[]>();
   readonly queuedComposerMessagesBySession = new Map<string, QueuedComposerMessage[]>();
@@ -63,6 +74,34 @@ export class SessionStateMap {
     }
   }
 
+  /** Record a transcript access for LRU tracking. Call whenever a transcript
+   * is read from or written to the cache. */
+  touchTranscriptCache(key: string): void {
+    const idx = this.transcriptCacheOrder.indexOf(key);
+    if (idx !== -1) {
+      this.transcriptCacheOrder.splice(idx, 1);
+    }
+    this.transcriptCacheOrder.unshift(key);
+    this.evictTranscriptCacheIfNeeded();
+  }
+
+  /** Evict oldest transcripts when the cache exceeds the limit. */
+  private evictTranscriptCacheIfNeeded(): void {
+    while (this.transcriptCacheOrder.length > TRANSCRIPT_CACHE_MAX_SIZE) {
+      const oldest = this.transcriptCacheOrder.pop();
+      if (oldest) {
+        this.transcriptCache.delete(oldest);
+        this.loadedTranscriptKeys.delete(oldest);
+      }
+    }
+  }
+
+  /** Trim a transcript to the maximum allowed items before caching. */
+  static trimTranscript(transcript: TranscriptMessage[]): TranscriptMessage[] {
+    if (transcript.length <= TRANSCRIPT_MAX_ITEMS) return transcript;
+    return transcript.slice(-TRANSCRIPT_MAX_ITEMS);
+  }
+
   /** Remove all state for a single session key. */
   deleteSession(key: string): void {
     const pendingAutoTitle = this.pendingAutoTitleBySession.get(key);
@@ -84,6 +123,8 @@ export class SessionStateMap {
     pendingAutoTitle?.cancel();
     this.loadedTranscriptKeys.delete(key);
     this.transcriptCache.delete(key);
+    const orderIdx = this.transcriptCacheOrder.indexOf(key);
+    if (orderIdx !== -1) this.transcriptCacheOrder.splice(orderIdx, 1);
   }
 }
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ClipboardEvent, type Dispatch, type DragEvent, type KeyboardEvent, type SetStateAction } from "react";
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ClipboardEvent, type Dispatch, type DragEvent, type KeyboardEvent, type SetStateAction } from "react";
 import type { SessionTreeSnapshot } from "@pi-gui/session-driver/types";
 import type { RuntimeSnapshot } from "@pi-gui/session-driver/runtime-types";
 import {
@@ -18,7 +18,6 @@ import {
 } from "./desktop-state";
 import { formatRelativeTime } from "./string-utils";
 import { ComposerPanel } from "./composer-panel";
-import { DiffPanel, type DiffPanelFileRequest } from "./diff-panel";
 import { buildModelOptions } from "./composer-commands";
 import { parseTreeComposerCommand } from "./composer-commands";
 import {
@@ -29,25 +28,18 @@ import {
   type PiDesktopCommand,
 } from "./ipc";
 import { deriveModelOnboardingState } from "./model-onboarding";
-import { SkillsView } from "./skills-view";
-import { ExtensionsView } from "./extensions-view";
-import { SettingsView, type SettingsSection } from "./settings-view";
-import { SecondarySurface } from "./secondary-surface";
 import { NewThreadView } from "./new-thread-view";
 import { buildThreadGroups } from "./thread-groups";
 import { Sidebar } from "./sidebar";
 import { SidebarToggleButton } from "./sidebar-toggle-button";
 import { Topbar } from "./topbar";
 import { LocaleProvider, useT } from "./i18n";
-import { TerminalPanel } from "./terminal-panel";
-import { ConnectPhoneView } from "./connect-phone-view";
 import { ConversationTimeline, VIRTUALIZATION_THRESHOLD } from "./conversation-timeline";
 import { useSlashMenu } from "./hooks/use-slash-menu";
 import { useMentionMenu } from "./hooks/use-mention-menu";
 import { useThreadSearch } from "./hooks/use-thread-search";
 import { useWorkspaceMenu } from "./hooks/use-workspace-menu";
 import { buildExtensionDockModel, ExtensionDialog, hasExtensionDockContent } from "./extension-session-ui";
-import { TreeModal } from "./tree-modal";
 import { getEffectiveModelRuntime } from "./model-settings";
 import { resolveRepoWorkspaceId } from "./workspace-roots";
 import {
@@ -55,6 +47,23 @@ import {
   extractFilesFromDataTransfer,
   readComposerAttachmentsFromFiles,
 } from "./composer-attachments";
+
+// Lazy-loaded heavy views — only loaded when the user navigates to them.
+// Keeps the initial thread-view bundle lean (~1/3 of the original size).
+const SettingsView = lazy(() => import("./settings-view").then((m) => ({ default: m.SettingsView })));
+const SkillsView = lazy(() => import("./skills-view").then((m) => ({ default: m.SkillsView })));
+const ExtensionsView = lazy(() => import("./extensions-view").then((m) => ({ default: m.ExtensionsView })));
+const ConnectPhoneView = lazy(() => import("./connect-phone-view").then((m) => ({ default: m.ConnectPhoneView })));
+const DiffPanel = lazy(() => import("./diff-panel").then((m) => ({ default: m.DiffPanel })));
+const TerminalPanel = lazy(() => import("./terminal-panel").then((m) => ({ default: m.TerminalPanel })));
+const TreeModal = lazy(() => import("./tree-modal").then((m) => ({ default: m.TreeModal })));
+import { SecondarySurface } from "./secondary-surface";
+import type { SettingsSection } from "./settings-view";
+import type { DiffPanelFileRequest } from "./diff-panel";
+
+function ViewFallback() {
+  return <div className="pi-loading-placeholder" />;
+}
 
 function useDesktopAppState() {
   const [snapshot, setSnapshot] = useState<DesktopAppState | null>(null);
@@ -1535,7 +1544,7 @@ export default function App() {
     showTerminalTakeover ? "main--terminal-takeover" : "",
   ].filter(Boolean).join(" ");
   const terminalPanel = terminalVisibleInCurrentView && selectedWorkspace ? (
-    <TerminalPanel
+    <Suspense fallback={<ViewFallback />}><TerminalPanel
       workspace={selectedWorkspace}
       sessionId={selectedSession?.id ?? ""}
       height={terminalHeight}
@@ -1552,7 +1561,7 @@ export default function App() {
         setTakeoverTerminalSessionKey((current) => (current === selectedSessionKey ? "" : current));
         focusComposer();
       }}
-    />
+    /></Suspense>
   ) : null;
 
   const setActiveView = (view: AppView) => {
@@ -2294,7 +2303,7 @@ export default function App() {
             </label>
           </div>
         ) : null}
-        <SettingsView
+        <Suspense fallback={<ViewFallback />}><SettingsView
           workspace={settingsWorkspace}
           runtime={settingsSection === "models" ? settingsModelRuntime : settingsRuntime}
           section={settingsSection}
@@ -2333,7 +2342,7 @@ export default function App() {
           onSetLocale={(value) => {
             void updateSnapshot(api, setSnapshot, () => api.setLocale(value));
           }}
-        />
+        /></Suspense>
       </SecondarySurface>
       </LocaleProvider>
     );
@@ -2358,7 +2367,7 @@ export default function App() {
             </select>
           </label>
         </div>
-        <SkillsView
+        <Suspense fallback={<ViewFallback />}><SkillsView
           workspace={skillsWorkspace}
           runtime={skillsRuntime}
           onOpenSkillFolder={handleOpenSkillFolder}
@@ -2376,7 +2385,7 @@ export default function App() {
                 : "Create a new skill for this workspace and explain which files you will add.",
             )
           }
-        />
+        /></Suspense>
       </SecondarySurface>
       </LocaleProvider>
     );
@@ -2386,12 +2395,12 @@ export default function App() {
     return (
       <LocaleProvider locale={snapshot.locale}>
       <SecondarySurface onBack={() => setActiveView("threads")} testId="connect-phone-surface" title="连接手机">
-        <ConnectPhoneView
+        <Suspense fallback={<ViewFallback />}><ConnectPhoneView
           channels={snapshot.imChannels}
           onSaveChannel={handleSaveImChannel}
           onRemoveChannel={handleRemoveImChannel}
           onConnected={handleImConnected}
-        />
+        /></Suspense>
       </SecondarySurface>
       </LocaleProvider>
     );
@@ -2416,7 +2425,7 @@ export default function App() {
             </select>
           </label>
         </div>
-        <ExtensionsView
+        <Suspense fallback={<ViewFallback />}><ExtensionsView
           workspace={extensionsWorkspace}
           runtime={extensionsRuntime}
           commandCompatibility={extensionsCommandCompatibility}
@@ -2435,7 +2444,7 @@ export default function App() {
           onUpdatePackages={handleUpdatePackages}
           onGetAppendSystemPrompt={handleGetAppendSystemPrompt}
           onSetAppendSystemPrompt={handleSetAppendSystemPrompt}
-        />
+        /></Suspense>
       </SecondarySurface>
       </LocaleProvider>
     );
@@ -2824,14 +2833,14 @@ export default function App() {
               <ExtensionDialog dialog={activeExtensionDialog} onRespond={handleRespondToExtensionDialog} />
             ) : null}
             {treeModalState.open ? (
-              <TreeModal
+              <Suspense fallback={<ViewFallback />}><TreeModal
                 error={treeModalState.error}
                 loading={treeModalState.loading}
                 submitting={treeModalState.submitting}
                 tree={treeModalState.tree}
                 onClose={closeTreeModal}
                 onNavigate={navigateTreeSelection}
-              />
+              /></Suspense>
             ) : null}
           </>
         ) : selectedWorkspace ? (
@@ -2865,13 +2874,13 @@ export default function App() {
           </>
         )}
         {diffVisibleInCurrentView && selectedWorkspace && selectedSession ? (
-          <DiffPanel
+          <Suspense fallback={<ViewFallback />}><DiffPanel
             workspaceId={selectedWorkspace.id}
             sessionId={selectedSession.id}
             api={api}
             sessionStatus={selectedSession.status}
             fileRequest={diffFileRequest}
-          />
+          /></Suspense>
         ) : null}
       </main>
     </div>

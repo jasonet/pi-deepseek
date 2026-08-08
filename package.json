@@ -37,5 +37,18 @@
   ],
   "dependencies": {
     "app-builder-bin": "^4.2.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@google/genai",
+      "electron-winstaller",
+      "esbuild",
+      "koffi",
+      "node-pty",
+      "openclaw",
+      "protobufjs",
+      "sharp",
+      "tree-sitter-bash"
+    ]
   }
 }

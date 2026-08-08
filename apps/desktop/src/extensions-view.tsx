@@ -139,6 +139,11 @@ export function ExtensionsView({
                   <button className="button button--secondary" type="button" onClick={() => onToggleExtension(selectedExtension.path, !selectedExtension.enabled)}>
                     {selectedExtension.enabled ? t("skills.disable") : t("skills.enable")}
                   </button>
+                  {isMCPExtension(selectedExtension) ? (
+                    <button className="button button--secondary" style={{ color: "#f85149", borderColor: "#f85149" }} type="button" onClick={() => onToggleExtension(selectedExtension.path, false)}>
+                      🔌 {t("extensions.disconnectMCP")}
+                    </button>
+                  ) : null}
                 </div>
                 {selectedExtension.displayName === "Open Design" ? <OpenDesignStatusBadge /> : null}
                 <ExtensionContributionSection title={t("extensions.commands")} items={selectedExtension.commands} emptyLabel={t("extensions.noCommands")} />
@@ -443,4 +448,8 @@ function ExtensionCompatibilitySection({ commands, compatibilityRecords, t }: {
 
 function ExtensionsEmptyState({ message }: { readonly message: string }) {
   return <div className="empty-state"><h2>No extensions found</h2><p>{message}</p></div>;
+}
+
+function isMCPExtension(ext: RuntimeExtensionRecord): boolean {
+  return ext.displayName?.includes("MCP") || ext.sourceInfo?.source?.includes("mcp");
 }

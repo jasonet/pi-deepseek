@@ -1,3 +1,4 @@
+import { memo } from "react";
 import type { SessionTranscriptMessage } from "@pi-gui/pi-sdk-driver";
 import type { TimelineActivity, TimelineToolCall, TimelineSummary, TranscriptMessage } from "./timeline-types";
 import { MessageMarkdown } from "./message-markdown";
@@ -5,7 +6,7 @@ import { InlineDiff, extractDiffFromOutput } from "./diff-inline";
 import { ChevronRightIcon, CopyIcon, DiffIcon, FileIcon } from "./icons";
 import { extensionToLanguage } from "./syntax-highlight";
 
-export function TimelineItem({
+export const TimelineItem = memo(function TimelineItem({
   item,
   expandedToolCallIds,
   onToggleToolCall,
@@ -35,7 +36,7 @@ export function TimelineItem({
     default:
       return null;
   }
-}
+});
 
 function TimelineMessage({ item }: { readonly item: SessionTranscriptMessage }) {
   if (item.role === "user") {

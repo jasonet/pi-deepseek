@@ -102,6 +102,23 @@ let stopPruningTerminals: (() => void) | undefined;
 let retainedTerminalWorkspacePathSignature = "";
 const terminalFocusedWebContentsIds = new Set<number>();
 let quittingAfterStoreFlush = false;
+let periodicGcTimer: ReturnType<typeof setInterval> | undefined;
+
+function startPeriodicGcHint(): void {
+  // Suggest V8 run garbage collection every 5 minutes if --expose-gc is set.
+  // No-op in production builds; only helps dev and long-running CI sessions.
+  if (typeof global.gc !== "function") return;
+  periodicGcTimer = setInterval(() => {
+    try { global.gc(); } catch { /* ignore */ }
+  }, 5 * 60 * 1000);
+}
+
+function stopPeriodicGcHint(): void {
+  if (periodicGcTimer) {
+    clearInterval(periodicGcTimer);
+    periodicGcTimer = undefined;
+  }
+}
 
 const SUPPORTED_IMAGE_TYPES = SUPPORTED_COMPOSER_IMAGE_TYPES;
 const SUPPORTED_IMAGE_MIME_TYPES = new Set<string>(SUPPORTED_IMAGE_TYPES.map((type) => type.mimeType));
@@ -1057,6 +1074,7 @@ app.whenReady().then(async () => {
   });
   installApplicationMenu();
   startAutoUpdateChecker();
+  startPeriodicGcHint();
 
   // Start IM webhook server for WeChat/Feishu message reception
   imWebhookServer = createImWebhookServer(store);
@@ -1567,6 +1585,7 @@ app.on("window-all-closed", () => {
     stopPruningTerminals = undefined;
     terminalService?.dispose();
     terminalService = undefined;
+    stopPeriodicGcHint();
     stopWeixinBridgeRuntime();
     app.quit();
   }
@@ -1584,6 +1603,7 @@ app.on("before-quit", (event) => {
   stopPruningTerminals = undefined;
   terminalService?.dispose();
   terminalService = undefined;
+  stopPeriodicGcHint();
   stopWeixinBridgeRuntime();
   if (quittingAfterStoreFlush || !store) {
     return;

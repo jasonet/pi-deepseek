@@ -2131,11 +2131,14 @@ export class DesktopAppStore implements AppStoreInternals {
   }
 
   emit(): DesktopAppState {
-    const snapshot = structuredClone(this.state);
+    // No structuredClone here — Electron IPC serialization (via
+    // contextBridge + ipcRenderer) already creates a fresh copy when
+    // the state crosses the process boundary.  Cloning in-process only
+    // doubles the memory cost for no benefit.
     for (const listener of this.listeners) {
-      listener(snapshot);
+      listener(this.state);
     }
-    return snapshot;
+    return this.state;
   }
 
   publishSelectedTranscript(): void {

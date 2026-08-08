@@ -161,6 +161,11 @@ export class DesktopAppStore implements AppStoreInternals {
   private initPromise: Promise<void> | undefined;
   private selectionEpoch = 0;
   private refreshStateDepth = 0;
+  /** Cached session catalog from the last full refresh. Reused when
+   * skipSessionListRefresh is set, avoiding O(sessions) rebuilds for
+   * lightweight state changes (settings, theme, etc.). */
+  private cachedSessionsSnapshot: SessionCatalogEntry[] | undefined;
+  private cachedWorkspacesSnapshot: WorkspaceCatalogEntry[] | undefined;
 
   constructor(options: DesktopAppStoreOptions) {
     const catalogFilePath = join(options.userDataDir, "catalogs.json");
@@ -735,7 +740,7 @@ export class DesktopAppStore implements AppStoreInternals {
       revision: this.state.revision + 1,
     };
     await this.persistUiState();
-    return this.refreshState({ clearLastError: true });
+    return this.refreshState({ clearLastError: true, skipSessionListRefresh: true });
   }
 
   /* ── Runtime / model / provider settings ───────────────── */
@@ -780,7 +785,7 @@ export class DesktopAppStore implements AppStoreInternals {
         defaultProvider: provider,
         defaultModel: modelId,
       }));
-      return this.refreshState({ clearLastError: true });
+      return this.refreshState({ clearLastError: true, skipSessionListRefresh: true });
     });
   }
 
@@ -804,7 +809,7 @@ export class DesktopAppStore implements AppStoreInternals {
         ...settings,
         ...(thinkingLevel ? { defaultThinkingLevel: thinkingLevel } : {}),
       }));
-      return this.refreshState({ clearLastError: true });
+      return this.refreshState({ clearLastError: true, skipSessionListRefresh: true });
     });
   }
 
@@ -868,7 +873,7 @@ export class DesktopAppStore implements AppStoreInternals {
         ...settings,
         enabledModels: patterns.length > 0 ? [...patterns] : undefined,
       }));
-      return this.refreshState({ clearLastError: true });
+      return this.refreshState({ clearLastError: true, skipSessionListRefresh: true });
     });
   }
 
@@ -1016,7 +1021,13 @@ export class DesktopAppStore implements AppStoreInternals {
         await this.reloadSessionsForWorkspace(workspaceId);
       }
       await this.refreshSessionCommandsForWorkspace(workspaceId);
-      return this.refreshState({ clearLastError: true });
+      // When sessions weren't reloaded, the session catalog is unchanged.
+      // Reuse the cached snapshot to avoid O(N) SessionRecord rebuilds for
+      // lightweight runtime changes (model selection, thinking level, etc.).
+      return this.refreshState({
+        clearLastError: true,
+        skipSessionListRefresh: !options?.reloadSessions,
+      });
     });
   }
 
@@ -1139,10 +1150,26 @@ export class DesktopAppStore implements AppStoreInternals {
     this.refreshStateDepth += 1;
     try {
       const previousSelectedKey = this.currentSelectedSessionKey();
-      const [workspacesSnapshot, sessionsSnapshot] = await Promise.all([
-        this.driver.listWorkspaces(),
-        this.driver.listSessions(),
-      ]);
+
+      // For lightweight state changes (settings toggles, theme, model selection,
+      // etc.) reuse the last catalog snapshot instead of hitting disk/rebuilding
+      // thousands of SessionRecord objects on every keystroke.
+      const skipList = options.skipSessionListRefresh && this.cachedSessionsSnapshot && this.cachedWorkspacesSnapshot;
+      const [workspacesSnapshot, sessionsSnapshot] = skipList
+        ? [
+            { workspaces: this.cachedWorkspacesSnapshot! },
+            { sessions: this.cachedSessionsSnapshot! },
+          ]
+        : await Promise.all([
+            this.driver.listWorkspaces(),
+            this.driver.listSessions(),
+          ]);
+
+      if (!skipList) {
+        this.cachedWorkspacesSnapshot = workspacesSnapshot.workspaces;
+        this.cachedSessionsSnapshot = sessionsSnapshot.sessions;
+      }
+
       const worktreeEntries = options.refreshWorktrees
         ? await worktree.syncAndListWorktrees(this, workspacesSnapshot.workspaces)
         : (await this.catalogStore.worktrees.listWorktrees()).worktrees;
@@ -1448,7 +1475,7 @@ export class DesktopAppStore implements AppStoreInternals {
 
     return this.withErrorHandling(async () => {
       await this.driver.respondToHostUiRequest(sessionRef, response);
-      return this.refreshState({ clearLastError: true });
+      return this.refreshState({ clearLastError: true, skipSessionListRefresh: true });
     });
   }
 

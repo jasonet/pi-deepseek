@@ -34,6 +34,12 @@ const TRANSCRIPT_CACHE_MAX_SIZE = 12;
  * from runaway sessions generating thousands of messages. */
 const TRANSCRIPT_MAX_ITEMS = 500;
 
+/** Maximum number of sessions for which we retain per-session Maps
+ * (commands, configs, drafts, extension UI, etc.). Beyond this limit,
+ * the oldest idle/completed session's data is evicted. Running sessions
+ * are never evicted. */
+const SESSION_DATA_MAX_SIZE = 64;
+
 /**
  * Consolidates all per-session Maps (and one Set) that DesktopAppStore
  * maintains for runtime session state.  Having them in a single class
@@ -64,12 +70,47 @@ export class SessionStateMap {
   /**
    * Remove entries for session keys that are no longer active.
    * Calls the unsubscribe callback for any stale subscription before deleting it.
+   * Also evicts idle/completed session data when the total count exceeds
+   * SESSION_DATA_MAX_SIZE, preventing unbounded growth during long-running
+   * multi-workspace sessions.
    */
   prune(activeKeys: Set<string>): void {
+    // 1. Unsubscribe and clean any session whose subscription key is stale.
     for (const [key, unsubscribe] of this.sessionSubscriptions) {
       if (!activeKeys.has(key)) {
         unsubscribe();
         this.deleteSession(key);
+      }
+    }
+
+    // 2. Collect all session keys that still have data in any Map.
+    const staleKeys = new Set<string>();
+    for (const map of [
+      this.composerDraftsBySession,
+      this.composerAttachmentsBySession,
+      this.sessionConfigBySession,
+      this.sessionCommandsBySession,
+      this.extensionUiBySession,
+      this.lastViewedAtBySession,
+    ]) {
+      for (const key of map.keys()) {
+        if (!activeKeys.has(key)) {
+          staleKeys.add(key);
+        }
+      }
+    }
+
+    // 3. If we're over the limit, evict the oldest idle/completed sessions.
+    // Running sessions (those with subscriptions) are never evicted.
+    if (staleKeys.size > SESSION_DATA_MAX_SIZE) {
+      const excess = staleKeys.size - SESSION_DATA_MAX_SIZE;
+      // Evict in FIFO order — oldest stale entries first.
+      let evicted = 0;
+      for (const key of staleKeys) {
+        if (evicted >= excess) break;
+        if (this.sessionSubscriptions.has(key)) continue; // skip running
+        this.deleteSession(key);
+        evicted += 1;
       }
     }
   }

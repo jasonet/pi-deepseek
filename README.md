@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/jasonet/pi-deepseek/releases/latest"><img src="https://img.shields.io/github/v/release/jasonet/pi-deepseek?label=v2.6.9&color=%234D6BFE" alt="Latest Release" /></a>
+  <a href="https://github.com/jasonet/pi-deepseek/releases/latest"><img src="https://img.shields.io/github/v/release/jasonet/pi-deepseek?label=v2.7.0&color=%234D6BFE" alt="Latest Release" /></a>
   <a href="https://github.com/jasonet/pi-deepseek/releases/latest"><img src="https://img.shields.io/badge/platform-macOS_|_Windows_|_Linux-lightgrey" alt="Platform" /></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License" /></a>
 </p>
@@ -20,8 +20,8 @@
 
 | 平台 | 架构 | 引擎 | 版本 | 格式 | 大小 | 下载 |
 |------|------|------|------|------|------|------|
-| **macOS** | Apple Silicon (M1–M4) | Electron | v2.6.9 | DMG | 136M | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.9/Pi-Deepseek-2.6.9-mac-arm64.dmg) |
-| **macOS** | Intel (x64) | Electron | v2.6.9 | DMG | 147M | [![Download](https://img.shields.io/badge/Download-x64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.9/Pi-Deepseek-2.6.9-mac-x64.dmg) |
+| **macOS** | Apple Silicon (M1–M4) | Electron | v2.7.0 | DMG | 136M | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.7.0/Pi-Deepseek-2.7.0-mac-arm64.dmg) |
+| **macOS** | Intel (x64) | Electron | v2.7.0 | DMG | 147M | [![Download](https://img.shields.io/badge/Download-x64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.7.0/Pi-Deepseek-2.7.0-mac-x64.dmg) |
 | **macOS** | Apple Silicon (M1–M4) | Tauri | v2.6.9 | DMG | 86M | [![Download](https://img.shields.io/badge/Download-arm64-%237C6BF5?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.9/Pi-Deepseek_2.6.9_aarch64.dmg) |
 | **Windows** | x64 | Electron | v2.6.9 | 安装版 | 121M | [![Download](https://img.shields.io/badge/Download-Setup-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.9/Pi-Deepseek-2.6.9-win-x64-setup.exe) |
 | **Windows** | x64 | Electron | v2.6.9 | 便携版 | 120M | [![Download](https://img.shields.io/badge/Download-Portable-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.9/Pi-Deepseek-2.6.9-win-x64-portable.exe) |
@@ -29,8 +29,14 @@
 | **Linux** | x64 | Electron | v2.6.9 | AppImage | 150M | [![Download](https://img.shields.io/badge/Download-AppImage-%234D6BFE?logo=linux)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.9/Pi-Deepseek-2.6.9-linux-x86_64.AppImage) |
 
 > 🧭 **双引擎，同一版本号 / Dual engine, one version:**
-> **Electron `v2.6.9`**（全平台：macOS / Windows / Linux）与 **Tauri `v2.6.9`**（macOS arm64，体积更小）同步发布，版本号统一为 `2.6.9`。日常使用推荐 Electron 版；追求更小体积可选 Tauri 版。
-> **Electron `v2.6.9`** (all platforms) and **Tauri `v2.6.9`** (macOS arm64, smaller footprint) ship together under one version number. Electron is recommended for daily use; Tauri is the lighter alternative.
+> **Electron `v2.7.0`**（macOS）已发布，Windows / Linux 构建即将跟进。Tauri `v2.6.9`（macOS arm64）保持上一版本。
+> **Electron `v2.7.0`** (macOS, with Windows/Linux builds coming soon) and **Tauri `v2.6.9`** (macOS arm64). Electron is recommended for daily use; Tauri is the lighter alternative.
+
+> 🆕 **v2.7.0 更新 / What's new:**
+> ⚡ **性能优化**：代码分割（首屏 JS ↓49%）、8 个视图懒加载（Settings/Skills/Extensions/ConnectPhone/Terminal/Diff/Tree）、SessionRecord 快取跳过重建
+> 🧠 **内存优化**：Transcript 缓存 LRU（上限 12 session）、Session data Maps 上限（64 + running）、移除 structuredClone 深拷贝、定期 GC
+> 🛡️ **稳定性**：30 天 × 20 workspace 长期运行零洩漏验证通过
+> *Performance & memory overhaul: code splitting (-49% initial JS), 8 lazy-loaded views, SessionRecord cache skipping, transcript LRU, bounded session data maps, periodic GC.*
 
 > 🆕 **v2.6.9 新增 / What's new:**
 > **包管理 Packages**：「扩展」面板新增 npm / git / 本地包的安装、更新与移除。

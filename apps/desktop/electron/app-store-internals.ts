@@ -89,4 +89,9 @@ export interface RefreshStateOptions {
   readonly activeView?: AppView;
   readonly markSelectedSessionViewed?: boolean;
   readonly hydrateSelectedSession?: boolean;
+  /** Skip session-list rebuild (listSessions + buildWorkspaceRecords).
+   * Use for lightweight state changes that don't affect the session catalog
+   * (settings toggles, model selection, theme, transparency, locale, etc.).
+   * The cached workspace/session snapshot is reused instead. */
+  readonly skipSessionListRefresh?: boolean;
 }

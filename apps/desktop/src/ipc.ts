@@ -1,7 +1,11 @@
 import type {
+  ProbeRuntimeCustomModelProviderInput,
+  ProbeRuntimeCustomModelProviderResult,
   RuntimeAppendSystemPrompt,
+  RuntimeCustomModelProviderRecord,
   RuntimePackageRecord,
   RuntimePackageUpdate,
+  SaveRuntimeCustomModelProviderInput,
   RuntimeSettingsSnapshot,
 } from "@pi-gui/session-driver/runtime-types";
 import type {
@@ -76,6 +80,10 @@ export const desktopIpc = {
   loginProvider: "pi-gui:login-provider",
   logoutProvider: "pi-gui:logout-provider",
   setProviderApiKey: "pi-gui:set-provider-api-key",
+  listCustomModelProviders: "pi-gui:list-custom-model-providers",
+  probeCustomModelProvider: "pi-gui:probe-custom-model-provider",
+  saveCustomModelProvider: "pi-gui:save-custom-model-provider",
+  removeCustomModelProvider: "pi-gui:remove-custom-model-provider",
   setEnableSkillCommands: "pi-gui:set-enable-skill-commands",
   setScopedModelPatterns: "pi-gui:set-scoped-model-patterns",
   setSkillEnabled: "pi-gui:set-skill-enabled",
@@ -330,6 +338,15 @@ export interface PiDesktopApi {
   loginProvider(workspaceId: string, providerId: string): Promise<DesktopAppState>;
   logoutProvider(workspaceId: string, providerId: string): Promise<DesktopAppState>;
   setProviderApiKey(workspaceId: string, providerId: string, apiKey: string): Promise<DesktopAppState>;
+  listCustomModelProviders(): Promise<readonly RuntimeCustomModelProviderRecord[]>;
+  probeCustomModelProvider(
+    input: ProbeRuntimeCustomModelProviderInput,
+  ): Promise<ProbeRuntimeCustomModelProviderResult>;
+  saveCustomModelProvider(
+    workspaceId: string,
+    input: SaveRuntimeCustomModelProviderInput,
+  ): Promise<DesktopAppState>;
+  removeCustomModelProvider(workspaceId: string, providerId: string): Promise<DesktopAppState>;
   setEnableSkillCommands(workspaceId: string, enabled: boolean): Promise<DesktopAppState>;
   setScopedModelPatterns(workspaceId: string, patterns: readonly string[]): Promise<DesktopAppState>;
   setSkillEnabled(workspaceId: string, filePath: string, enabled: boolean): Promise<DesktopAppState>;

@@ -22,6 +22,7 @@ import path, { delimiter as PATH_DELIMITER } from "node:path";
 import { createInterface } from "node:readline";
 
 import { DesktopAppStore } from "../../desktop/electron/app-store";
+import { probeCustomModelProvider } from "../../desktop/electron/custom-model-provider-probe";
 import { desktopIpc } from "../../desktop/src/ipc";
 import type {
   ComposerAttachment,
@@ -461,6 +462,12 @@ const handlers: Record<string, Handler> = {
     store.logoutProvider(workspaceId, providerId),
   [desktopIpc.setProviderApiKey]: (workspaceId: string, providerId: string, apiKey: string) =>
     store.setProviderApiKey(workspaceId, providerId, apiKey),
+  [desktopIpc.listCustomModelProviders]: () => store.listCustomModelProviders(),
+  [desktopIpc.probeCustomModelProvider]: (input: any) => probeCustomModelProvider(input, fetch),
+  [desktopIpc.saveCustomModelProvider]: (workspaceId: string, input: any) =>
+    store.saveCustomModelProvider(workspaceId, input),
+  [desktopIpc.removeCustomModelProvider]: (workspaceId: string, providerId: string) =>
+    store.removeCustomModelProvider(workspaceId, providerId),
   [desktopIpc.setEnableSkillCommands]: (workspaceId: string, enabled: boolean) =>
     store.setEnableSkillCommands(workspaceId, enabled),
   [desktopIpc.setScopedModelPatterns]: (workspaceId: string, patterns: readonly string[]) =>

@@ -1,5 +1,6 @@
 import { join } from "node:path";
-import { writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
+import { createServer } from "node:http";
 import { expect, test } from "@playwright/test";
 import {
   desktopShortcut,
@@ -66,6 +67,91 @@ test("settings lets the user save an API key for a built-in provider", async () 
     await expect(enabledModels).toContainText("openai/gpt-4o");
   } finally {
     await harness.close();
+  }
+});
+
+test("settings discovers and saves an OpenAI-compatible custom provider", async () => {
+  test.setTimeout(60_000);
+  const modelId = "local-coder.gguf";
+  const server = createServer((request, response) => {
+    if (request.url === "/v1/models") {
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(JSON.stringify({
+        object: "list",
+        data: [{
+          id: modelId,
+          object: "model",
+          owned_by: "local",
+          meta: { n_ctx: 81_920 },
+        }],
+        models: [{
+          name: modelId,
+          model: modelId,
+          capabilities: ["completion", "multimodal"],
+        }],
+      }));
+      return;
+    }
+    response.writeHead(404).end();
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  if (!address || typeof address === "string") throw new Error("Custom provider test server did not bind.");
+
+  const userDataDir = await makeUserDataDir();
+  const agentDir = join(userDataDir, "agent");
+  const workspacePath = await makeWorkspace("custom-provider-settings-workspace");
+  await seedAgentDir(agentDir, {
+    withOpenAiAuth: false,
+    withDefaultModel: false,
+    enabledModels: ["openai/gpt-4o"],
+  });
+
+  const harness = await launchDesktop(userDataDir, {
+    agentDir,
+    initialWorkspaces: [workspacePath],
+    scrubProviderEnv: true,
+    testMode: "background",
+  });
+
+  try {
+    const window = await harness.firstWindow();
+    await window.keyboard.press(desktopShortcut(","));
+    await window.getByRole("button", { name: "Providers", exact: true }).click();
+    await window.getByRole("button", { name: "Add provider", exact: true }).click();
+
+    const dialog = window.getByTestId("custom-provider-dialog");
+    await expect(dialog).toBeVisible();
+    await dialog.getByLabel("Provider name").fill("Lab llama.cpp");
+    await dialog.getByLabel("Base URL").fill(`http://127.0.0.1:${address.port}/v1`);
+    await dialog.getByRole("button", { name: "Test connection" }).click();
+    await expect(dialog).toContainText("Connected. Found 1 model.");
+    await expect(dialog).toContainText(modelId);
+    await expect(dialog.getByLabel("Images")).toBeChecked();
+    await dialog.getByLabel("Reasoning").check();
+    await dialog.getByRole("button", { name: "Save", exact: true }).click();
+
+    const providerRow = window.getByTestId("custom-provider-custom-lab-llama-cpp");
+    await expect(providerRow).toContainText("Lab llama.cpp");
+    await expect(providerRow).toContainText(`http://127.0.0.1:${address.port}/v1`);
+
+    const modelsConfig = JSON.parse(await readFile(join(agentDir, "models.json"), "utf8"));
+    const customProvider = modelsConfig.providers["custom-lab-llama-cpp"];
+    expect(customProvider.api).toBe("openai-completions");
+    expect(customProvider.models[0]).toMatchObject({
+      id: modelId,
+      reasoning: true,
+      input: ["text", "image"],
+      contextWindow: 81_920,
+    });
+    const authConfig = JSON.parse(await readFile(join(agentDir, "auth.json"), "utf8"));
+    expect(authConfig["custom-lab-llama-cpp"]).toEqual({ type: "api_key", key: "pi-deepseek-local" });
+
+    await window.getByRole("button", { name: "Models", exact: true }).click();
+    await expect(window.getByText(`custom-lab-llama-cpp/${modelId}`, { exact: true })).toBeVisible();
+  } finally {
+    await harness.close();
+    await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
   }
 });
 

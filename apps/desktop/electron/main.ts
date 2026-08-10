@@ -54,6 +54,7 @@ import type {
 import type { SessionDriverEvent } from "@pi-gui/session-driver";
 import type { GenerateThreadTitleOptions } from "@pi-gui/pi-sdk-driver";
 import { createImWebhookServer, type ImWebhookServer } from "./im-webhook-server";
+import { probeCustomModelProvider } from "./custom-model-provider-probe";
 import {
   configureWeixinBridgeRuntimeContextProvider,
   ensureWeixinBridgeRpcUrl,
@@ -107,9 +108,10 @@ let periodicGcTimer: ReturnType<typeof setInterval> | undefined;
 function startPeriodicGcHint(): void {
   // Suggest V8 run garbage collection every 5 minutes if --expose-gc is set.
   // No-op in production builds; only helps dev and long-running CI sessions.
-  if (typeof global.gc !== "function") return;
+  const gc = global.gc;
+  if (typeof gc !== "function") return;
   periodicGcTimer = setInterval(() => {
-    try { global.gc(); } catch { /* ignore */ }
+    try { gc(); } catch { /* ignore */ }
   }, 5 * 60 * 1000);
 }
 
@@ -1231,6 +1233,16 @@ app.whenReady().then(async () => {
   );
   ipcMain.handle(desktopIpc.setProviderApiKey, (_event, workspaceId: string, providerId: string, apiKey: string) =>
     store.setProviderApiKey(workspaceId, providerId, apiKey),
+  );
+  ipcMain.handle(desktopIpc.listCustomModelProviders, () => store.listCustomModelProviders());
+  ipcMain.handle(desktopIpc.probeCustomModelProvider, (_event, input) =>
+    probeCustomModelProvider(input, (url, init) => net.fetch(url.toString(), init)),
+  );
+  ipcMain.handle(desktopIpc.saveCustomModelProvider, (_event, workspaceId: string, input) =>
+    store.saveCustomModelProvider(workspaceId, input),
+  );
+  ipcMain.handle(desktopIpc.removeCustomModelProvider, (_event, workspaceId: string, providerId: string) =>
+    store.removeCustomModelProvider(workspaceId, providerId),
   );
   ipcMain.handle(desktopIpc.setEnableSkillCommands, (_event, workspaceId: string, enabled: boolean) =>
     store.setEnableSkillCommands(workspaceId, enabled),

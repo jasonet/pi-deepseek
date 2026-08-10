@@ -8,8 +8,8 @@
   "homepage": "https://github.com/jasonet/pi-deepseek",
   "main": "out/main/main.js",
   "scripts": {
-    "build:deps": "pnpm --dir ../.. --filter @pi-gui/session-driver --filter @pi-gui/pi-sdk-driver --filter @pi-gui/catalogs run build",
-    "bun:build:deps": "for dir in ../../packages/session-driver ../../packages/pi-sdk-driver ../../packages/catalogs; do (cd \"$dir\" && bun run build); done",
+    "build:deps": "pnpm --dir ../.. --filter @pi-gui/session-driver run build && pnpm --dir ../.. --filter @pi-gui/catalogs run build && pnpm --dir ../.. --filter @pi-gui/pi-sdk-driver run build",
+    "bun:build:deps": "for dir in ../../packages/session-driver ../../packages/catalogs ../../packages/pi-sdk-driver; do (cd \"$dir\" && bun run build); done",
     "build:notification-helper": "node scripts/build-notification-status-helper.mjs",
     "stage:mcp-bridge": "node scripts/stage-mcp-bridge.mjs",
     "dev": "node scripts/dev.mjs",

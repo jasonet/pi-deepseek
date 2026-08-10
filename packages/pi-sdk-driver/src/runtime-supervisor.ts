@@ -1,4 +1,4 @@
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import {
   DefaultPackageManager,
@@ -14,6 +14,8 @@ import {
 import type {
   RuntimeAppendSystemPrompt,
   RuntimeAppendSystemPromptFile,
+  RuntimeCustomModelProviderRecord,
+  RuntimeCustomModelRecord,
   RuntimeLoginCallbacks,
   RuntimeExtensionDiagnostic,
   RuntimeExtensionRecord,
@@ -26,6 +28,7 @@ import type {
   RuntimeSkillRecord,
   RuntimeSourceInfo,
   RuntimeSnapshot,
+  SaveRuntimeCustomModelProviderInput,
 } from "@pi-gui/session-driver/runtime-types";
 import type { WorkspaceRef } from "@pi-gui/session-driver";
 import { createRuntimeDependencies } from "./runtime-deps.js";
@@ -60,6 +63,11 @@ export interface RuntimeSupervisorOptions {
 
 type ResourceScope = "user" | "project";
 type ToggleableResourceKind = "extension" | "skill";
+
+interface ModelsJsonConfig {
+  readonly [key: string]: unknown;
+  providers: Record<string, Record<string, unknown>>;
+}
 
 export class RuntimeSupervisor implements RuntimeResourceDriver {
   private readonly agentDir: string;
@@ -120,6 +128,90 @@ export class RuntimeSupervisor implements RuntimeResourceDriver {
     await context.resourceLoader.reload();
     await this.autoEnableModelsForAuthenticatedProviders(context, [providerId]);
     await this.autoSetDefaultModelForFirstProvider(context, providerId);
+    return this.buildSnapshot(context);
+  }
+
+  async listCustomModelProviders(): Promise<readonly RuntimeCustomModelProviderRecord[]> {
+    const config = await readModelsJsonConfig(join(this.agentDir, "models.json"));
+    return Object.entries(config.providers)
+      .filter(([providerId, provider]) => providerId.startsWith("custom-") && Array.isArray(provider.models))
+      .map(([providerId, provider]) => ({
+        id: providerId,
+        name: readNonEmptyString(provider.name) ?? providerId,
+        baseUrl: readNonEmptyString(provider.baseUrl) ?? "",
+        hasApiKey: this.authStorage.hasAuth(providerId),
+        models: readCustomModelRecords(provider.models),
+      }))
+      .sort((left, right) => left.name.localeCompare(right.name));
+  }
+
+  async saveCustomModelProvider(
+    workspace: WorkspaceRef,
+    input: SaveRuntimeCustomModelProviderInput,
+  ): Promise<RuntimeSnapshot> {
+    const context = await this.ensureContext(workspace);
+    const providerId = normalizeCustomProviderId(input.id);
+    const providerName = input.name.trim();
+    if (!providerName) {
+      throw new Error("Provider name is required.");
+    }
+    const baseUrl = normalizeCustomProviderBaseUrl(input.baseUrl);
+    const models = normalizeCustomModels(input.models);
+    const modelsPath = join(this.agentDir, "models.json");
+    const config = await readModelsJsonConfig(modelsPath);
+    const existing = config.providers[providerId] ?? {};
+    config.providers[providerId] = {
+      ...existing,
+      name: providerName,
+      baseUrl,
+      api: "openai-completions",
+      // The real credential lives in auth.json. This fallback keeps local
+      // OpenAI-compatible servers usable when they ignore authentication.
+      apiKey: "pi-deepseek-local",
+      authHeader: true,
+      compat: {
+        ...(isRecord(existing.compat) ? existing.compat : {}),
+        supportsDeveloperRole: false,
+        supportsReasoningEffort: false,
+        supportsUsageInStreaming: false,
+        maxTokensField: "max_tokens",
+      },
+      models: models.map((model) => ({
+        id: model.id,
+        name: model.name,
+        reasoning: model.reasoning,
+        input: model.supportsImages ? ["text", "image"] : ["text"],
+        contextWindow: model.contextWindow,
+        maxTokens: model.maxTokens,
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+      })),
+    };
+    await writeModelsJsonConfig(modelsPath, config);
+
+    const apiKey = input.apiKey?.trim();
+    if (apiKey) {
+      this.authStorage.set(providerId, { type: "api_key", key: apiKey });
+    } else if (!this.authStorage.hasAuth(providerId)) {
+      this.authStorage.set(providerId, { type: "api_key", key: "pi-deepseek-local" });
+    }
+
+    this.modelRegistry.refresh();
+    await context.resourceLoader.reload();
+    await this.autoEnableModelsForAuthenticatedProviders(context, [providerId]);
+    await this.autoSetDefaultModelForFirstProvider(context, providerId);
+    return this.buildSnapshot(context);
+  }
+
+  async removeCustomModelProvider(workspace: WorkspaceRef, providerId: string): Promise<RuntimeSnapshot> {
+    const context = await this.ensureContext(workspace);
+    const normalizedId = normalizeCustomProviderId(providerId);
+    const modelsPath = join(this.agentDir, "models.json");
+    const config = await readModelsJsonConfig(modelsPath);
+    delete config.providers[normalizedId];
+    await writeModelsJsonConfig(modelsPath, config);
+    this.authStorage.remove(normalizedId);
+    this.modelRegistry.refresh();
+    await context.resourceLoader.reload();
     return this.buildSnapshot(context);
   }
 
@@ -533,7 +625,7 @@ export class RuntimeSupervisor implements RuntimeResourceDriver {
         const hasAuth = providerAuthStatus.configured || this.authStorage.hasAuth(providerId);
         return {
           id: providerId,
-          name: oauthProvider?.name ?? providerId,
+          name: oauthProvider?.name ?? this.modelRegistry.getProviderDisplayName(providerId) ?? providerId,
           hasAuth,
           authType: auth?.type ?? "none",
           authSource: inferProviderAuthSource(auth, providerAuthStatus, apiKeySetupSupported),
@@ -831,6 +923,116 @@ async function readJsonRecord(filePath: string): Promise<Record<string, unknown>
   }
 }
 
+async function readModelsJsonConfig(filePath: string): Promise<ModelsJsonConfig> {
+  try {
+    const raw = await readFile(filePath, "utf8");
+    const parsed = JSON.parse(raw) as unknown;
+    if (!isRecord(parsed)) {
+      throw new Error("models.json must contain a JSON object.");
+    }
+    const providers = isRecord(parsed.providers)
+      ? Object.fromEntries(
+          Object.entries(parsed.providers).filter((entry): entry is [string, Record<string, unknown>] => isRecord(entry[1])),
+        )
+      : {};
+    return { ...parsed, providers };
+  } catch (error) {
+    if (isMissingPathError(error)) {
+      return { providers: {} };
+    }
+    throw new Error(`Unable to read models.json: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+async function writeModelsJsonConfig(filePath: string, config: ModelsJsonConfig): Promise<void> {
+  await mkdir(dirname(filePath), { recursive: true });
+  const temporaryPath = `${filePath}.${process.pid}.tmp`;
+  await writeFile(temporaryPath, `${JSON.stringify(config, null, 2)}\n`, "utf8");
+  await rename(temporaryPath, filePath);
+}
+
+function normalizeCustomProviderId(value: string): string {
+  const providerId = value.trim().toLowerCase();
+  if (!/^custom-[a-z0-9][a-z0-9._-]*$/.test(providerId)) {
+    throw new Error('Provider ID must start with "custom-" and use only letters, numbers, dots, underscores, or hyphens.');
+  }
+  return providerId;
+}
+
+function normalizeCustomProviderBaseUrl(value: string): string {
+  const normalized = value.trim().replace(/\/+$/, "");
+  let url: URL;
+  try {
+    url = new URL(normalized);
+  } catch {
+    throw new Error("Base URL must be a valid HTTP or HTTPS URL.");
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new Error("Base URL must use HTTP or HTTPS.");
+  }
+  if (url.username || url.password) {
+    throw new Error("Base URL must not contain embedded credentials.");
+  }
+  return normalized;
+}
+
+function normalizeCustomModels(models: readonly RuntimeCustomModelRecord[]): RuntimeCustomModelRecord[] {
+  const normalized = new Map<string, RuntimeCustomModelRecord>();
+  for (const model of models) {
+    const id = model.id.trim();
+    if (!id) {
+      continue;
+    }
+    const contextWindow = positiveIntegerOr(model.contextWindow, 128_000);
+    const maxTokens = Math.min(positiveIntegerOr(model.maxTokens, 16_384), contextWindow);
+    normalized.set(id, {
+      id,
+      name: model.name.trim() || id,
+      reasoning: Boolean(model.reasoning),
+      supportsImages: Boolean(model.supportsImages),
+      contextWindow,
+      maxTokens,
+    });
+  }
+  if (normalized.size === 0) {
+    throw new Error("Select at least one model.");
+  }
+  return [...normalized.values()];
+}
+
+function readCustomModelRecords(value: unknown): RuntimeCustomModelRecord[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .filter(isRecord)
+    .map((model) => ({
+      id: readNonEmptyString(model.id) ?? "",
+      name: readNonEmptyString(model.name) ?? readNonEmptyString(model.id) ?? "",
+      reasoning: model.reasoning === true,
+      supportsImages: Array.isArray(model.input) && model.input.includes("image"),
+      contextWindow: positiveIntegerOr(model.contextWindow, 128_000),
+      maxTokens: positiveIntegerOr(model.maxTokens, 16_384),
+    }))
+    .filter((model) => Boolean(model.id));
+}
+
+function positiveIntegerOr(value: unknown, fallback: number): number {
+  return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : fallback;
+}
+
+function readNonEmptyString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isMissingPathError(error: unknown): boolean {
+  return isRecord(error) && error.code === "ENOENT";
+}
+
 async function readAppendSystemPromptFile(filePath: string): Promise<RuntimeAppendSystemPromptFile> {
   try {
     const content = await readFile(filePath, "utf8");
@@ -974,7 +1176,7 @@ const DESKTOP_API_KEY_PROVIDER_IDS = new Set([
 ]);
 
 function providerSupportsDesktopApiKeySetup(providerId: string): boolean {
-  return DESKTOP_API_KEY_PROVIDER_IDS.has(providerId);
+  return providerId.startsWith("custom-") || DESKTOP_API_KEY_PROVIDER_IDS.has(providerId);
 }
 
 function inferProviderAuthSource(

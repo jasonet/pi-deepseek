@@ -35,6 +35,48 @@ export interface RuntimeModelRecord {
   readonly supportsImages: boolean;
 }
 
+export interface RuntimeCustomModelRecord {
+  readonly id: string;
+  readonly name: string;
+  readonly reasoning: boolean;
+  readonly supportsImages: boolean;
+  readonly contextWindow: number;
+  readonly maxTokens: number;
+}
+
+export interface RuntimeCustomModelProviderRecord {
+  readonly id: string;
+  readonly name: string;
+  readonly baseUrl: string;
+  readonly hasApiKey: boolean;
+  readonly models: readonly RuntimeCustomModelRecord[];
+}
+
+export interface SaveRuntimeCustomModelProviderInput {
+  readonly id: string;
+  readonly name: string;
+  readonly baseUrl: string;
+  /** Omit while editing to preserve the currently stored key. */
+  readonly apiKey?: string;
+  readonly models: readonly RuntimeCustomModelRecord[];
+}
+
+export interface ProbeRuntimeCustomModelProviderInput {
+  readonly baseUrl: string;
+  readonly apiKey?: string;
+}
+
+export type ProbeRuntimeCustomModelProviderResult =
+  | {
+      readonly ok: true;
+      readonly message: string;
+      readonly models: readonly RuntimeCustomModelRecord[];
+    }
+  | {
+      readonly ok: false;
+      readonly message: string;
+    };
+
 export interface RuntimeSkillRecord {
   readonly name: string;
   readonly description: string;
@@ -183,6 +225,12 @@ export interface RuntimeResourceDriver {
   login(workspace: WorkspaceRef, providerId: string, callbacks: RuntimeLoginCallbacks): Promise<RuntimeSnapshot>;
   logout(workspace: WorkspaceRef, providerId: string): Promise<RuntimeSnapshot>;
   setProviderApiKey(workspace: WorkspaceRef, providerId: string, apiKey: string): Promise<RuntimeSnapshot>;
+  listCustomModelProviders(): Promise<readonly RuntimeCustomModelProviderRecord[]>;
+  saveCustomModelProvider(
+    workspace: WorkspaceRef,
+    input: SaveRuntimeCustomModelProviderInput,
+  ): Promise<RuntimeSnapshot>;
+  removeCustomModelProvider(workspace: WorkspaceRef, providerId: string): Promise<RuntimeSnapshot>;
   setDefaultModel(
     workspace: WorkspaceRef,
     selection: {

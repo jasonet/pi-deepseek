@@ -357,6 +357,31 @@ declare module "@pi-gui/session-driver/runtime-types" {
     readonly supportsImages: boolean;
   }
 
+  export interface RuntimeCustomModelRecord {
+    readonly id: string;
+    readonly name: string;
+    readonly reasoning: boolean;
+    readonly supportsImages: boolean;
+    readonly contextWindow: number;
+    readonly maxTokens: number;
+  }
+
+  export interface RuntimeCustomModelProviderRecord {
+    readonly id: string;
+    readonly name: string;
+    readonly baseUrl: string;
+    readonly hasApiKey: boolean;
+    readonly models: readonly RuntimeCustomModelRecord[];
+  }
+
+  export interface SaveRuntimeCustomModelProviderInput {
+    readonly id: string;
+    readonly name: string;
+    readonly baseUrl: string;
+    readonly apiKey?: string;
+    readonly models: readonly RuntimeCustomModelRecord[];
+  }
+
   export interface RuntimeSkillRecord {
     readonly name: string;
     readonly description: string;
@@ -458,6 +483,12 @@ declare module "@pi-gui/session-driver/runtime-types" {
   export interface RuntimeResourceDriver {
     getRuntimeSnapshot(workspace: WorkspaceRef): Promise<RuntimeSnapshot>;
     refreshRuntime(workspace: WorkspaceRef): Promise<RuntimeSnapshot>;
+    listCustomModelProviders(): Promise<readonly RuntimeCustomModelProviderRecord[]>;
+    saveCustomModelProvider(
+      workspace: WorkspaceRef,
+      input: SaveRuntimeCustomModelProviderInput,
+    ): Promise<RuntimeSnapshot>;
+    removeCustomModelProvider(workspace: WorkspaceRef, providerId: string): Promise<RuntimeSnapshot>;
     login(workspace: WorkspaceRef, providerId: string, callbacks: RuntimeLoginCallbacks): Promise<RuntimeSnapshot>;
     logout(workspace: WorkspaceRef, providerId: string): Promise<RuntimeSnapshot>;
     setProviderApiKey(workspace: WorkspaceRef, providerId: string, apiKey: string): Promise<RuntimeSnapshot>;

@@ -2587,6 +2587,116 @@ textarea.settings-input {
   background: var(--surface);
 }
 
+.custom-provider__row-actions,
+.custom-provider-dialog__probe-row,
+.custom-provider-dialog__manual-model,
+.custom-provider-dialog__capabilities {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.custom-provider__add svg {
+  width: 15px;
+  height: 15px;
+}
+
+.custom-provider-dialog {
+  width: min(680px, calc(100vw - 48px));
+  max-width: 680px;
+}
+
+.custom-provider-dialog__fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.custom-provider-dialog__field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.custom-provider-dialog__field--wide {
+  grid-column: 1 / -1;
+}
+
+.custom-provider-dialog__probe-row {
+  min-height: 34px;
+  margin-bottom: 12px;
+}
+
+.custom-provider-dialog__status {
+  min-width: 0;
+  font-size: 12px;
+}
+
+.custom-provider-dialog__status--ok {
+  color: var(--success, #238636);
+}
+
+.custom-provider-dialog__models {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+
+.custom-provider-dialog__models-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.custom-provider-dialog__model {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 42px;
+  border-bottom: 1px solid var(--line);
+}
+
+.custom-provider-dialog__capabilities {
+  white-space: nowrap;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.custom-provider-dialog__capabilities label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.custom-provider-dialog__manual-model {
+  margin-top: 12px;
+}
+
+.custom-provider-dialog__manual-model .settings-search {
+  min-width: 0;
+  flex: 1;
+}
+
+@media (max-width: 720px) {
+  .custom-provider-dialog__fields,
+  .custom-provider-dialog__model {
+    grid-template-columns: 1fr;
+  }
+
+  .custom-provider-dialog__field--wide {
+    grid-column: auto;
+  }
+
+  .custom-provider-dialog__capabilities {
+    padding: 0 0 8px 28px;
+  }
+}
+
 .connect-phone__providers {
   display: grid;
   gap: 8px;

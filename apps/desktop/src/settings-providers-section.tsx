@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { RuntimeSnapshot } from "@pi-gui/session-driver/runtime-types";
 import { filterProviders, ProviderRow, SettingsGroup, ProviderExternalConfigDialog } from "./settings-utils";
 import { useT } from "./i18n";
+import { SettingsCustomProviders } from "./settings-custom-providers";
 
 interface SettingsProvidersSectionProps {
   readonly runtime?: RuntimeSnapshot;
@@ -25,10 +26,9 @@ export function SettingsProvidersSection({
   const [apiKeyError, setApiKeyError] = useState<string | undefined>();
   const [apiKeyPending, setApiKeyPending] = useState(false);
 
-  const providers = runtime?.providers ?? [];
+  const providers = (runtime?.providers ?? []).filter((provider) => !provider.id.startsWith("custom-"));
   const connectedProviders = providers.filter((p) => p.hasAuth);
   const oauthProviders = providers.filter((p) => p.oauthSupported);
-  const filteredProviders = filterProviders(providers, providerQuery);
   // Sorted all-providers list: API key first (connected → available), external last, hide OAuth
   const sortedAllProviders = [...filterProviders(
     providers.filter((p) => !p.oauthSupported),
@@ -87,6 +87,8 @@ export function SettingsProvidersSection({
 
   return (
     <>
+      <SettingsCustomProviders workspaceId={runtime?.workspace.workspaceId} />
+
       <SettingsGroup title={t("settings.providers.connected")} description={t("settings.providers.connectedDesc")}>
         {connectedProviders.length > 0 ? (
           connectedProviders.map((provider) => (

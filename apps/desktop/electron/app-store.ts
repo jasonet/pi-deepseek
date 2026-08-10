@@ -14,7 +14,7 @@ import {
   type PiSdkDriverConfig,
   sessionKey,
 } from "@pi-gui/pi-sdk-driver";
-import type { SessionCatalogEntry } from "@pi-gui/catalogs";
+import type { SessionCatalogEntry, WorkspaceCatalogEntry } from "@pi-gui/catalogs";
 import type {
   NavigateSessionTreeOptions,
   NavigateSessionTreeResult,
@@ -34,11 +34,13 @@ import type {
   ModelSettingsSnapshot,
   RuntimeAppendSystemPrompt,
   RuntimeCommandRecord,
+  RuntimeCustomModelProviderRecord,
   RuntimeLoginCallbacks,
   RuntimePackageRecord,
   RuntimePackageUpdate,
   RuntimeSettingsSnapshot,
   RuntimeSnapshot,
+  SaveRuntimeCustomModelProviderInput,
 } from "@pi-gui/session-driver/runtime-types";
 import {
   type AppView,
@@ -846,6 +848,25 @@ export class DesktopAppStore implements AppStoreInternals {
   async setProviderApiKey(workspaceId: string, providerId: string, apiKey: string): Promise<DesktopAppState> {
     return this.withRuntimeUpdate(workspaceId, (ws) =>
       this.driver.runtimeSupervisor.setProviderApiKey(ws, providerId, apiKey),
+    );
+  }
+
+  listCustomModelProviders(): Promise<readonly RuntimeCustomModelProviderRecord[]> {
+    return this.driver.runtimeSupervisor.listCustomModelProviders();
+  }
+
+  async saveCustomModelProvider(
+    workspaceId: string,
+    input: SaveRuntimeCustomModelProviderInput,
+  ): Promise<DesktopAppState> {
+    return this.withRuntimeUpdate(workspaceId, (ws) =>
+      this.driver.runtimeSupervisor.saveCustomModelProvider(ws, input),
+    );
+  }
+
+  async removeCustomModelProvider(workspaceId: string, providerId: string): Promise<DesktopAppState> {
+    return this.withRuntimeUpdate(workspaceId, (ws) =>
+      this.driver.runtimeSupervisor.removeCustomModelProvider(ws, providerId),
     );
   }
 

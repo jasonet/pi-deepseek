@@ -422,6 +422,7 @@ const handlers: Record<string, Handler> = {
   [desktopIpc.installOpenDesign]: () => installOpenDesign(),
   [desktopIpc.stateRequest]: () => store.getState(),
   [desktopIpc.selectedTranscriptRequest]: () => store.getSelectedTranscript(),
+  [desktopIpc.transcriptForRequest]: (target: WorkspaceSessionTarget) => store.getTranscriptFor(target),
   [desktopIpc.addWorkspacePath]: (workspacePath: string) => store.addWorkspace(workspacePath),
   [desktopIpc.pickWorkspace]: () => store.getState(),
   [desktopIpc.selectWorkspace]: (workspaceId: string) => store.selectWorkspace(workspaceId),
@@ -476,6 +477,14 @@ const handlers: Record<string, Handler> = {
     store.setSkillEnabled(workspaceId, filePath, enabled),
   [desktopIpc.setExtensionEnabled]: (workspaceId: string, filePath: string, enabled: boolean) =>
     store.setExtensionEnabled(workspaceId, filePath, enabled),
+  [desktopIpc.listPackages]: (workspaceId?: string) => store.listPackages(workspaceId),
+  [desktopIpc.checkForPackageUpdates]: (workspaceId?: string) => store.checkForPackageUpdates(workspaceId),
+  [desktopIpc.installPackage]: (workspaceId: string, source: string) => store.installPackage(workspaceId, source),
+  [desktopIpc.removePackage]: (workspaceId: string, source: string) => store.removePackage(workspaceId, source),
+  [desktopIpc.updatePackages]: (workspaceId: string, source?: string) => store.updatePackages(workspaceId, source),
+  [desktopIpc.getAppendSystemPrompt]: (workspaceId?: string) => store.getAppendSystemPrompt(workspaceId),
+  [desktopIpc.setAppendSystemPrompt]: (workspaceId: string, scope: "project" | "global", content: string) =>
+    store.setAppendSystemPrompt(workspaceId, scope, content),
   [desktopIpc.respondToHostUiRequest]: (workspaceId: string, sessionId: string, response: any) =>
     store.respondToHostUiRequest({ workspaceId, sessionId }, response),
   [desktopIpc.setNotificationPreferences]: (preferences: any) => store.setNotificationPreferences(preferences),
@@ -534,6 +543,7 @@ const handlers: Record<string, Handler> = {
   },
   [desktopIpc.terminalCloseSession]: () => null,
   [desktopIpc.terminalSetTitle]: () => undefined,
+  [desktopIpc.terminalSetFocused]: () => undefined,
   [desktopIpc.getNotificationPermissionStatus]: () => "unknown",
   [desktopIpc.requestNotificationPermission]: () => "unknown",
   [desktopIpc.openSystemNotificationSettings]: () => undefined,
@@ -563,6 +573,11 @@ const handlers: Record<string, Handler> = {
   [desktopIpc.updateComposerDraft]: (composerDraft: string) => store.updateComposerDraft(composerDraft),
   [desktopIpc.submitComposer]: (text: string, options?: { readonly deliverAs?: "steer" | "followUp" }) =>
     store.submitComposer(text, options),
+  [desktopIpc.submitComposerFor]: (
+    target: WorkspaceSessionTarget,
+    text: string,
+    options?: { readonly deliverAs?: "steer" | "followUp" },
+  ) => store.submitComposerFor(target, text, options),
   [desktopIpc.getSessionTree]: (target: WorkspaceSessionTarget) => store.getSessionTree(target),
   [desktopIpc.navigateSessionTree]: (target: WorkspaceSessionTarget, targetId: string, options?: any) =>
     store.navigateSessionTree(target, targetId, options),

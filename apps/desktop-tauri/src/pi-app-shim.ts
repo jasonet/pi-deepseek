@@ -65,6 +65,7 @@ export async function installPiApp(): Promise<void> {
     onStateChanged: (listener: Listener) => subscribe("stateChanged", listener),
 
     getSelectedTranscript: call(desktopIpc.selectedTranscriptRequest),
+    getTranscriptFor: call(desktopIpc.transcriptForRequest),
     onSelectedTranscriptChanged: (listener: Listener) =>
       subscribe("selectedTranscriptChanged", listener),
 
@@ -115,6 +116,13 @@ export async function installPiApp(): Promise<void> {
     setScopedModelPatterns: call(desktopIpc.setScopedModelPatterns),
     setSkillEnabled: call(desktopIpc.setSkillEnabled),
     setExtensionEnabled: call(desktopIpc.setExtensionEnabled),
+    listPackages: call(desktopIpc.listPackages),
+    checkForPackageUpdates: call(desktopIpc.checkForPackageUpdates),
+    installPackage: call(desktopIpc.installPackage),
+    removePackage: call(desktopIpc.removePackage),
+    updatePackages: call(desktopIpc.updatePackages),
+    getAppendSystemPrompt: call(desktopIpc.getAppendSystemPrompt),
+    setAppendSystemPrompt: call(desktopIpc.setAppendSystemPrompt),
     respondToHostUiRequest: call(desktopIpc.respondToHostUiRequest),
     setNotificationPreferences: call(desktopIpc.setNotificationPreferences),
     saveImChannel: call(desktopIpc.saveImChannel),
@@ -170,6 +178,7 @@ export async function installPiApp(): Promise<void> {
     steerQueuedComposerMessage: call(desktopIpc.steerQueuedComposerMessage),
     updateComposerDraft: call(desktopIpc.updateComposerDraft),
     submitComposer: call(desktopIpc.submitComposer),
+    submitComposerFor: call(desktopIpc.submitComposerFor),
 
     getSessionTree: call(desktopIpc.getSessionTree),
     navigateSessionTree: call(desktopIpc.navigateSessionTree),

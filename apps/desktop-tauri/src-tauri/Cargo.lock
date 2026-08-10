@@ -2352,7 +2352,7 @@ dependencies = [
 
 [[package]]
 name = "pi-deepseek"
-version = "2.6.6"
+version = "2.7.1"
 dependencies = [
  "serde",
  "serde_json",

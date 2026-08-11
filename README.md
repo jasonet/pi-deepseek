@@ -22,7 +22,7 @@
 |------|------|------|------|------|------|------|
 | **macOS** | Apple Silicon (M1–M4) | Electron | v2.7.1 | DMG | 136M | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.7.1/Pi-Deepseek-2.7.1-mac-arm64.dmg) |
 | **macOS** | Intel (x64) | Electron | v2.7.1 | DMG | 147M | [![Download](https://img.shields.io/badge/Download-x64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.7.1/Pi-Deepseek-2.7.1-mac-x64.dmg) |
-| **macOS** | Apple Silicon (M1–M4) | Tauri | v2.6.9 | DMG | 86M | [![Download](https://img.shields.io/badge/Download-arm64-%237C6BF5?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.9/Pi-Deepseek_2.6.9_aarch64.dmg) |
+| **macOS** | Apple Silicon (M1–M4) | Tauri | v2.7.1 | DMG | 420M | [![Download](https://img.shields.io/badge/Download-arm64-%237C6BF5?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.7.1/Pi-Deepseek_2.7.1_aarch64.dmg) |
 | **Windows** | x64 | Electron | v2.6.9 | 安装版 | 121M | [![Download](https://img.shields.io/badge/Download-Setup-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.9/Pi-Deepseek-2.6.9-win-x64-setup.exe) |
 | **Windows** | x64 | Electron | v2.6.9 | 便携版 | 120M | [![Download](https://img.shields.io/badge/Download-Portable-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.9/Pi-Deepseek-2.6.9-win-x64-portable.exe) |
 | **Linux** | x64 | Electron | v2.6.9 | deb | 147M | [![Download](https://img.shields.io/badge/Download-.deb-%234D6BFE?logo=ubuntu)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.9/Pi-Deepseek-2.6.9-linux-amd64.deb) |
@@ -32,8 +32,8 @@
 > *Windows / Linux v2.7.x builds in progress — currently v2.7.1 ships macOS (Apple Silicon + Intel). Windows & Linux packages will be added here once CI builds complete.*
 
 > 🧭 **双引擎，同一版本号 / Dual engine, one version:**
-> **Electron `v2.7.1`**（macOS）与 **Tauri `v2.6.9`**。Electron 为日常使用推荐；Tauri 为更轻量替代（暂停在 v2.6.9）。
-> **Electron `v2.7.1`** (macOS) and **Tauri `v2.6.9`**. Electron is recommended for daily use; Tauri is the lighter alternative (currently at v2.6.9).
+> **Electron `v2.7.1`**（macOS）与 **Tauri `v2.7.1`**（macOS arm64）。Electron 为日常使用推荐；Tauri 为更轻量替代。
+> **Electron `v2.7.1`** (macOS) and **Tauri `v2.7.1`** (macOS arm64). Electron is recommended for daily use; Tauri is the lighter alternative.
 
 > 🆕 **v2.7.1 更新 / What's new:**
 > 🐛 **修复**：同步 v2.7.0 性能优化基础上的增量修复。

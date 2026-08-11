@@ -4,6 +4,7 @@
   "version": "2.7.1",
   "scripts": {
     "dev": "vite",
+    "test": "node --experimental-strip-types tests/invoke-args.test.mts",
     "build:sidecar": "node sidecar/build.mjs",
     "build:renderer": "vite build",
     "build": "npm run build:sidecar && npm run build:renderer",

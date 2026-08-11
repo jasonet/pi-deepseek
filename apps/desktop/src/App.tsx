@@ -116,6 +116,10 @@ function updateSnapshot(
   });
 }
 
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 function isEventInsideTerminal(event: globalThis.KeyboardEvent): boolean {
   const target = event.target;
   return target instanceof Element && Boolean(target.closest("[data-pi-terminal]"));
@@ -907,7 +911,7 @@ export default function App() {
           open: true,
           loading: false,
           submitting: false,
-          error: error instanceof Error ? error.message : String(error),
+          error: errorMessage(error),
         });
       });
   }, [api, selectedSession, selectedWorkspace]);
@@ -944,7 +948,7 @@ export default function App() {
           setTreeModalState((current) => ({
             ...current,
             submitting: false,
-            error: error instanceof Error ? error.message : String(error),
+            error: errorMessage(error),
           }));
         });
     },
@@ -1654,9 +1658,10 @@ export default function App() {
       );
       setComposerDraft(nextState.composerDraft);
       setAttachmentsClearedOnSubmit(false);
-    })().catch(() => {
+    })().catch((error) => {
       setComposerDraft(previousDraft);
       setAttachmentsClearedOnSubmit(false);
+      setSnapshot((current) => (current ? { ...current, lastError: errorMessage(error) } : current));
     });
   };
 

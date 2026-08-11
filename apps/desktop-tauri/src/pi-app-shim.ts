@@ -11,6 +11,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 
 import { desktopIpc } from "../../desktop/src/ipc";
+import { normalizeInvokeArgs } from "./invoke-args";
 
 type Listener = (payload: any) => void;
 
@@ -43,7 +44,7 @@ function dispatchEvent(eventName: string, payload: unknown): void {
 /** Fire a desktop IPC channel through the sidecar bridge. */
 function call<T = unknown>(channel: string) {
   return (...args: unknown[]): Promise<T> =>
-    invoke<T>("pi_invoke", { method: channel, args }) as Promise<T>;
+    invoke<T>("pi_invoke", { method: channel, args: normalizeInvokeArgs(args) }) as Promise<T>;
 }
 
 export async function installPiApp(): Promise<void> {

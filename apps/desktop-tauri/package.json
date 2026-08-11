@@ -10,6 +10,7 @@
     "build": "npm run build:sidecar && npm run build:renderer",
     "stage:runtime": "node scripts/stage-runtime.mjs",
     "build:bundle": "npm run stage:runtime && npm run build:renderer",
+    "package:mac": "tauri build --bundles app && node scripts/package-macos-dmg.mjs",
     "tauri": "tauri"
   },
   "dependencies": {

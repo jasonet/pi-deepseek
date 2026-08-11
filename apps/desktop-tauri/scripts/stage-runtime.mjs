@@ -18,6 +18,7 @@ import {
   copyFileSync,
   chmodSync,
   createWriteStream,
+  readdirSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -41,6 +42,36 @@ function log(msg) {
 function run(cmd, args, opts = {}) {
   log(`$ ${cmd} ${args.join(" ")}`);
   execFileSync(cmd, args, { stdio: "inherit", ...opts });
+}
+
+function retainRuntimeTarget(parentDir, target) {
+  if (!existsSync(parentDir)) {
+    return;
+  }
+  for (const entry of readdirSync(parentDir, { withFileTypes: true })) {
+    if (entry.name !== target) {
+      rmSync(join(parentDir, entry.name), { recursive: true, force: true });
+    }
+  }
+}
+
+function pruneNativePackages(modulesDir) {
+  const nodePtyDir = join(modulesDir, "node-pty");
+  const nodePtyTarget = join(nodePtyDir, "prebuilds", `${process.platform}-${process.arch}`);
+  retainRuntimeTarget(join(nodePtyDir, "prebuilds"), `${process.platform}-${process.arch}`);
+  const spawnHelper = join(nodePtyTarget, "spawn-helper");
+  if (existsSync(spawnHelper)) {
+    chmodSync(spawnHelper, 0o755);
+  }
+  for (const entry of ["binding.gyp", "deps", "scripts", "src", "third_party", "typings"]) {
+    rmSync(join(nodePtyDir, entry), { recursive: true, force: true });
+  }
+
+  const koffiDir = join(modulesDir, "koffi");
+  retainRuntimeTarget(join(koffiDir, "build", "koffi"), `${process.platform}_${process.arch}`);
+  for (const entry of ["doc", "src", "vendor"]) {
+    rmSync(join(koffiDir, entry), { recursive: true, force: true });
+  }
 }
 
 // 1. Build the sidecar bundle (sidecar/dist/server.mjs).
@@ -98,9 +129,27 @@ cpSync(stagedModules, join(outDir, "node_modules"), {
   recursive: true,
   filter: (src) => !src.split("/").includes(".bin"),
 });
+pruneNativePackages(join(outDir, "node_modules"));
 
 const outNode = join(outDir, "node");
 copyFileSync(nodeBin, outNode);
 chmodSync(outNode, 0o755);
+if (process.platform === "darwin") {
+  run("strip", ["-x", outNode]);
+  run("codesign", ["--force", "--sign", "-", outNode]);
+}
+
+const runtimeProbe = [
+  `const koffi = require(${JSON.stringify(join(outDir, "node_modules", "koffi"))});`,
+  `if (!koffi) throw new Error("koffi failed to load");`,
+  `const pty = require(${JSON.stringify(join(outDir, "node_modules", "node-pty"))});`,
+  `const shell = process.platform === "win32" ? process.env.ComSpec ?? "cmd.exe" : "/bin/sh";`,
+  `const args = process.platform === "win32" ? ["/d", "/s", "/c", "echo|set /p=PI_TAURI_PTY_OK"] : ["-lc", "printf PI_TAURI_PTY_OK"];`,
+  `const child = pty.spawn(shell, args, { cols: 80, rows: 24 });`,
+  `let output = "";`,
+  `child.onData((data) => { output += data; });`,
+  `child.onExit(() => { if (!output.includes("PI_TAURI_PTY_OK")) process.exit(1); });`,
+].join("\n");
+run(outNode, ["-e", runtimeProbe]);
 
 log("done. self-contained runtime staged at src-tauri/sidecar/");

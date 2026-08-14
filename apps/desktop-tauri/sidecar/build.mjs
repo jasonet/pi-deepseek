@@ -1,6 +1,6 @@
 // Bundles the Node sidecar (sidecar/server.ts) into sidecar/dist/server.mjs.
-// The real pi runtime (@earendil-works/pi-coding-agent, ESM-only) and node-pty
-// stay external so they're loaded from the shipped node_modules at runtime.
+// Runtime dependencies with native or mixed ESM/CJS behavior stay external so
+// they're loaded from the shipped node_modules instead of being inlined.
 import { build } from "esbuild";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
@@ -15,7 +15,7 @@ await build({
   format: "esm",
   target: "node20",
   tsconfig: join(repoRoot, "apps", "desktop", "tsconfig.paths.json"),
-  external: ["@earendil-works/pi-coding-agent", "node-pty"],
+  external: ["@earendil-works/pi-coding-agent", "node-pty", "yaml"],
   outfile: join(here, "dist", "server.mjs"),
   logLevel: "info",
 });

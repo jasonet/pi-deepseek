@@ -2,8 +2,7 @@
 //
 // Output layout (gitignored build artifact): apps/desktop-tauri/src-tauri/sidecar/
 //   server.mjs        - esbuild bundle of the Node sidecar (deps externalized)
-//   node_modules/     - the externalized deps (@earendil-works/pi-coding-agent,
-//                       node-pty), installed as a real on-disk tree
+//   node_modules/     - externalized runtime deps installed as a real tree
 //   node              - the official, self-contained Node binary
 //
 // tauri.conf.json maps these into Contents/Resources/sidecar/, and lib.rs
@@ -21,7 +20,7 @@ import {
   readdirSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { tmpdir } from "node:os";
 import { pipeline } from "node:stream/promises";
 
@@ -151,5 +150,8 @@ const runtimeProbe = [
   `child.onExit(() => { if (!output.includes("PI_TAURI_PTY_OK")) process.exit(1); });`,
 ].join("\n");
 run(outNode, ["-e", runtimeProbe]);
+
+const sidecarUrl = pathToFileURL(join(outDir, "server.mjs")).href;
+run(outNode, ["--input-type=module", "-e", `await import(${JSON.stringify(sidecarUrl)}); process.exit(0);`]);
 
 log("done. self-contained runtime staged at src-tauri/sidecar/");

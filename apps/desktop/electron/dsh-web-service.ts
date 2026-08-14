@@ -2,6 +2,8 @@ import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
+import { parseEnv } from "node:util";
+import { parseDocument } from "yaml";
 
 import type { DshWebStatus } from "../src/ipc";
 
@@ -15,8 +17,22 @@ interface NodeRuntime {
   readonly electronRunAsNode: boolean;
 }
 
+export type DshCredentialProbeResult = "valid" | "invalid" | "unknown";
+
+export interface DshCredentialCandidate {
+  readonly source: "environment" | "file";
+  readonly value: string;
+}
+
+export interface DshCredentialSelection {
+  readonly apiKey?: string;
+  readonly clearInherited: boolean;
+}
+
 const START_TIMEOUT_MS = 30_000;
+const CREDENTIAL_PROBE_TIMEOUT_MS = 8_000;
 const DSH_URL_PATTERN = /dsh web:\s*(http:\/\/(?:127\.0\.0\.1|localhost):\d+)/i;
+const DEEPSEEK_MODELS_URL = "https://api.deepseek.com/models";
 
 export class DshWebService {
   private child: ChildProcess | undefined;
@@ -35,7 +51,7 @@ export class DshWebService {
     return this.status;
   }
 
-  start(workspacePath?: string): Promise<DshWebStatus> {
+  start(workspacePath?: string, fallbackApiKey?: string): Promise<DshWebStatus> {
     if (this.status.state === "running") {
       return Promise.resolve(this.status);
     }
@@ -43,7 +59,7 @@ export class DshWebService {
       return this.pendingStart;
     }
 
-    this.pendingStart = this.startServer(workspacePath).finally(() => {
+    this.pendingStart = this.startServer(workspacePath, fallbackApiKey).finally(() => {
       this.pendingStart = undefined;
     });
     return this.pendingStart;
@@ -65,7 +81,7 @@ export class DshWebService {
     return this.status;
   }
 
-  private async startServer(workspacePath?: string): Promise<DshWebStatus> {
+  private async startServer(workspacePath?: string, fallbackApiKey?: string): Promise<DshWebStatus> {
     const externalUrl = resolveExternalUrl();
     if (externalUrl) {
       this.status = { state: "running", installed: true, url: externalUrl, managed: false };
@@ -96,6 +112,16 @@ export class DshWebService {
     this.status = { state: "starting", installed: true, version: cli.version };
     const cwd = workspacePath && existsSync(workspacePath) ? workspacePath : homedir();
     const env = { ...process.env };
+    const credential = await selectDshLaunchCredential(
+      readDshCredentialCandidates(env, cwd),
+      fallbackApiKey,
+      probeDeepseekApiKey,
+    );
+    if (credential.apiKey) {
+      env.DEEPSEEK_API_KEY = credential.apiKey;
+    } else if (credential.clearInherited) {
+      delete env.DEEPSEEK_API_KEY;
+    }
     if (node.electronRunAsNode) {
       env.ELECTRON_RUN_AS_NODE = "1";
     }
@@ -171,6 +197,112 @@ export class DshWebService {
         });
       }, START_TIMEOUT_MS);
     });
+  }
+}
+
+export async function selectDshLaunchCredential(
+  candidates: readonly DshCredentialCandidate[],
+  fallbackApiKey: string | undefined,
+  probe: (apiKey: string) => Promise<DshCredentialProbeResult>,
+): Promise<DshCredentialSelection> {
+  const uniqueCandidates = deduplicateCredentialCandidates(candidates);
+  for (const candidate of uniqueCandidates) {
+    const result = await probe(candidate.value);
+    if (result !== "invalid") {
+      return { apiKey: candidate.value, clearInherited: false };
+    }
+  }
+
+  const fallback = fallbackApiKey?.trim();
+  if (fallback && !uniqueCandidates.some((candidate) => candidate.value === fallback)) {
+    const result = await probe(fallback);
+    if (result !== "invalid") {
+      return { apiKey: fallback, clearInherited: false };
+    }
+  }
+
+  return {
+    clearInherited: uniqueCandidates.some((candidate) => candidate.source === "environment"),
+  };
+}
+
+function deduplicateCredentialCandidates(
+  candidates: readonly DshCredentialCandidate[],
+): readonly DshCredentialCandidate[] {
+  const seen = new Set<string>();
+  return candidates.filter((candidate) => {
+    if (!candidate.value || seen.has(candidate.value)) return false;
+    seen.add(candidate.value);
+    return true;
+  });
+}
+
+function readDshCredentialCandidates(
+  env: NodeJS.ProcessEnv,
+  cwd: string,
+): readonly DshCredentialCandidate[] {
+  const candidates: DshCredentialCandidate[] = [];
+  const inherited = env.DEEPSEEK_API_KEY?.trim();
+  if (inherited) candidates.push({ source: "environment", value: inherited });
+
+  const dshHome = resolveDshHome(env.DSH_HOME);
+  const stored = readStoredDshDeepseekApiKey(dshHome);
+  if (stored) candidates.push({ source: "file", value: stored });
+  for (const envPath of [path.join(cwd, ".env"), path.join(dshHome, ".env")]) {
+    const value = readDotEnvDeepseekApiKey(envPath);
+    if (value) candidates.push({ source: "file", value });
+  }
+  return candidates;
+}
+
+function resolveDshHome(configuredHome: string | undefined): string {
+  return expandHome(configuredHome?.trim() || path.join(homedir(), ".dsh"));
+}
+
+function readStoredDshDeepseekApiKey(dshHome: string): string | undefined {
+  try {
+    const document = parseDocument(readFileSync(path.join(dshHome, ".credentials.yaml"), "utf8"), {
+      prettyErrors: false,
+      uniqueKeys: true,
+    });
+    if (document.errors.length > 0) return undefined;
+    const value = document.get("DEEPSEEK_API_KEY");
+    return typeof value === "string" && value.trim() ? value.trim() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function readDotEnvDeepseekApiKey(filePath: string): string | undefined {
+  try {
+    const value = parseEnv(readFileSync(filePath, "utf8")).DEEPSEEK_API_KEY?.trim();
+    return value || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function expandHome(value: string): string {
+  if (value === "~") return homedir();
+  if (value.startsWith(`~${path.sep}`)) return path.join(homedir(), value.slice(2));
+  return path.resolve(value);
+}
+
+async function probeDeepseekApiKey(apiKey: string): Promise<DshCredentialProbeResult> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), CREDENTIAL_PROBE_TIMEOUT_MS);
+  try {
+    const response = await fetch(DEEPSEEK_MODELS_URL, {
+      headers: { authorization: `Bearer ${apiKey}` },
+      signal: controller.signal,
+    });
+    if (response.ok) return "valid";
+    if (response.status === 401 || response.status === 403) return "invalid";
+    return "unknown";
+  } catch {
+    return "unknown";
+  } finally {
+    clearTimeout(timeout);
   }
 }
 

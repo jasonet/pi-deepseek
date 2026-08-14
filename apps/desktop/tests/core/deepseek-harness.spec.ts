@@ -2,7 +2,56 @@ import { createServer } from "node:http";
 
 import { expect, test } from "@playwright/test";
 
+import { selectDshLaunchCredential } from "../../electron/dsh-web-service";
 import { getDesktopState, launchDesktop, makeUserDataDir, makeWorkspace } from "../helpers/electron-app";
+
+test("keeps a working DSH credential ahead of the Pi-Deepseek fallback", async () => {
+  const probed: string[] = [];
+  const selection = await selectDshLaunchCredential(
+    [{ source: "environment", value: "dsh-key" }],
+    "pi-key",
+    async (apiKey) => {
+      probed.push(apiKey);
+      return "valid";
+    },
+  );
+
+  expect(selection).toEqual({ apiKey: "dsh-key", clearInherited: false });
+  expect(probed).toEqual(["dsh-key"]);
+});
+
+test("uses the Pi-Deepseek credential when configured DSH credentials are rejected", async () => {
+  const selection = await selectDshLaunchCredential(
+    [
+      { source: "environment", value: "bad-env-key" },
+      { source: "file", value: "bad-file-key" },
+    ],
+    "pi-key",
+    async (apiKey) => apiKey === "pi-key" ? "valid" : "invalid",
+  );
+
+  expect(selection).toEqual({ apiKey: "pi-key", clearInherited: false });
+});
+
+test("preserves the current DSH credential when the network cannot verify it", async () => {
+  const selection = await selectDshLaunchCredential(
+    [{ source: "file", value: "dsh-key" }],
+    "pi-key",
+    async () => "unknown",
+  );
+
+  expect(selection).toEqual({ apiKey: "dsh-key", clearInherited: false });
+});
+
+test("clears a rejected inherited credential when no working fallback exists", async () => {
+  const selection = await selectDshLaunchCredential(
+    [{ source: "environment", value: "bad-env-key" }],
+    "bad-pi-key",
+    async () => "invalid",
+  );
+
+  expect(selection).toEqual({ clearInherited: true });
+});
 
 test("opens the managed DeepSeek Harness web UI as a sidebar tab", async () => {
   const server = createServer((_request, response) => {

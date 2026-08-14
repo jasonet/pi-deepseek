@@ -9,8 +9,8 @@ const targetDir = join(appRoot, "src-tauri", "target", "release", "bundle");
 const appPath = join(targetDir, "macos", "Pi-Deepseek.app");
 const config = JSON.parse(readFileSync(join(appRoot, "src-tauri", "tauri.conf.json"), "utf8"));
 const dmgDir = join(targetDir, "dmg");
-const arch = process.arch === "arm64" ? "aarch64" : process.arch;
-const dmgPath = join(dmgDir, `Pi-Deepseek_${config.version}_${arch}.dmg`);
+const arch = process.arch === "arm64" ? "arm64" : process.arch;
+const dmgPath = join(dmgDir, `Pi-Deepseek-${config.version}-tauri-mac-${arch}.dmg`);
 const stagingDir = join(dmgDir, ".staging");
 
 function run(command, args) {

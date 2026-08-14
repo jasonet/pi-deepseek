@@ -35,8 +35,10 @@ const requiredPackages = [
   "retry",
   "strip-ansi",
   "typebox",
+  "ws",
   "yaml",
   "yargs",
+  "zod",
 ];
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));

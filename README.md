@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/jasonet/pi-deepseek/releases/latest"><img src="https://img.shields.io/github/v/release/jasonet/pi-deepseek?label=v2.7.1&color=%234D6BFE" alt="Latest Release" /></a>
+  <a href="https://github.com/jasonet/pi-deepseek/releases/latest"><img src="https://img.shields.io/github/v/release/jasonet/pi-deepseek?label=release&color=%234D6BFE" alt="Latest Release" /></a>
   <a href="https://github.com/jasonet/pi-deepseek/releases/latest"><img src="https://img.shields.io/badge/platform-macOS_|_Windows_|_Linux-lightgrey" alt="Platform" /></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License" /></a>
 </p>
@@ -20,20 +20,26 @@
 
 | 平台 | 架构 | 引擎 | 版本 | 格式 | 大小 | 下载 |
 |------|------|------|------|------|------|------|
-| **macOS** | Apple Silicon (M1–M4) | Electron | v2.7.1 | DMG | 136M | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.7.1/Pi-Deepseek-2.7.1-mac-arm64.dmg) |
-| **macOS** | Intel (x64) | Electron | v2.7.1 | DMG | 147M | [![Download](https://img.shields.io/badge/Download-x64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.7.1/Pi-Deepseek-2.7.1-mac-x64.dmg) |
-| **macOS** | Apple Silicon (M1–M4) | Tauri | v2.7.1 | DMG | 112M | [![Download](https://img.shields.io/badge/Download-arm64-%237C6BF5?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.7.1/Pi-Deepseek_2.7.1_aarch64.dmg) |
+| **macOS** | Apple Silicon (M1–M4) | Electron | v2.8.0 | DMG | 137M | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.8.0/Pi-Deepseek-2.8.0-mac-arm64.dmg) |
+| **macOS** | Intel (x64) | Electron | v2.8.0 | DMG | 148M | [![Download](https://img.shields.io/badge/Download-x64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.8.0/Pi-Deepseek-2.8.0-mac-x64.dmg) |
+| **macOS** | Apple Silicon (M1–M4) | Tauri | v2.8.0 | DMG | 115M | [![Download](https://img.shields.io/badge/Download-arm64-%237C6BF5?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.8.0/Pi-Deepseek-2.8.0-tauri-mac-arm64.dmg) |
 | **Windows** | x64 | Electron | v2.6.9 | 安装版 | 121M | [![Download](https://img.shields.io/badge/Download-Setup-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.9/Pi-Deepseek-2.6.9-win-x64-setup.exe) |
 | **Windows** | x64 | Electron | v2.6.9 | 便携版 | 120M | [![Download](https://img.shields.io/badge/Download-Portable-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.9/Pi-Deepseek-2.6.9-win-x64-portable.exe) |
 | **Linux** | x64 | Electron | v2.6.9 | deb | 147M | [![Download](https://img.shields.io/badge/Download-.deb-%234D6BFE?logo=ubuntu)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.9/Pi-Deepseek-2.6.9-linux-amd64.deb) |
 | **Linux** | x64 | Electron | v2.6.9 | AppImage | 150M | [![Download](https://img.shields.io/badge/Download-AppImage-%234D6BFE?logo=linux)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.9/Pi-Deepseek-2.6.9-linux-x86_64.AppImage) |
 
-> ⏳ **Windows / Linux v2.7.x 构建中**：目前 v2.7.1 已发布 macOS（Apple Silicon + Intel）；Windows 与 Linux 的 v2.7.x 包正在通过 CI 构建，构建完成后将同步更新本表。
-> *Windows / Linux v2.7.x builds in progress — currently v2.7.1 ships macOS (Apple Silicon + Intel). Windows & Linux packages will be added here once CI builds complete.*
+> **v2.8.0 首批发布 macOS**：Electron 提供 Apple Silicon 与 Intel 版本，Tauri 提供 Apple Silicon 版本；Windows / Linux 暂保留 v2.6.9。
+> *v2.8.0 initially ships for macOS: Electron for Apple Silicon and Intel, plus Tauri for Apple Silicon. Windows and Linux remain on v2.6.9.*
 
 > 🧭 **双引擎，同一版本号 / Dual engine, one version:**
-> **Electron `v2.7.1`**（macOS）与 **Tauri `v2.7.1`**（macOS arm64）。Electron 为日常使用推荐；Tauri 为更轻量替代。
-> **Electron `v2.7.1`** (macOS) and **Tauri `v2.7.1`** (macOS arm64). Electron is recommended for daily use; Tauri is the lighter alternative.
+> **Electron `v2.8.0`**（macOS）与 **Tauri `v2.8.0`**（macOS arm64）。Electron 为日常使用推荐；Tauri 为更快启动的轻量替代。
+> **Electron `v2.8.0`** (macOS) and **Tauri `v2.8.0`** (macOS arm64). Electron is recommended for daily use; Tauri is the faster-starting lightweight alternative.
+
+> **v2.8.0 更新 / What's new:**
+> **DeepSeek Harness**：新增内置 Harness Web 页签；本机服务未启动时，明确提示运行 `npx @deepseek-ai/dsh web`。
+> **本地模型**：支持自定义 OpenAI 兼容供应商和本地 LLM 端点。
+> **Tauri 稳定性**：修复 sidecar IPC 参数、Node runtime 打包及 `yaml` 运行时依赖。
+> *Adds the embedded DeepSeek Harness tab and offline startup guidance, custom OpenAI-compatible local LLM providers, and Tauri sidecar/runtime packaging fixes.*
 
 > 🆕 **v2.7.1 更新 / What's new:**
 > 🐛 **修复**：同步 v2.7.0 性能优化基础上的增量修复。

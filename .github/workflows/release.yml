@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   release-mac:
+    if: github.repository == 'minghinmatthewlam/pi-gui'
     runs-on: macos-latest
 
     steps:
@@ -125,6 +126,7 @@ jobs:
             --push
 
   release-linux:
+    if: github.repository == 'minghinmatthewlam/pi-gui'
     runs-on: ubuntu-latest
 
     steps:

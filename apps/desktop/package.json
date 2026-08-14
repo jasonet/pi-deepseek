@@ -1,7 +1,7 @@
 {
   "name": "@pi-gui/desktop",
   "private": true,
-  "version": "2.7.1",
+  "version": "2.8.0",
   "author": "Yiding by HKEZ",
   "license": "MIT",
   "description": "Deepseek GUI app for elegant pi coding agent",
@@ -117,8 +117,10 @@
     "retry": "^0.13.1",
     "strip-ansi": "^7.2.0",
     "typebox": "1.1.39",
+    "ws": "^8.21.0",
     "yaml": "2.9.0",
-    "yargs": "^16.2.0"
+    "yargs": "^16.2.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@dnd-kit/core": "^6.3.1",

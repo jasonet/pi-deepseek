@@ -89,15 +89,15 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
-      - name: Build self-contained app (bundles node + sidecar)
+      - name: Build self-contained signed DMG (bundles node + sidecar)
         working-directory: apps/desktop-tauri
-        run: pnpm exec tauri build
+        run: pnpm run package:mac
 
       - name: Upload Tauri dmg to v${{ inputs.tauri_version }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          DMG=$(ls apps/desktop-tauri/src-tauri/target/release/bundle/dmg/*.dmg | head -1)
+          DMG=$(ls apps/desktop-tauri/src-tauri/target/release/bundle/dmg/Pi-Deepseek-*-tauri-mac-*.dmg | head -1)
           gh release create "v${{ inputs.tauri_version }}" "$DMG" \
             --repo "${{ github.repository }}" \
             --title "Pi-Deepseek v${{ inputs.tauri_version }} (Tauri)" \

@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <strong>Deekseek harness GUI app for elegant pi coding agent with pi-opendesign</strong>
+  <strong>Deepseek harness Dual GUI app for elegant pi coding agent with pi-opendesign & local LLM</strong>
 </p>
 
 <p align="center">

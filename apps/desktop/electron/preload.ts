@@ -261,8 +261,8 @@ contextBridge.exposeInMainWorld("piApp", {
     ipcRenderer.invoke(desktopIpc.installOpenDesign) as Promise<{ ok: boolean; message: string }>,
   getDshWebStatus: () =>
     ipcRenderer.invoke(desktopIpc.getDshWebStatus) as Promise<DshWebStatus>,
-  startDshWeb: (workspacePath?: string) =>
-    ipcRenderer.invoke(desktopIpc.startDshWeb, workspacePath) as Promise<DshWebStatus>,
+  startDshWeb: () =>
+    ipcRenderer.invoke(desktopIpc.startDshWeb) as Promise<DshWebStatus>,
   stopDshWeb: () =>
     ipcRenderer.invoke(desktopIpc.stopDshWeb) as Promise<DshWebStatus>,
   setComposerWorkMode: (mode: string) =>

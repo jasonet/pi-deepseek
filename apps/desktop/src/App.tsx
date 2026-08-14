@@ -2520,7 +2520,7 @@ export default function App() {
           <>
         {snapshot.activeView === "deepseek-harness" ? (
           <Suspense fallback={<ViewFallback />}>
-            <DeepSeekHarnessView api={api} workspacePath={selectedWorkspace?.path} />
+            <DeepSeekHarnessView api={api} />
           </Suspense>
         ) : snapshot.activeView === "new-thread" ? (
           rootWorkspaceOptions.length > 0 ? (

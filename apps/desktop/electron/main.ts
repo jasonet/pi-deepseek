@@ -1165,9 +1165,7 @@ app.whenReady().then(async () => {
     }
   });
   ipcMain.handle(desktopIpc.getDshWebStatus, () => dshWebService.getStatus());
-  ipcMain.handle(desktopIpc.startDshWeb, (_event, workspacePath?: string) =>
-    dshWebService.start(workspacePath, store.getProviderAuth("deepseek")),
-  );
+  ipcMain.handle(desktopIpc.startDshWeb, () => dshWebService.start());
   ipcMain.handle(desktopIpc.stopDshWeb, () => dshWebService.stop());
   ipcMain.handle(desktopIpc.stateRequest, () => store.getState());
   ipcMain.handle(desktopIpc.selectedTranscriptRequest, () => store.getSelectedTranscript());

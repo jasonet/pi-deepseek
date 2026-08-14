@@ -234,20 +234,13 @@ export interface OpenDesignStatus {
 export type DshWebStatus =
   | {
       readonly state: "idle" | "starting";
-      readonly installed: boolean;
-      readonly version?: string;
     }
   | {
       readonly state: "running";
-      readonly installed: true;
-      readonly version?: string;
       readonly url: string;
-      readonly managed: boolean;
     }
   | {
       readonly state: "error";
-      readonly installed: boolean;
-      readonly version?: string;
       readonly message: string;
     };
 
@@ -413,7 +406,7 @@ export interface PiDesktopApi {
   getOpenDesignStatus(): Promise<OpenDesignStatus>;
   installOpenDesign(): Promise<{ ok: boolean; message: string }>;
   getDshWebStatus(): Promise<DshWebStatus>;
-  startDshWeb(workspacePath?: string): Promise<DshWebStatus>;
+  startDshWeb(): Promise<DshWebStatus>;
   stopDshWeb(): Promise<DshWebStatus>;
   setComposerWorkMode(mode: string): Promise<DesktopAppState>;
   getComposerWorkMode(): Promise<string>;

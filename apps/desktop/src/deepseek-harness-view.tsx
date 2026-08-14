@@ -5,37 +5,31 @@ import type { DshWebStatus, PiDesktopApi } from "./ipc";
 
 interface DeepSeekHarnessViewProps {
   readonly api: PiDesktopApi;
-  readonly workspacePath?: string;
 }
 
-export function DeepSeekHarnessView({ api, workspacePath }: DeepSeekHarnessViewProps) {
-  const [status, setStatus] = useState<DshWebStatus>({ state: "starting", installed: true });
+export function DeepSeekHarnessView({ api }: DeepSeekHarnessViewProps) {
+  const [status, setStatus] = useState<DshWebStatus>({ state: "starting" });
   const [frameLoaded, setFrameLoaded] = useState(false);
 
-  const start = useCallback(async () => {
+  const connect = useCallback(async () => {
     setFrameLoaded(false);
-    setStatus((current) => ({
-      state: "starting",
-      installed: current.installed,
-      version: current.version,
-    }));
+    setStatus({ state: "starting" });
     try {
-      setStatus(await api.startDshWeb(workspacePath));
+      setStatus(await api.startDshWeb());
     } catch (error) {
       setStatus({
         state: "error",
-        installed: false,
         message: error instanceof Error ? error.message : String(error),
       });
     }
-  }, [api, workspacePath]);
+  }, [api]);
 
   useEffect(() => {
-    void start();
-  }, [start]);
+    void connect();
+  }, [connect]);
 
   useEffect(() => {
-    if (status.state !== "running" || !status.managed) return undefined;
+    if (status.state !== "running") return undefined;
     const interval = window.setInterval(() => {
       void api.getDshWebStatus().then((nextStatus) => {
         if (nextStatus.state !== "running") setStatus(nextStatus);
@@ -48,9 +42,9 @@ export function DeepSeekHarnessView({ api, workspacePath }: DeepSeekHarnessViewP
     return (
       <section className="dsh-web dsh-web--status" data-testid="dsh-web-error">
         <img className="dsh-web__logo" src={deepseekLogo} alt="" />
-        <h1>DeepSeek Harness 无法启动</h1>
+        <h1>DeepSeek Harness 未运行</h1>
         <p>{status.message}</p>
-        <button className="button button--primary" type="button" onClick={() => void start()}>
+        <button className="button button--primary" type="button" onClick={() => void connect()}>
           重试
         </button>
       </section>
@@ -61,8 +55,7 @@ export function DeepSeekHarnessView({ api, workspacePath }: DeepSeekHarnessViewP
     return (
       <section className="dsh-web dsh-web--status" data-testid="dsh-web-loading">
         <img className="dsh-web__logo dsh-web__logo--loading" src={deepseekLogo} alt="" />
-        <h1>正在启动 DeepSeek Harness</h1>
-        {status.version ? <p>v{status.version}</p> : null}
+        <h1>正在检测 DeepSeek Harness</h1>
       </section>
     );
   }

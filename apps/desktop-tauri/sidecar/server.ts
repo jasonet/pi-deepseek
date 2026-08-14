@@ -423,8 +423,7 @@ const handlers: Record<string, Handler> = {
   [desktopIpc.getOpenDesignStatus]: () => getOpenDesignStatus(),
   [desktopIpc.installOpenDesign]: () => installOpenDesign(),
   [desktopIpc.getDshWebStatus]: () => dshWebService.getStatus(),
-  [desktopIpc.startDshWeb]: (workspacePath?: string) =>
-    dshWebService.start(workspacePath, store.getProviderAuth("deepseek")),
+  [desktopIpc.startDshWeb]: () => dshWebService.start(),
   [desktopIpc.stopDshWeb]: () => dshWebService.stop(),
   [desktopIpc.stateRequest]: () => store.getState(),
   [desktopIpc.selectedTranscriptRequest]: () => store.getSelectedTranscript(),

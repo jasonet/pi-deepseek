@@ -144,6 +144,9 @@ export async function installPiApp(): Promise<void> {
     setSkipAutoTitle: call(desktopIpc.setSkipAutoTitle),
     getOpenDesignStatus: call(desktopIpc.getOpenDesignStatus),
     installOpenDesign: call(desktopIpc.installOpenDesign),
+    getDshWebStatus: call(desktopIpc.getDshWebStatus),
+    startDshWeb: call(desktopIpc.startDshWeb),
+    stopDshWeb: call(desktopIpc.stopDshWeb),
     setComposerWorkMode: call(desktopIpc.setComposerWorkMode),
     getComposerWorkMode: call(desktopIpc.getComposerWorkMode),
 

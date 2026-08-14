@@ -115,6 +115,9 @@ export const desktopIpc = {
   setSkipAutoTitle: "pi-gui:set-skip-auto-title",
   getOpenDesignStatus: "pi-gui:get-open-design-status",
   installOpenDesign: "pi-gui:install-open-design",
+  getDshWebStatus: "pi-gui:get-dsh-web-status",
+  startDshWeb: "pi-gui:start-dsh-web",
+  stopDshWeb: "pi-gui:stop-dsh-web",
   setComposerWorkMode: "pi-gui:set-composer-work-mode",
   getComposerWorkMode: "pi-gui:get-composer-work-mode",
   terminalEnsurePanel: "pi-gui:terminal-ensure-panel",
@@ -227,6 +230,26 @@ export interface OpenDesignStatus {
   readonly version?: string;
   readonly message?: string;
 }
+
+export type DshWebStatus =
+  | {
+      readonly state: "idle" | "starting";
+      readonly installed: boolean;
+      readonly version?: string;
+    }
+  | {
+      readonly state: "running";
+      readonly installed: true;
+      readonly version?: string;
+      readonly url: string;
+      readonly managed: boolean;
+    }
+  | {
+      readonly state: "error";
+      readonly installed: boolean;
+      readonly version?: string;
+      readonly message: string;
+    };
 
 export interface DesktopShortcutInput {
   readonly modifier: boolean;
@@ -389,6 +412,9 @@ export interface PiDesktopApi {
   setSkipAutoTitle(enabled: boolean): Promise<DesktopAppState>;
   getOpenDesignStatus(): Promise<OpenDesignStatus>;
   installOpenDesign(): Promise<{ ok: boolean; message: string }>;
+  getDshWebStatus(): Promise<DshWebStatus>;
+  startDshWeb(workspacePath?: string): Promise<DshWebStatus>;
+  stopDshWeb(): Promise<DshWebStatus>;
   setComposerWorkMode(mode: string): Promise<DesktopAppState>;
   getComposerWorkMode(): Promise<string>;
   ensureTerminalPanel(

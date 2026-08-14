@@ -37,6 +37,7 @@ import {
 import { configureLogger } from "./logger";
 import { ensurePathForGuiLaunch } from "./ensure-path";
 import { seedBundledExtensions } from "./seed-extensions";
+import { DshWebService } from "./dsh-web-service";
 import type { DesktopAppState, ThemeMode } from "../src/desktop-state";
 import { desktopIpc, getDesktopCommandFromShortcut, type OpenDesignStatus } from "../src/ipc";
 import { SUPPORTED_COMPOSER_IMAGE_TYPES } from "../src/composer-attachments";
@@ -83,6 +84,7 @@ let autoUpdateInterval: ReturnType<typeof setInterval> | undefined;
 let skipAutoTitle = false;
 let composerWorkMode: string = "pi-agent";
 let imWebhookServer: ImWebhookServer | null = null;
+const dshWebService = new DshWebService();
 
 function safeAutoUpdater() { return autoUpdater; }
 const windowTestMode = resolveWindowTestMode();
@@ -1162,6 +1164,9 @@ app.whenReady().then(async () => {
       return { ok: false, message: e.message };
     }
   });
+  ipcMain.handle(desktopIpc.getDshWebStatus, () => dshWebService.getStatus());
+  ipcMain.handle(desktopIpc.startDshWeb, (_event, workspacePath?: string) => dshWebService.start(workspacePath));
+  ipcMain.handle(desktopIpc.stopDshWeb, () => dshWebService.stop());
   ipcMain.handle(desktopIpc.stateRequest, () => store.getState());
   ipcMain.handle(desktopIpc.selectedTranscriptRequest, () => store.getSelectedTranscript());
   ipcMain.handle(desktopIpc.transcriptForRequest, (_event, target: WorkspaceSessionTarget) =>
@@ -1599,6 +1604,7 @@ app.on("window-all-closed", () => {
     terminalService = undefined;
     stopPeriodicGcHint();
     stopWeixinBridgeRuntime();
+    void dshWebService.stop();
     app.quit();
   }
 });
@@ -1617,6 +1623,7 @@ app.on("before-quit", (event) => {
   terminalService = undefined;
   stopPeriodicGcHint();
   stopWeixinBridgeRuntime();
+  void dshWebService.stop();
   if (quittingAfterStoreFlush || !store) {
     return;
   }

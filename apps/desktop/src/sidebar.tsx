@@ -23,6 +23,7 @@ import type { ThreadGroup, ThreadListEntry } from "./thread-groups";
 import type { Dispatch, SetStateAction } from "react";
 import type { DesktopAppState } from "./desktop-state";
 import { useT } from "./i18n";
+import deepseekLogo from "../resources/providers/deepseek.png";
 
 interface SidebarProps {
   readonly activeView: AppView;
@@ -146,6 +147,15 @@ export function Sidebar(props: SidebarProps) {
           >
             <FolderIcon />
             <span>{t("sidebar.threads")}</span>
+          </button>
+          <button
+            className={`sidebar__nav-item ${activeView === "deepseek-harness" ? "sidebar__nav-item--active" : ""}`}
+            data-testid="open-deepseek-harness"
+            type="button"
+            onClick={() => onSetActiveView("deepseek-harness")}
+          >
+            <img className="sidebar__nav-logo" src={deepseekLogo} alt="" />
+            <span>{t("sidebar.deepseekHarness")}</span>
           </button>
           <button
             className="sidebar__nav-item"

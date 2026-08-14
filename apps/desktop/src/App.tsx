@@ -54,6 +54,7 @@ const SettingsView = lazy(() => import("./settings-view").then((m) => ({ default
 const SkillsView = lazy(() => import("./skills-view").then((m) => ({ default: m.SkillsView })));
 const ExtensionsView = lazy(() => import("./extensions-view").then((m) => ({ default: m.ExtensionsView })));
 const ConnectPhoneView = lazy(() => import("./connect-phone-view").then((m) => ({ default: m.ConnectPhoneView })));
+const DeepSeekHarnessView = lazy(() => import("./deepseek-harness-view").then((m) => ({ default: m.DeepSeekHarnessView })));
 const DiffPanel = lazy(() => import("./diff-panel").then((m) => ({ default: m.DiffPanel })));
 const TerminalPanel = lazy(() => import("./terminal-panel").then((m) => ({ default: m.TerminalPanel })));
 const TreeModal = lazy(() => import("./tree-modal").then((m) => ({ default: m.TreeModal })));
@@ -126,7 +127,7 @@ function isEventInsideTerminal(event: globalThis.KeyboardEvent): boolean {
 }
 
 function canTogglePrimarySidebar(view: AppView | undefined): boolean {
-  return view === "threads" || view === "new-thread";
+  return view === "threads" || view === "new-thread" || view === "deepseek-harness";
 }
 
 function useRunningLabel(startedAt: string | undefined) {
@@ -2517,7 +2518,11 @@ export default function App() {
           terminalPanel
         ) : (
           <>
-        {snapshot.activeView === "new-thread" ? (
+        {snapshot.activeView === "deepseek-harness" ? (
+          <Suspense fallback={<ViewFallback />}>
+            <DeepSeekHarnessView api={api} workspacePath={selectedWorkspace?.path} />
+          </Suspense>
+        ) : snapshot.activeView === "new-thread" ? (
           rootWorkspaceOptions.length > 0 ? (
             <NewThreadView
               workspaces={rootWorkspaceOptions}

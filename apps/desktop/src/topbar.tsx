@@ -129,6 +129,11 @@ export function Topbar(props: TopbarProps) {
             <span className="topbar__separator">/</span>
             <span className="topbar__session">New thread</span>
           </>
+        ) : activeView === "deepseek-harness" ? (
+          <>
+            <span className="topbar__separator">/</span>
+            <span className="topbar__session">DeepSeek Harness</span>
+          </>
         ) : null}
       </div>
 

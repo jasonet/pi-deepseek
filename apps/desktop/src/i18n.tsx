@@ -25,6 +25,7 @@ const translations: Record<Locale, Record<string, string>> = {
   en: {
     // Sidebar
     "sidebar.threads": "Threads",
+    "sidebar.deepseekHarness": "DeepSeek Harness",
     "sidebar.newThread": "New Thread",
     "sidebar.skills": "Skills",
     "sidebar.extensions": "Extensions",
@@ -389,6 +390,7 @@ const translations: Record<Locale, Record<string, string>> = {
   "zh-CN": {
     // Sidebar
     "sidebar.threads": "会话",
+    "sidebar.deepseekHarness": "DeepSeek Harness",
     "sidebar.newThread": "新建会话",
     "sidebar.skills": "技能",
     "sidebar.extensions": "扩展",
@@ -741,6 +743,7 @@ const translations: Record<Locale, Record<string, string>> = {
   "zh-TW": {
     // Sidebar
     "sidebar.threads": "會話",
+    "sidebar.deepseekHarness": "DeepSeek Harness",
     "sidebar.newThread": "新增會話",
     "sidebar.skills": "技能",
     "sidebar.extensions": "擴充功能",
@@ -1004,6 +1007,7 @@ const translations: Record<Locale, Record<string, string>> = {
   ja: {
     // Sidebar
     "sidebar.threads": "スレッド",
+    "sidebar.deepseekHarness": "DeepSeek Harness",
     "sidebar.newThread": "新規スレッド",
     "sidebar.skills": "スキル",
     "sidebar.extensions": "拡張機能",

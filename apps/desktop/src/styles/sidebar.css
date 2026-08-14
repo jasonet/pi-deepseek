@@ -77,6 +77,13 @@
   height: 16px;
 }
 
+.sidebar__nav-logo {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  object-fit: contain;
+}
+
 .sidebar__nav-item--active {
   background: var(--surface-overlay);
   border-color: var(--line);

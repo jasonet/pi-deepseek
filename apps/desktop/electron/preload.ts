@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer, webUtils } from "electron";
 import { PRELOAD_DEV_RELOAD_MARKER } from "./dev-reload-preload-probe";
 import {
   desktopIpc,
+  type DshWebStatus,
   type DesktopNotificationPermissionStatus,
   type OpenDesignStatus,
   type PiDesktopCommand,
@@ -258,6 +259,12 @@ contextBridge.exposeInMainWorld("piApp", {
     ipcRenderer.invoke(desktopIpc.getOpenDesignStatus) as Promise<OpenDesignStatus>,
   installOpenDesign: () =>
     ipcRenderer.invoke(desktopIpc.installOpenDesign) as Promise<{ ok: boolean; message: string }>,
+  getDshWebStatus: () =>
+    ipcRenderer.invoke(desktopIpc.getDshWebStatus) as Promise<DshWebStatus>,
+  startDshWeb: (workspacePath?: string) =>
+    ipcRenderer.invoke(desktopIpc.startDshWeb, workspacePath) as Promise<DshWebStatus>,
+  stopDshWeb: () =>
+    ipcRenderer.invoke(desktopIpc.stopDshWeb) as Promise<DshWebStatus>,
   setComposerWorkMode: (mode: string) =>
     ipcRenderer.invoke(desktopIpc.setComposerWorkMode, mode) as Promise<DesktopAppState>,
   getComposerWorkMode: () =>

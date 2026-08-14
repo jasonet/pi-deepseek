@@ -23,6 +23,7 @@ import { createInterface } from "node:readline";
 
 import { DesktopAppStore } from "../../desktop/electron/app-store";
 import { probeCustomModelProvider } from "../../desktop/electron/custom-model-provider-probe";
+import { DshWebService } from "../../desktop/electron/dsh-web-service";
 import { desktopIpc } from "../../desktop/src/ipc";
 import type {
   ComposerAttachment,
@@ -134,6 +135,7 @@ const store = new DesktopAppStore({
     return undefined;
   },
 });
+const dshWebService = new DshWebService();
 
 // ---------------------------------------------------------------------------
 // Open Design (pi-open-design) status + install. Ported from
@@ -420,6 +422,9 @@ const handlers: Record<string, Handler> = {
   },
   [desktopIpc.getOpenDesignStatus]: () => getOpenDesignStatus(),
   [desktopIpc.installOpenDesign]: () => installOpenDesign(),
+  [desktopIpc.getDshWebStatus]: () => dshWebService.getStatus(),
+  [desktopIpc.startDshWeb]: (workspacePath?: string) => dshWebService.start(workspacePath),
+  [desktopIpc.stopDshWeb]: () => dshWebService.stop(),
   [desktopIpc.stateRequest]: () => store.getState(),
   [desktopIpc.selectedTranscriptRequest]: () => store.getSelectedTranscript(),
   [desktopIpc.transcriptForRequest]: (target: WorkspaceSessionTarget) => store.getTranscriptFor(target),
@@ -668,7 +673,7 @@ async function main(): Promise<void> {
     void handleLine(line);
   });
   rl.on("close", () => {
-    process.exit(0);
+    void dshWebService.stop().finally(() => process.exit(0));
   });
 }
 

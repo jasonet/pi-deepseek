@@ -22,18 +22,18 @@
 |------|------|------|------|------|------|------|
 | **macOS** | Apple Silicon (M1–M4) | Electron | v2.8.1 | DMG | 137M | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.8.1/Pi-Deepseek-2.8.1-mac-arm64.dmg) |
 | **macOS** | Intel (x64) | Electron | v2.8.1 | DMG | 148M | [![Download](https://img.shields.io/badge/Download-x64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.8.1/Pi-Deepseek-2.8.1-mac-x64.dmg) |
-| **macOS** | Apple Silicon (M1–M4) | Tauri | v2.8.0 | DMG | 115M | [![Download](https://img.shields.io/badge/Download-arm64-%237C6BF5?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.8.0/Pi-Deepseek-2.8.0-tauri-mac-arm64.dmg) |
+| **macOS** | Apple Silicon (M1–M4) | Tauri | v2.8.1 | DMG | 126M | [![Download](https://img.shields.io/badge/Download-arm64-%237C6BF5?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.8.1/Pi-Deepseek-2.8.1-tauri-mac-arm64.dmg) |
 | **Windows** | x64 | Electron | v2.6.9 | 安装版 | 121M | [![Download](https://img.shields.io/badge/Download-Setup-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.9/Pi-Deepseek-2.6.9-win-x64-setup.exe) |
 | **Windows** | x64 | Electron | v2.6.9 | 便携版 | 120M | [![Download](https://img.shields.io/badge/Download-Portable-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.9/Pi-Deepseek-2.6.9-win-x64-portable.exe) |
 | **Linux** | x64 | Electron | v2.6.9 | deb | 147M | [![Download](https://img.shields.io/badge/Download-.deb-%234D6BFE?logo=ubuntu)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.9/Pi-Deepseek-2.6.9-linux-amd64.deb) |
 | **Linux** | x64 | Electron | v2.6.9 | AppImage | 150M | [![Download](https://img.shields.io/badge/Download-AppImage-%234D6BFE?logo=linux)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.9/Pi-Deepseek-2.6.9-linux-x86_64.AppImage) |
 
-> **v2.8.1 发布 macOS Electron**：提供 Apple Silicon 与 Intel 版本；Tauri 保持 v2.8.0，Windows / Linux 暂保留 v2.6.9。
-> *v2.8.1 ships for macOS Electron on Apple Silicon and Intel. Tauri remains on v2.8.0; Windows and Linux remain on v2.6.9.*
+> **v2.8.1 发布 macOS Electron 与 Tauri**：Electron 提供 Apple Silicon 与 Intel 版本，Tauri 提供 Apple Silicon 版本；Windows / Linux 暂保留 v2.6.9。
+> *v2.8.1 ships for macOS Electron on Apple Silicon and Intel, plus Tauri on Apple Silicon. Windows and Linux remain on v2.6.9.*
 
 > 🧭 **双引擎版本矩阵 / Dual-engine version matrix:**
-> **Electron `v2.8.1`**（macOS）与 **Tauri `v2.8.0`**（macOS arm64）。Electron 为日常使用推荐；Tauri 为更快启动的轻量替代。
-> **Electron `v2.8.1`** (macOS) and **Tauri `v2.8.0`** (macOS arm64). Electron is recommended for daily use; Tauri is the faster-starting lightweight alternative.
+> **Electron `v2.8.1`**（macOS）与 **Tauri `v2.8.1`**（macOS arm64）。Electron 为日常使用推荐；Tauri 为更快启动的轻量替代。
+> **Electron `v2.8.1`** (macOS) and **Tauri `v2.8.1`** (macOS arm64). Electron is recommended for daily use; Tauri is the faster-starting lightweight alternative.
 
 > **v2.8.1 更新 / What's new:**
 > **DeepSeek Key 安全互通**：Pi 保存的 Key 或用户环境变量可补全 DeepSeek Harness；Harness 的有效本地凭据也可补全缺失的 Pi 保存配置。环境变量仅读取、不回写；绝不将用户 Key 写入安装包或日志。

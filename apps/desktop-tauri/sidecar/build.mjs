@@ -15,7 +15,7 @@ await build({
   format: "esm",
   target: "node20",
   tsconfig: join(repoRoot, "apps", "desktop", "tsconfig.paths.json"),
-  external: ["@earendil-works/pi-coding-agent", "node-pty", "yaml"],
+  external: ["@earendil-works/pi-coding-agent", "node-pty", "proper-lockfile", "yaml"],
   outfile: join(here, "dist", "server.mjs"),
   logLevel: "info",
 });

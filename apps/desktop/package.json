@@ -34,6 +34,7 @@
     "verify:packaged-runtime-deps:linux": "pnpm run verify:runtime-model-registry && cross-env PI_APP_PACKAGE_PLATFORM=linux node scripts/assert-packaged-runtime-deps.mjs",
     "verify:first-run:packaged": "node scripts/first-run-smoke.mjs",
     "test": "pnpm run test:e2e",
+    "test:dsh-web-service": "pnpm run test:e2e:runner -- tests/unit/dsh-web-service.spec.ts",
     "test:update-version": "pnpm run test:e2e:runner -- tests/unit/update-version.spec.ts",
     "test:e2e": "pnpm run test:e2e:core",
     "test:e2e:all": "pnpm run test:e2e:core && pnpm run test:e2e:live && pnpm run test:e2e:native",

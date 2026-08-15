@@ -20,6 +20,7 @@ test("opens a running DeepSeek Harness web UI as a sidebar tab", async () => {
   const workspacePath = await makeWorkspace("dsh-web-workspace");
   const harness = await launchDesktop(userDataDir, {
     initialWorkspaces: [workspacePath],
+    scrubProviderEnv: true,
     testMode: "background",
     envOverrides: { PI_APP_DSH_WEB_URL: `http://127.0.0.1:${address.port}` },
   });
@@ -58,6 +59,7 @@ test("prompts for the DSH web command when no local service is running", async (
   const workspacePath = await makeWorkspace("dsh-web-missing-workspace");
   const harness = await launchDesktop(userDataDir, {
     initialWorkspaces: [workspacePath],
+    scrubProviderEnv: true,
     testMode: "background",
     envOverrides: { PI_APP_DSH_WEB_URL: `http://127.0.0.1:${address.port}` },
   });
@@ -68,7 +70,7 @@ test("prompts for the DSH web command when no local service is running", async (
 
     await expect(window.getByTestId("dsh-web-error")).toBeVisible();
     await expect(window.getByRole("heading", { name: "DeepSeek Harness 未运行" })).toBeVisible();
-    await expect(window.getByText("npx @deepseek-ai/dsh web", { exact: false })).toBeVisible();
+    await expect(window.getByText("env -u DEEPSEEK_API_KEY npx @deepseek-ai/dsh web", { exact: false })).toBeVisible();
     const retry = window.getByRole("button", { name: "重试" });
     await expect(retry).toBeVisible();
 

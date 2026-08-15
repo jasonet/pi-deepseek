@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <strong>Deepseek harness Dual GUI app for elegant pi coding agent with pi-opendesign & local LLM</strong>
+  <strong>Deepseek harness Dual GUI(UnOfficial) for elegant pi coding agent with DeepSeek Harness(Official) pi-opendesign & local LLM</strong>
 </p>
 
 <p align="center">
@@ -20,9 +20,9 @@
 
 | 平台 | 架构 | 引擎 | 版本 | 格式 | 大小 | 下载 |
 |------|------|------|------|------|------|------|
-| **macOS** | Apple Silicon (M1–M4) | Electron | v2.8.1 | DMG | 137M | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.8.1/Pi-Deepseek-2.8.1-mac-arm64.dmg) |
+| **macOS** | Apple Silicon (M1–M5) | Electron | v2.8.1 | DMG | 137M | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.8.1/Pi-Deepseek-2.8.1-mac-arm64.dmg) |
 | **macOS** | Intel (x64) | Electron | v2.8.1 | DMG | 148M | [![Download](https://img.shields.io/badge/Download-x64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.8.1/Pi-Deepseek-2.8.1-mac-x64.dmg) |
-| **macOS** | Apple Silicon (M1–M4) | Tauri | v2.8.1 | DMG | 126M | [![Download](https://img.shields.io/badge/Download-arm64-%237C6BF5?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.8.1/Pi-Deepseek-2.8.1-tauri-mac-arm64.dmg) |
+| **macOS** | Apple Silicon (M1–M5) | Tauri | v2.8.1 | DMG | 126M | [![Download](https://img.shields.io/badge/Download-arm64-%237C6BF5?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.8.1/Pi-Deepseek-2.8.1-tauri-mac-arm64.dmg) |
 | **Windows** | x64 | Electron | v2.6.9 | 安装版 | 121M | [![Download](https://img.shields.io/badge/Download-Setup-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.9/Pi-Deepseek-2.6.9-win-x64-setup.exe) |
 | **Windows** | x64 | Electron | v2.6.9 | 便携版 | 120M | [![Download](https://img.shields.io/badge/Download-Portable-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.9/Pi-Deepseek-2.6.9-win-x64-portable.exe) |
 | **Linux** | x64 | Electron | v2.6.9 | deb | 147M | [![Download](https://img.shields.io/badge/Download-.deb-%234D6BFE?logo=ubuntu)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.9/Pi-Deepseek-2.6.9-linux-amd64.deb) |
@@ -77,7 +77,7 @@
 
 ## 简介
 
-`Pi-Deepseek` 利用 Pi coding agent 充分发挥 DeepSeek V4 Pro 的性价比（体验接近 Claude Opus 4.7，成本仅为其 N 分之一），一个面向本地 AI 编程工作流的桌面客户端。现已支持 macOS / Windows / Linux 三平台，为 `pi` 会话提供深推理、无提示词的 Codex 级工程自动交互体验。
+`Pi-Deepseek` 利用 Pi coding agent 充分发挥 DeepSeek V4 Pro/Flash 的性价比（体验接近 Claude Opus 4.8），同时内置了DeepSeek Harness Web UI（npx @deepseek-ai/dsh web），一个面向本地 AI 编程工作流的桌面客户端。现已支持 macOS / Windows / Linux 三平台，为 `pi` 会话提供深推理、无提示词的 Codex 级工程自动交互体验。
 
 ![dual-pane](./docs/readme/dual-pane.jpg)
 

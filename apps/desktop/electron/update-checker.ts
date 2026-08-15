@@ -1,4 +1,5 @@
 import { app, net, Notification, shell } from "electron";
+import { isUpdateVersionNewer } from "./update-version";
 
 const RELEASES_PAGE =
   "https://github.com/jasonet/pi-deepseek/releases/latest";
@@ -45,7 +46,7 @@ export async function checkForUpdate(): Promise<UpdateCheckResult> {
 
   const current = app.getVersion();
 
-  if (latest !== current) {
+  if (isUpdateVersionNewer(latest, current)) {
     showUpdateNotification(current, latest);
     return {
       status: "update-available",

@@ -26,6 +26,7 @@ import {
   NotificationPermissionService,
 } from "./notification-permission";
 import { checkForUpdate, initUpdateChecker } from "./update-checker";
+import { isUpdateVersionNewer } from "./update-version";
 import { ThemeManager } from "./theme-manager";
 import { TerminalService } from "./terminal-service";
 import {
@@ -641,30 +642,24 @@ async function registerBuiltInPlugins(): Promise<void> {
   } catch { /* silently skip */ }
 }
 
+async function downloadAvailableUpdate(): Promise<void> {
+  try {
+    const updater = safeAutoUpdater();
+    const result = await updater?.checkForUpdates();
+    const latest = result?.updateInfo?.version;
+    if (latest && isUpdateVersionNewer(latest, app.getVersion())) {
+      await updater.downloadUpdate();
+    }
+  } catch {}
+}
+
 function startAutoUpdateChecker(): void {
   if (isDev || autoUpdateInterval) return;
-  autoUpdateInterval = setInterval(async () => {
-    try {
-      const result = await safeAutoUpdater()?.checkForUpdates();
-      if (result?.updateInfo?.version) {
-        const latest = result.updateInfo.version;
-        if (latest !== app.getVersion()) {
-          await safeAutoUpdater()?.downloadUpdate();
-        }
-      }
-    } catch {}
+  autoUpdateInterval = setInterval(() => {
+    void downloadAvailableUpdate();
   }, 4 * 60 * 60 * 1000); // Check every 4 hours
-  // Also check immediately on first start
-  setTimeout(async () => {
-    try {
-      const result = await safeAutoUpdater()?.checkForUpdates();
-      if (result?.updateInfo?.version) {
-        const latest = result.updateInfo.version;
-        if (latest !== app.getVersion()) {
-          await safeAutoUpdater()?.downloadUpdate();
-        }
-      }
-    } catch {}
+  setTimeout(() => {
+    void downloadAvailableUpdate();
   }, 30000); // Wait 30s after startup
 }
 
@@ -1371,7 +1366,7 @@ app.whenReady().then(async () => {
       if (result?.updateInfo?.version) {
         const latest = result.updateInfo.version;
         const current = app.getVersion();
-        if (latest !== current) {
+        if (isUpdateVersionNewer(latest, current)) {
           return { status: "available", current, latest };
         }
         return { status: "up-to-date", current };

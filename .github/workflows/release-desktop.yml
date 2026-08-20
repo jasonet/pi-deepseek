@@ -139,6 +139,14 @@ jobs:
           PI_APP_PACKAGE_PLATFORM: ${{ matrix.platform }}
         run: pnpm run verify:packaged-runtime-deps
 
+      - name: Verify macOS app signatures
+        if: ${{ matrix.platform == 'macos' }}
+        working-directory: apps/desktop
+        shell: bash
+        run: |
+          codesign --verify --deep --strict --verbose=2 release/mac/Pi-Deepseek.app
+          codesign --verify --deep --strict --verbose=2 release/mac-arm64/Pi-Deepseek.app
+
       - name: First-run smoke (Windows)
         if: ${{ matrix.platform == 'windows' }}
         working-directory: apps/desktop

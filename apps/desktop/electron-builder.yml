@@ -59,6 +59,7 @@ mac:
   artifactName: ${productName}-${version}-${os}-${arch}.${ext}
   bundleShortVersion: 2.8.2
   bundleVersion: 2.8.2
+  identity: "-"
   category: public.app-category.developer-tools
   hardenedRuntime: true
   gatekeeperAssess: false

@@ -72,9 +72,36 @@ jobs:
           esac
           echo "value=$value" >> "$GITHUB_OUTPUT"
 
+  release:
+    name: Prepare draft release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ensure target releases exist
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          VERSION: ${{ inputs.version }}
+          TAURI_VERSION: ${{ inputs.tauri_version }}
+          TARGET_SHA: ${{ github.sha }}
+        run: |
+          ensure_release() {
+            local version="$1"
+            if ! gh release view "v${version}" --repo "$REPOSITORY" >/dev/null 2>&1; then
+              gh release create "v${version}" --repo "$REPOSITORY" \
+                --target "$TARGET_SHA" --draft --title "Pi-Deepseek v${version}" \
+                --notes "Build artifacts are being prepared."
+            fi
+          }
+
+          ensure_release "$VERSION"
+          if [[ -n "$TAURI_VERSION" && "$TAURI_VERSION" != "$VERSION" ]]; then
+            ensure_release "$TAURI_VERSION"
+          fi
+
   electron:
     name: Electron (${{ matrix.os }})
-    needs: prepare
+    needs: [prepare, release]
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
@@ -164,6 +191,7 @@ jobs:
   tauri:
     name: Tauri (macOS)
     if: ${{ inputs.tauri_version != '' }}
+    needs: release
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -191,9 +219,5 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           DMG=$(ls apps/desktop-tauri/src-tauri/target/release/bundle/dmg/Pi-Deepseek-*-tauri-mac-*.dmg | head -1)
-          gh release create "v${{ inputs.tauri_version }}" "$DMG" \
-            --repo "${{ github.repository }}" \
-            --title "Pi-Deepseek v${{ inputs.tauri_version }} (Tauri)" \
-            --notes "Self-contained Tauri build (bundled Node runtime + pi sidecar). macOS Apple Silicon." \
-          || gh release upload "v${{ inputs.tauri_version }}" "$DMG" \
+          gh release upload "v${{ inputs.tauri_version }}" "$DMG" \
             --repo "${{ github.repository }}" --clobber

@@ -21,7 +21,7 @@
 | 平台 | 架构 | 引擎 | 版本 | 格式 | 大小 | 下载 |
 |------|------|------|------|------|------|------|
 | **macOS** | Apple Silicon (M1–M5) | Electron | v2.8.2 | DMG | 140M | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.8.2/Pi-Deepseek-2.8.2-mac-arm64.dmg) |
-| **macOS** | Intel (x64) | Electron | v2.8.2 | DMG | 149M | [![Download](https://img.shields.io/badge/Download-x64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.8.2/Pi-Deepseek-2.8.2-mac-x64.dmg) |
+| **macOS** | Intel (x64) | Electron | v2.8.2 | DMG | 151M | [![Download](https://img.shields.io/badge/Download-x64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.8.2/Pi-Deepseek-2.8.2-mac-x64.dmg) |
 | **macOS** | Apple Silicon (M1–M5) | Tauri | v2.8.2 | DMG | 186M | [![Download](https://img.shields.io/badge/Download-arm64-%237C6BF5?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.8.2/Pi-Deepseek-2.8.2-tauri-mac-arm64.dmg) |
 | **Windows** | x64 | Electron | v2.6.9 | 安装版 | 121M | [![Download](https://img.shields.io/badge/Download-Setup-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.9/Pi-Deepseek-2.6.9-win-x64-setup.exe) |
 | **Windows** | x64 | Electron | v2.6.9 | 便携版 | 120M | [![Download](https://img.shields.io/badge/Download-Portable-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.9/Pi-Deepseek-2.6.9-win-x64-portable.exe) |

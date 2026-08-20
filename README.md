@@ -20,20 +20,27 @@
 
 | 平台 | 架构 | 引擎 | 版本 | 格式 | 大小 | 下载 |
 |------|------|------|------|------|------|------|
-| **macOS** | Apple Silicon (M1–M5) | Electron | v2.8.1 | DMG | 137M | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.8.1/Pi-Deepseek-2.8.1-mac-arm64.dmg) |
-| **macOS** | Intel (x64) | Electron | v2.8.1 | DMG | 148M | [![Download](https://img.shields.io/badge/Download-x64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.8.1/Pi-Deepseek-2.8.1-mac-x64.dmg) |
-| **macOS** | Apple Silicon (M1–M5) | Tauri | v2.8.1 | DMG | 126M | [![Download](https://img.shields.io/badge/Download-arm64-%237C6BF5?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.8.1/Pi-Deepseek-2.8.1-tauri-mac-arm64.dmg) |
+| **macOS** | Apple Silicon (M1–M5) | Electron | v2.8.2 | DMG | 137M | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.8.2/Pi-Deepseek-2.8.2-mac-arm64.dmg) |
+| **macOS** | Intel (x64) | Electron | v2.8.2 | DMG | 148M | [![Download](https://img.shields.io/badge/Download-x64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.8.2/Pi-Deepseek-2.8.2-mac-x64.dmg) |
+| **macOS** | Apple Silicon (M1–M5) | Tauri | v2.8.2 | DMG | 126M | [![Download](https://img.shields.io/badge/Download-arm64-%237C6BF5?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.8.2/Pi-Deepseek-2.8.2-tauri-mac-arm64.dmg) |
 | **Windows** | x64 | Electron | v2.6.9 | 安装版 | 121M | [![Download](https://img.shields.io/badge/Download-Setup-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.9/Pi-Deepseek-2.6.9-win-x64-setup.exe) |
 | **Windows** | x64 | Electron | v2.6.9 | 便携版 | 120M | [![Download](https://img.shields.io/badge/Download-Portable-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.9/Pi-Deepseek-2.6.9-win-x64-portable.exe) |
 | **Linux** | x64 | Electron | v2.6.9 | deb | 147M | [![Download](https://img.shields.io/badge/Download-.deb-%234D6BFE?logo=ubuntu)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.9/Pi-Deepseek-2.6.9-linux-amd64.deb) |
 | **Linux** | x64 | Electron | v2.6.9 | AppImage | 150M | [![Download](https://img.shields.io/badge/Download-AppImage-%234D6BFE?logo=linux)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.9/Pi-Deepseek-2.6.9-linux-x86_64.AppImage) |
 
-> **v2.8.1 发布 macOS Electron 与 Tauri**：Electron 提供 Apple Silicon 与 Intel 版本，Tauri 提供 Apple Silicon 版本；Windows / Linux 暂保留 v2.6.9。
-> *v2.8.1 ships for macOS Electron on Apple Silicon and Intel, plus Tauri on Apple Silicon. Windows and Linux remain on v2.6.9.*
+> **v2.8.2 发布 macOS Electron 与 Tauri**：Electron 提供 Apple Silicon 与 Intel 版本，Tauri 提供 Apple Silicon 版本；Windows / Linux 暂保留 v2.6.9。
+> *v2.8.2 ships for macOS Electron on Apple Silicon and Intel, plus Tauri on Apple Silicon. Windows and Linux remain on v2.6.9.*
 
 > 🧭 **双引擎版本矩阵 / Dual-engine version matrix:**
-> **Electron `v2.8.1`**（macOS）与 **Tauri `v2.8.1`**（macOS arm64）。Electron 为日常使用推荐；Tauri 为更快启动的轻量替代。
-> **Electron `v2.8.1`** (macOS) and **Tauri `v2.8.1`** (macOS arm64). Electron is recommended for daily use; Tauri is the faster-starting lightweight alternative.
+> **Electron `v2.8.2`**（macOS）与 **Tauri `v2.8.2`**（macOS arm64）。Electron 为日常使用推荐；Tauri 为更快启动的轻量替代；About 面板会标明 Electron / Tauri 编译版。
+> **Electron `v2.8.2`** (macOS) and **Tauri `v2.8.2`** (macOS arm64). Electron is recommended for daily use; Tauri is the faster-starting lightweight alternative; About identifies the Electron / Tauri build.
+
+> **v2.8.2 更新 / What's new:**
+> **双版面会话隔离**：左右 pane 各自选择模型、各自提交到对应会话，右侧提交不会切换左侧主会话。
+> **Treg 工具集成**：Settings → External tools 新增 Treg，默认关闭；可授权 Pi 工作区和 DeepSeek Harness 目标，带服务地址、余额、工作区范围、付费调用和外部写入确认控制。
+> **自定义本地 LLM**：自动探测 OpenAI 兼容模型与 llama.cpp thinking 能力，支持 Qwen chat-template 等 Reasoning 协议，并显示连接、生成和上下文压缩进度。
+> **运行恢复**：自定义模型请求与自动压缩都有超时保护；失败、取消或重启后会正确恢复 Composer，不再残留 `Working…` 状态。
+> *Dual-pane sessions now keep model selection and submission isolated per pane. Treg is available under Settings → External tools with explicit workspace, spending, and external-write controls. Custom OpenAI-compatible LLMs gain reasoning-protocol detection, visible progress, and reliable timeout/compaction recovery.*
 
 > **v2.8.1 更新 / What's new:**
 > **DeepSeek Key 安全互通**：Pi 保存的 Key 或用户环境变量可补全 DeepSeek Harness；Harness 的有效本地凭据也可补全缺失的 Pi 保存配置。环境变量仅读取、不回写；绝不将用户 Key 写入安装包或日志。

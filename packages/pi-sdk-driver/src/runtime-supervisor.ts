@@ -16,6 +16,7 @@ import type {
   RuntimeAppendSystemPromptFile,
   RuntimeCustomModelProviderRecord,
   RuntimeCustomModelRecord,
+  RuntimeCustomModelThinkingFormat,
   RuntimeLoginCallbacks,
   RuntimeExtensionDiagnostic,
   RuntimeExtensionRecord,
@@ -140,6 +141,9 @@ export class RuntimeSupervisor implements RuntimeResourceDriver {
         name: readNonEmptyString(provider.name) ?? providerId,
         baseUrl: readNonEmptyString(provider.baseUrl) ?? "",
         hasApiKey: this.authStorage.hasAuth(providerId),
+        thinkingFormat: normalizeCustomModelThinkingFormat(
+          isRecord(provider.compat) ? provider.compat.thinkingFormat : undefined,
+        ),
         models: readCustomModelRecords(provider.models),
       }))
       .sort((left, right) => left.name.localeCompare(right.name));
@@ -160,6 +164,12 @@ export class RuntimeSupervisor implements RuntimeResourceDriver {
     const modelsPath = join(this.agentDir, "models.json");
     const config = await readModelsJsonConfig(modelsPath);
     const existing = config.providers[providerId] ?? {};
+    const existingThinkingFormat = normalizeCustomModelThinkingFormat(
+      isRecord(existing.compat) ? existing.compat.thinkingFormat : undefined,
+    );
+    const thinkingFormat = normalizeCustomModelThinkingFormat(
+      input.thinkingFormat ?? existingThinkingFormat,
+    );
     config.providers[providerId] = {
       ...existing,
       name: providerName,
@@ -170,11 +180,11 @@ export class RuntimeSupervisor implements RuntimeResourceDriver {
       apiKey: "pi-deepseek-local",
       authHeader: true,
       compat: {
-        ...(isRecord(existing.compat) ? existing.compat : {}),
         supportsDeveloperRole: false,
         supportsReasoningEffort: false,
         supportsUsageInStreaming: false,
         maxTokensField: "max_tokens",
+        ...(thinkingFormat === "auto" ? {} : { thinkingFormat }),
       },
       models: models.map((model) => ({
         id: model.id,
@@ -974,6 +984,23 @@ function normalizeCustomProviderBaseUrl(value: string): string {
     throw new Error("Base URL must not contain embedded credentials.");
   }
   return normalized;
+}
+
+const CUSTOM_MODEL_THINKING_FORMATS = new Set<RuntimeCustomModelThinkingFormat>([
+  "auto",
+  "openai",
+  "openrouter",
+  "deepseek",
+  "zai",
+  "qwen",
+  "qwen-chat-template",
+]);
+
+function normalizeCustomModelThinkingFormat(value: unknown): RuntimeCustomModelThinkingFormat {
+  if (typeof value !== "string" || !CUSTOM_MODEL_THINKING_FORMATS.has(value as RuntimeCustomModelThinkingFormat)) {
+    return "auto";
+  }
+  return value as RuntimeCustomModelThinkingFormat;
 }
 
 function normalizeCustomModels(models: readonly RuntimeCustomModelRecord[]): RuntimeCustomModelRecord[] {

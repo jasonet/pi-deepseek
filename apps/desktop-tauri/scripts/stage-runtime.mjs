@@ -29,6 +29,7 @@ const pkgRoot = join(here, ".."); // apps/desktop-tauri
 const sidecarDir = join(pkgRoot, "sidecar");
 const stagingDir = join(sidecarDir, "staging");
 const outDir = join(pkgRoot, "src-tauri", "sidecar");
+const desktopRoot = join(pkgRoot, "..", "desktop");
 
 // Pin the bundled Node runtime. Official nodejs.org builds are self-contained
 // (link only macOS system frameworks), unlike Homebrew's Cellar-linked node.
@@ -75,6 +76,7 @@ function pruneNativePackages(modulesDir) {
 
 // 1. Build the sidecar bundle (sidecar/dist/server.mjs).
 run("node", [join(sidecarDir, "build.mjs")]);
+run("node", [join(desktopRoot, "scripts", "stage-mcp-bridge.mjs")]);
 
 // 2. Ensure the runtime node_modules exists (real on-disk package tree).
 const stagedModules = join(stagingDir, "node_modules");
@@ -120,6 +122,13 @@ rmSync(outDir, { recursive: true, force: true });
 mkdirSync(outDir, { recursive: true });
 
 copyFileSync(join(sidecarDir, "dist", "server.mjs"), join(outDir, "server.mjs"));
+mkdirSync(join(outDir, "extensions"), { recursive: true });
+for (const id of ["pi-mcp-unity", "pi-mcp-higgsfield", "pi-understand", "pi-treg"]) {
+  copyFileSync(
+    join(desktopRoot, "resources", "extensions", `${id}.tgz`),
+    join(outDir, "extensions", `${id}.tgz`),
+  );
+}
 
 // Copy node_modules, dereferencing the handful of .bin symlinks is unnecessary
 // because we drop .bin entirely (the sidecar imports packages, never execs the

@@ -1,7 +1,7 @@
 {
   "name": "@pi-gui/desktop",
   "private": true,
-  "version": "2.8.1",
+  "version": "2.8.2",
   "author": "Yiding by HKEZ",
   "license": "MIT",
   "description": "Deepseek GUI app for elegant pi coding agent",
@@ -32,6 +32,7 @@
     "verify:runtime-model-registry": "node scripts/assert-runtime-model-registry.mjs",
     "verify:packaged-runtime-deps": "pnpm run verify:runtime-model-registry && node scripts/assert-packaged-runtime-deps.mjs",
     "verify:packaged-runtime-deps:linux": "pnpm run verify:runtime-model-registry && cross-env PI_APP_PACKAGE_PLATFORM=linux node scripts/assert-packaged-runtime-deps.mjs",
+    "verify:release-no-secrets": "node scripts/assert-release-no-secrets.mjs",
     "verify:first-run:packaged": "node scripts/first-run-smoke.mjs",
     "test": "pnpm run test:e2e",
     "test:dsh-web-service": "pnpm run test:e2e:runner -- tests/unit/dsh-web-service.spec.ts",
@@ -82,6 +83,7 @@
     "test:prod:open-folder-real": "pnpm build && cross-env PI_APP_TEST_MODE=foreground pnpm --dir ../.. exec playwright test -c apps/desktop/playwright.config.ts apps/desktop/tests/production/open-folder-real.spec.ts"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@aws-sdk/token-providers": "^3.1036.0",
     "@earendil-works/pi-coding-agent": "^0.74.0",
     "@pi-gui/pi-sdk-driver": "workspace:*",

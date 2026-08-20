@@ -6,11 +6,12 @@ name: Release Desktop (Pi-Deepseek)
 #
 # Usage: Actions tab -> "Release Desktop (Pi-Deepseek)" -> Run workflow ->
 #   version: 2.6.6            (Electron, builds all 3 OSes)
-#   tauri:   true / false     (also build the macOS Tauri sidecar app -> v2.6.6)
+#   platforms: windows-linux  (or all / one platform)
+#   tauri_version: 2.6.6      (leave blank to skip the macOS Tauri build)
 #
-# electron-builder reads `publish:` from apps/desktop/electron-builder.yml
-# (owner jasonet / repo pi-deepseek). `--publish always` uploads the installers
-# PLUS latest*.yml + *.blockmap so the in-app Auto Update keeps working.
+# electron-builder reads packaging metadata from apps/desktop/electron-builder.yml.
+# Installers and updater metadata are verified before `gh release upload` publishes
+# them to jasonet/pi-deepseek.
 
 on:
   workflow_dispatch:
@@ -18,6 +19,17 @@ on:
       version:
         description: "Electron version, no leading v (e.g. 2.6.6)"
         required: true
+      platforms:
+        description: "Electron platforms to release"
+        required: true
+        type: choice
+        options:
+          - all
+          - windows-linux
+          - macos
+          - windows
+          - linux
+        default: all
       tauri_version:
         description: "Tauri version, no leading v (e.g. 2.6.6). Leave blank to skip."
         required: false
@@ -27,18 +39,45 @@ permissions:
   contents: write
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.value }}
+    steps:
+      - id: matrix
+        shell: bash
+        env:
+          PLATFORMS: ${{ inputs.platforms }}
+        run: |
+          case "$PLATFORMS" in
+            all)
+              value='{"include":[{"platform":"macos","os":"macos-latest","args":"--mac"},{"platform":"windows","os":"windows-latest","args":"--win"},{"platform":"linux","os":"ubuntu-latest","args":"--linux"}]}'
+              ;;
+            windows-linux)
+              value='{"include":[{"platform":"windows","os":"windows-latest","args":"--win"},{"platform":"linux","os":"ubuntu-latest","args":"--linux"}]}'
+              ;;
+            macos)
+              value='{"include":[{"platform":"macos","os":"macos-latest","args":"--mac"}]}'
+              ;;
+            windows)
+              value='{"include":[{"platform":"windows","os":"windows-latest","args":"--win"}]}'
+              ;;
+            linux)
+              value='{"include":[{"platform":"linux","os":"ubuntu-latest","args":"--linux"}]}'
+              ;;
+            *)
+              echo "Unsupported platforms selection: $PLATFORMS" >&2
+              exit 1
+              ;;
+          esac
+          echo "value=$value" >> "$GITHUB_OUTPUT"
+
   electron:
     name: Electron (${{ matrix.os }})
+    needs: prepare
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - os: macos-latest
-            args: "--mac"
-          - os: windows-latest
-            args: "--win"
-          - os: ubuntu-latest
-            args: "--linux"
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -56,17 +95,71 @@ jobs:
       - name: Build renderer
         run: pnpm --filter @pi-gui/desktop run build
 
-      - name: Package + publish
+      - name: Package
+        shell: bash
+        run: |
+          cd apps/desktop
+          pnpm exec electron-builder ${{ matrix.args }} \
+            --publish never \
+            "-c.publish.releaseType=release" \
+            "-c.extraMetadata.version=${{ inputs.version }}" \
+            "-c.buildVersion=${{ inputs.version }}"
+
+      - name: Verify packaged runtime dependencies
+        if: ${{ matrix.platform != 'macos' }}
+        working-directory: apps/desktop
+        env:
+          PI_APP_PACKAGE_PLATFORM: ${{ matrix.platform }}
+        run: pnpm run verify:packaged-runtime-deps
+
+      - name: First-run smoke (Windows)
+        if: ${{ matrix.platform == 'windows' }}
+        working-directory: apps/desktop
+        run: pnpm run verify:first-run:packaged
+
+      - name: First-run smoke (Linux)
+        if: ${{ matrix.platform == 'linux' }}
+        working-directory: apps/desktop
+        run: xvfb-run --auto-servernum pnpm run verify:first-run:packaged
+
+      - name: Verify release contains no credentials
+        working-directory: apps/desktop
+        env:
+          RELEASE_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm run verify:release-no-secrets
+
+      - name: Upload Windows release assets
+        if: ${{ matrix.platform == 'windows' }}
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cd apps/desktop
-          pnpm exec electron-builder ${{ matrix.args }} \
-            --publish always \
-            "-c.publish.releaseType=release" \
-            "-c.extraMetadata.version=${{ inputs.version }}" \
-            "-c.buildVersion=${{ inputs.version }}"
+          gh release upload "v${{ inputs.version }}" \
+            apps/desktop/release/Pi-Deepseek-${{ inputs.version }}-win-* \
+            apps/desktop/release/latest.yml \
+            --repo "${{ github.repository }}" --clobber
+
+      - name: Upload Linux release assets
+        if: ${{ matrix.platform == 'linux' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "v${{ inputs.version }}" \
+            apps/desktop/release/Pi-Deepseek-${{ inputs.version }}-linux-* \
+            apps/desktop/release/latest-linux*.yml \
+            --repo "${{ github.repository }}" --clobber
+
+      - name: Upload macOS release assets
+        if: ${{ matrix.platform == 'macos' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "v${{ inputs.version }}" \
+            apps/desktop/release/Pi-Deepseek-${{ inputs.version }}-mac-* \
+            apps/desktop/release/latest-mac.yml \
+            --repo "${{ github.repository }}" --clobber
 
   tauri:
     name: Tauri (macOS)

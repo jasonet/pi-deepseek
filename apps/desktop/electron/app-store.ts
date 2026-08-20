@@ -765,6 +765,22 @@ export class DesktopAppStore implements AppStoreInternals {
     });
   }
 
+  async refreshAllRuntimes(): Promise<DesktopAppState> {
+    await this.initialize();
+    return this.withErrorHandling(async () => {
+      for (const workspace of this.state.workspaces) {
+        const ws = this.workspaceRefFromState(workspace.id);
+        if (!ws) continue;
+        const snapshot = await this.driver.runtimeSupervisor.refreshRuntime(ws);
+        this.runtimeByWorkspace.set(ws.workspaceId, snapshot);
+        this.clearExtensionUiForWorkspace(ws.workspaceId);
+        await this.reloadSessionsForWorkspace(ws.workspaceId);
+        await this.refreshSessionCommandsForWorkspace(ws.workspaceId);
+      }
+      return this.refreshState({ clearLastError: true });
+    });
+  }
+
   async setSessionModel(target: WorkspaceSessionTarget, provider: string, modelId: string): Promise<DesktopAppState> {
     return composer.setSessionModel(this, target, provider, modelId);
   }

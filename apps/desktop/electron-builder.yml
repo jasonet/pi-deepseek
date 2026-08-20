@@ -31,6 +31,8 @@ extraResources:
     to: extensions/pi-mcp-higgsfield.tgz
   - from: resources/extensions/pi-understand.tgz
     to: extensions/pi-understand.tgz
+  - from: resources/extensions/pi-treg.tgz
+    to: extensions/pi-treg.tgz
 
 asar:
   smartUnpack: false
@@ -43,7 +45,7 @@ asarUnpack:
   - "**/node_modules/.pnpm/node-pty*/node_modules/node-pty/**/*"
 
 artifactName: ${productName}-${version}-${os}-${arch}.${ext}
-buildVersion: 2.8.1
+buildVersion: 2.8.2
 
 electronLanguages:
   - en-US
@@ -55,8 +57,8 @@ electronLanguages:
 
 mac:
   artifactName: ${productName}-${version}-${os}-${arch}.${ext}
-  bundleShortVersion: 2.8.1
-  bundleVersion: 2.8.1
+  bundleShortVersion: 2.8.2
+  bundleVersion: 2.8.2
   category: public.app-category.developer-tools
   hardenedRuntime: true
   gatekeeperAssess: false

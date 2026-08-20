@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type {
   RuntimeCustomModelProviderRecord,
   RuntimeCustomModelRecord,
+  RuntimeCustomModelThinkingFormat,
   SaveRuntimeCustomModelProviderInput,
 } from "@pi-gui/session-driver/runtime-types";
 import { PlusIcon } from "./icons";
@@ -18,6 +19,7 @@ interface ProviderDraft {
   readonly name: string;
   readonly baseUrl: string;
   readonly apiKey: string;
+  readonly thinkingFormat: RuntimeCustomModelThinkingFormat;
   readonly models: readonly RuntimeCustomModelRecord[];
   readonly selectedModelIds: ReadonlySet<string>;
 }
@@ -28,6 +30,7 @@ const EMPTY_DRAFT: ProviderDraft = {
   name: "Local OpenAI",
   baseUrl: "http://localhost:8080/v1",
   apiKey: "",
+  thinkingFormat: "auto",
   models: [],
   selectedModelIds: new Set(),
 };
@@ -74,6 +77,7 @@ export function SettingsCustomProviders({ workspaceId }: SettingsCustomProviders
       name: provider.name,
       baseUrl: provider.baseUrl,
       apiKey: "",
+      thinkingFormat: provider.thinkingFormat,
       models: provider.models,
       selectedModelIds: new Set(provider.models.map((model) => model.id)),
     });
@@ -116,6 +120,7 @@ export function SettingsCustomProviders({ workspaceId }: SettingsCustomProviders
     });
     updateDraft({
       models: discoveredModels,
+      thinkingFormat: result.thinkingFormat,
       selectedModelIds: new Set(discoveredModels.map((model) => model.id)),
     });
     setStatus(result.message);
@@ -169,6 +174,7 @@ export function SettingsCustomProviders({ workspaceId }: SettingsCustomProviders
       name: draft.name,
       baseUrl: draft.baseUrl,
       ...(draft.apiKey.trim() ? { apiKey: draft.apiKey.trim() } : {}),
+      thinkingFormat: draft.thinkingFormat,
       models: selectedModels,
     };
     const nextState = await window.piApp.saveCustomModelProvider(workspaceId, input);
@@ -285,6 +291,24 @@ export function SettingsCustomProviders({ workspaceId }: SettingsCustomProviders
                   value={draft.apiKey}
                   onChange={(event) => updateDraft({ apiKey: event.target.value })}
                 />
+              </label>
+              <label className="custom-provider-dialog__field custom-provider-dialog__field--wide">
+                <span>{t("settings.providers.customThinkingFormat")}</span>
+                <select
+                  className="settings-select"
+                  value={draft.thinkingFormat}
+                  onChange={(event) => updateDraft({
+                    thinkingFormat: event.target.value as RuntimeCustomModelThinkingFormat,
+                  })}
+                >
+                  <option value="auto">{t("settings.providers.customThinkingAuto")}</option>
+                  <option value="qwen-chat-template">{t("settings.providers.customThinkingQwenTemplate")}</option>
+                  <option value="deepseek">DeepSeek</option>
+                  <option value="qwen">Qwen</option>
+                  <option value="openai">OpenAI</option>
+                  <option value="openrouter">OpenRouter</option>
+                  <option value="zai">Z.ai</option>
+                </select>
               </label>
             </div>
 

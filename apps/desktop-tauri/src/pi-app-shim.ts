@@ -147,6 +147,9 @@ export async function installPiApp(): Promise<void> {
     getDshWebStatus: call(desktopIpc.getDshWebStatus),
     startDshWeb: call(desktopIpc.startDshWeb),
     stopDshWeb: call(desktopIpc.stopDshWeb),
+    getTregStatus: call(desktopIpc.getTregStatus),
+    saveTregSettings: call(desktopIpc.saveTregSettings),
+    installTregHarnessPlugin: call(desktopIpc.installTregHarnessPlugin),
     setComposerWorkMode: call(desktopIpc.setComposerWorkMode),
     getComposerWorkMode: call(desktopIpc.getComposerWorkMode),
 

@@ -39,6 +39,7 @@ import { configureLogger } from "./logger";
 import { ensurePathForGuiLaunch } from "./ensure-path";
 import { seedBundledExtensions } from "./seed-extensions";
 import { DshWebService } from "./dsh-web-service";
+import { TregService } from "./treg-service";
 import type { DesktopAppState, ThemeMode } from "../src/desktop-state";
 import { desktopIpc, getDesktopCommandFromShortcut, type OpenDesignStatus } from "../src/ipc";
 import { SUPPORTED_COMPOSER_IMAGE_TYPES } from "../src/composer-attachments";
@@ -86,6 +87,7 @@ let skipAutoTitle = false;
 let composerWorkMode: string = "pi-agent";
 let imWebhookServer: ImWebhookServer | null = null;
 const dshWebService = new DshWebService();
+const tregService = new TregService();
 
 function safeAutoUpdater() { return autoUpdater; }
 const windowTestMode = resolveWindowTestMode();
@@ -988,6 +990,12 @@ function installApplicationMenu(): void {
 }
 
 app.setName("pi");
+app.setAboutPanelOptions({
+  applicationName: "Pi-Deepseek",
+  applicationVersion: `${app.getVersion()} (Electron build)`,
+  version: `Electron ${process.versions.electron} · Chromium ${process.versions.chrome} · Node ${process.versions.node}`,
+  copyright: "Copyright 2026 Yiding by HKEZ",
+});
 
 const configuredUserDataDir = process.env.PI_APP_USER_DATA_DIR?.trim() || app.getPath("userData").replace(/\/pi$/, "/pi-deepseek");
 app.setPath("userData", configuredUserDataDir);
@@ -1162,6 +1170,13 @@ app.whenReady().then(async () => {
   ipcMain.handle(desktopIpc.getDshWebStatus, () => dshWebService.getStatus());
   ipcMain.handle(desktopIpc.startDshWeb, () => dshWebService.start());
   ipcMain.handle(desktopIpc.stopDshWeb, () => dshWebService.stop());
+  ipcMain.handle(desktopIpc.getTregStatus, () => tregService.getStatus());
+  ipcMain.handle(desktopIpc.saveTregSettings, async (_event, settings) => {
+    const status = await tregService.saveSettings(settings);
+    await store.refreshAllRuntimes();
+    return status;
+  });
+  ipcMain.handle(desktopIpc.installTregHarnessPlugin, () => tregService.installHarnessPlugin());
   ipcMain.handle(desktopIpc.stateRequest, () => store.getState());
   ipcMain.handle(desktopIpc.selectedTranscriptRequest, () => store.getSelectedTranscript());
   ipcMain.handle(desktopIpc.transcriptForRequest, (_event, target: WorkspaceSessionTarget) =>

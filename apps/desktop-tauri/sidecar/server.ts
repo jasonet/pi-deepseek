@@ -24,6 +24,8 @@ import { createInterface } from "node:readline";
 import { DesktopAppStore } from "../../desktop/electron/app-store";
 import { probeCustomModelProvider } from "../../desktop/electron/custom-model-provider-probe";
 import { DshWebService } from "../../desktop/electron/dsh-web-service";
+import { TregService } from "../../desktop/electron/treg-service";
+import { seedBundledExtensionsFromPath } from "../../desktop/electron/seed-extensions-core";
 import { desktopIpc } from "../../desktop/src/ipc";
 import type {
   ComposerAttachment,
@@ -126,6 +128,9 @@ function resolveInitialWorkspacePaths(): readonly string[] {
     .filter(Boolean);
 }
 
+const bundledExtensionsDir = process.env.PI_BUNDLED_EXTENSIONS_DIR?.trim();
+if (bundledExtensionsDir) seedBundledExtensionsFromPath(bundledExtensionsDir);
+
 const store = new DesktopAppStore({
   userDataDir: resolveUserDataDir(),
   initialWorkspacePaths: resolveInitialWorkspacePaths(),
@@ -136,6 +141,7 @@ const store = new DesktopAppStore({
   },
 });
 const dshWebService = new DshWebService();
+const tregService = new TregService();
 
 // ---------------------------------------------------------------------------
 // Open Design (pi-open-design) status + install. Ported from
@@ -425,6 +431,13 @@ const handlers: Record<string, Handler> = {
   [desktopIpc.getDshWebStatus]: () => dshWebService.getStatus(),
   [desktopIpc.startDshWeb]: () => dshWebService.start(),
   [desktopIpc.stopDshWeb]: () => dshWebService.stop(),
+  [desktopIpc.getTregStatus]: () => tregService.getStatus(),
+  [desktopIpc.saveTregSettings]: async (settings: Parameters<TregService["saveSettings"]>[0]) => {
+    const status = await tregService.saveSettings(settings);
+    await store.refreshAllRuntimes();
+    return status;
+  },
+  [desktopIpc.installTregHarnessPlugin]: () => tregService.installHarnessPlugin(),
   [desktopIpc.stateRequest]: () => store.getState(),
   [desktopIpc.selectedTranscriptRequest]: () => store.getSelectedTranscript(),
   [desktopIpc.transcriptForRequest]: (target: WorkspaceSessionTarget) => store.getTranscriptFor(target),

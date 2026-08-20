@@ -11,6 +11,7 @@ const executablePath = process.env.PI_APP_FIRST_RUN_EXECUTABLE?.trim() || resolv
 const userDataDir = mkdtempSync(path.join(tmpdir(), "pi-first-run-user-data-"));
 const agentDir = path.join(userDataDir, "agent");
 mkdirSync(agentDir, { recursive: true });
+const childEnv = createIsolatedEnvironment(userDataDir, agentDir);
 
 await assertPortAvailable("http://127.0.0.1:8789/im/health", "IM webhook 8789");
 await assertPortAvailable("http://127.0.0.1:18790/health", "WeChat bridge RPC 18790");
@@ -20,14 +21,7 @@ let stderr = "";
 let exitCode;
 const child = spawn(executablePath, [], {
   cwd: path.dirname(executablePath),
-  env: {
-    ...process.env,
-    PI_APP_USER_DATA_DIR: userDataDir,
-    PI_CODING_AGENT_DIR: agentDir,
-    PI_APP_INITIAL_WORKSPACES: "",
-    PI_APP_TEST_MODE: "background",
-    PI_APP_OPEN_DEVTOOLS: "0",
-  },
+  env: childEnv,
 });
 
 child.stdout.on("data", (chunk) => {
@@ -57,9 +51,12 @@ try {
     pid: child.pid,
     imWebhook: "http://127.0.0.1:8789/im/health",
     weixinRpc: "http://127.0.0.1:18790/health",
-    stdout: stdout.trim().slice(-1000),
-    stderr: stderr.trim().slice(-1000),
-    logs: readLogPreview(userDataDir),
+    stdout: redactSecrets(stdout.trim().slice(-1000)),
+    stderr: redactSecrets(stderr.trim().slice(-1000)),
+    logs: readLogPreview(userDataDir).map(({ fileName, tail }) => ({
+      fileName,
+      tail: redactSecrets(tail),
+    })),
   }, null, 2));
 } finally {
   if (exitCode === undefined) {
@@ -115,6 +112,45 @@ function resolveMacExecutable(appBundle) {
     throw new Error(`No executable found under ${macOsDir}.`);
   }
   return path.join(macOsDir, entry.name);
+}
+
+function createIsolatedEnvironment(baseDir, isolatedAgentDir) {
+  const environment = Object.fromEntries(
+    Object.entries(process.env).filter(([name]) => !isSensitiveEnvironmentName(name)),
+  );
+  const configDir = path.join(baseDir, "config");
+  const cacheDir = path.join(baseDir, "cache");
+  const dataDir = path.join(baseDir, "data");
+  for (const directory of [configDir, cacheDir, dataDir]) {
+    mkdirSync(directory, { recursive: true });
+  }
+
+  return {
+    ...environment,
+    HOME: baseDir,
+    USERPROFILE: baseDir,
+    APPDATA: configDir,
+    LOCALAPPDATA: dataDir,
+    XDG_CONFIG_HOME: configDir,
+    XDG_CACHE_HOME: cacheDir,
+    XDG_DATA_HOME: dataDir,
+    PI_APP_USER_DATA_DIR: baseDir,
+    PI_CODING_AGENT_DIR: isolatedAgentDir,
+    PI_APP_INITIAL_WORKSPACES: "",
+    PI_APP_TEST_MODE: "background",
+    PI_APP_OPEN_DEVTOOLS: "0",
+  };
+}
+
+function isSensitiveEnvironmentName(name) {
+  return /(?:API_?KEY|TOKEN|SECRET|PASSWORD|PASSWD|PRIVATE_?KEY|CREDENTIAL)/i.test(name);
+}
+
+function redactSecrets(value) {
+  return value
+    .replace(/github_pat_[A-Za-z0-9_]{20,}/g, "[REDACTED_GITHUB_TOKEN]")
+    .replace(/gh[pousr]_[A-Za-z0-9]{20,}/g, "[REDACTED_GITHUB_TOKEN]")
+    .replace(/\bsk-[A-Za-z0-9_-]{20,}\b/g, "[REDACTED_API_KEY]");
 }
 
 async function assertPortAvailable(url, label) {

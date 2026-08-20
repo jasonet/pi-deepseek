@@ -329,16 +329,21 @@ export default function App() {
   const isInDualPane = Boolean(
     secondarySession && selectedSession && secondarySession.id !== selectedSession.id,
   );
+  const selectedSessionKey = selectedWorkspace && selectedSession ? `${selectedWorkspace.id}:${selectedSession.id}` : "";
+  const secondarySessionKey = secondaryWorkspace && secondarySession ? `${secondaryWorkspace.id}:${secondarySession.id}` : "";
 
   const [secondaryDraft, setSecondaryDraft] = useState("");
+  const [paneModelSelections, setPaneModelSelections] = useState<
+    Record<string, { readonly provider?: string; readonly modelId?: string; readonly thinkingLevel?: string }>
+  >({});
   const secondaryComposerRef = useRef<HTMLTextAreaElement>(null);
   const secondaryTimelinePaneRef = useRef<HTMLDivElement | null>(null);
   const secondaryThreadSearch = useThreadSearch(secondaryTimelinePaneRef);
   // The secondary pane renders a *read-only* transcript fetched by id. Reading a
   // non-selected session never mutates state, so this is conflict-free even while
-  // the primary pane streams. Re-fetched on every snapshot tick so the secondary
-  // stays live as its session progresses.
+  // the primary pane streams.
   const [secondaryTranscript, setSecondaryTranscript] = useState<SelectedTranscriptRecord | null>(null);
+  const secondaryTranscriptMarkerRef = useRef("");
 
   const clearSecondary = useCallback(() => {
     setSecondarySessionId(undefined);
@@ -383,20 +388,40 @@ export default function App() {
     }
   }, [dualPaneEnabled, selectedWorkspace, selectedSession, secondarySessionId, secondaryWorkspaceId, clearSecondary]);
 
-  // Keep the secondary pane's transcript fresh. Read-only fetch by id; re-runs on
-  // snapshot ticks so new messages in the secondary session flow in live.
+  // Keep the secondary pane's transcript fresh without reloading it for unrelated
+  // primary-session state ticks. Its per-session revision covers assistant and
+  // tool events, so the pane stays live without resetting its scroll needlessly.
   useEffect(() => {
     if (!api || !secondarySessionId || !secondaryWorkspaceId) {
+      secondaryTranscriptMarkerRef.current = "";
       setSecondaryTranscript(null);
       return;
     }
     let cancelled = false;
     void api
       .getTranscriptFor({ workspaceId: secondaryWorkspaceId, sessionId: secondarySessionId })
-      .then((record) => { if (!cancelled) setSecondaryTranscript(record); })
-      .catch(() => { if (!cancelled) setSecondaryTranscript(null); });
+      .then((record) => {
+        if (cancelled) return;
+        const marker = buildTranscriptChangeMarker(
+          `${secondaryWorkspaceId}:${secondarySessionId}`,
+          record?.transcript ?? [],
+        );
+        if (marker === secondaryTranscriptMarkerRef.current) return;
+        secondaryTranscriptMarkerRef.current = marker;
+        setSecondaryTranscript(record);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        secondaryTranscriptMarkerRef.current = "";
+        setSecondaryTranscript(null);
+      });
     return () => { cancelled = true; };
-  }, [api, secondaryWorkspaceId, secondarySessionId, snapshot]);
+  }, [
+    api,
+    secondaryWorkspaceId,
+    secondarySessionId,
+    secondarySession?.transcriptRevision,
+  ]);
 
   // Stick the secondary (right) pane to the latest message, mirroring the primary
   // pane. Stays pinned to the bottom as new text streams in unless the user
@@ -413,12 +438,16 @@ export default function App() {
     if (!secondaryPinnedRef.current) return;
     const pane = secondaryTimelinePaneRef.current;
     if (!pane) return;
+    let frame: number | undefined;
     const align = (remaining: number) => {
       pane.scrollTop = pane.scrollHeight;
       if (remaining <= 0) return;
-      window.requestAnimationFrame(() => align(remaining - 1));
+      frame = window.requestAnimationFrame(() => align(remaining - 1));
     };
     align(3);
+    return () => {
+      if (frame !== undefined) window.cancelAnimationFrame(frame);
+    };
   }, [secondaryTranscript, secondarySessionId]);
 
   // Draggable divider. The handlers are registered once per dual-pane mount
@@ -437,7 +466,12 @@ export default function App() {
     const move = (e: MouseEvent) => {
       if (!dragging) return;
       const p = el.parentElement; if (!p) return;
-      const w = p.getBoundingClientRect().width - 10;
+      const dividerStyle = window.getComputedStyle(el);
+      const dividerWidth =
+        el.getBoundingClientRect().width +
+        Number.parseFloat(dividerStyle.marginLeft) +
+        Number.parseFloat(dividerStyle.marginRight);
+      const w = p.getBoundingClientRect().width - dividerWidth;
       setSplitRatio(Math.min(0.8, Math.max(0.2, sr + (e.clientX - sx) / w)));
     };
     const up = () => { dragging = false; };
@@ -502,6 +536,7 @@ export default function App() {
   }, [selectedWorkspace, snapshot]);
   const selectedRuntime = selectedWorkspace ? snapshot?.runtimeByWorkspace[selectedWorkspace.id] : undefined;
   const selectedModelRuntime = snapshot ? getEffectiveModelRuntime(snapshot, selectedWorkspace) : undefined;
+  const secondaryModelRuntime = snapshot ? getEffectiveModelRuntime(snapshot, secondaryWorkspace) : undefined;
   const selectedWorktree = selectedWorkspace ? linkedWorktreeByWorkspaceId.get(selectedWorkspace.id) : undefined;
   const secondaryWorktree = secondaryWorkspace ? linkedWorktreeByWorkspaceId.get(secondaryWorkspace.id) : undefined;
   const secondaryRootWorkspace = secondaryWorkspace && snapshot
@@ -541,20 +576,43 @@ export default function App() {
   const selectedDefaultEnabled = buildModelOptions(selectedModelRuntime).some(
     (m) => m.providerId === selectedModelRuntime?.settings.defaultProvider && m.modelId === selectedModelRuntime?.settings.defaultModelId,
   );
+  const secondaryDefaultEnabled = buildModelOptions(secondaryModelRuntime).some(
+    (m) => m.providerId === secondaryModelRuntime?.settings.defaultProvider && m.modelId === secondaryModelRuntime?.settings.defaultModelId,
+  );
+  const selectedPaneModelSelection = selectedSessionKey ? paneModelSelections[selectedSessionKey] : undefined;
+  const secondaryPaneModelSelection = secondarySessionKey ? paneModelSelections[secondarySessionKey] : undefined;
   const resolvedSessionProvider =
+    selectedPaneModelSelection?.provider ??
     selectedSession?.config?.provider ??
     (selectedDefaultEnabled ? selectedModelRuntime?.settings.defaultProvider : undefined);
   const resolvedSessionModelId =
+    selectedPaneModelSelection?.modelId ??
     selectedSession?.config?.modelId ??
     (selectedDefaultEnabled ? selectedModelRuntime?.settings.defaultModelId : undefined);
   const resolvedSessionThinkingLevel =
+    selectedPaneModelSelection?.thinkingLevel ??
     selectedSession?.config?.thinkingLevel ?? selectedModelRuntime?.settings.defaultThinkingLevel;
+  const resolvedSecondaryProvider =
+    secondaryPaneModelSelection?.provider ??
+    secondarySession?.config?.provider ??
+    (secondaryDefaultEnabled ? secondaryModelRuntime?.settings.defaultProvider : undefined);
+  const resolvedSecondaryModelId =
+    secondaryPaneModelSelection?.modelId ??
+    secondarySession?.config?.modelId ??
+    (secondaryDefaultEnabled ? secondaryModelRuntime?.settings.defaultModelId : undefined);
+  const resolvedSecondaryThinkingLevel =
+    secondaryPaneModelSelection?.thinkingLevel ??
+    secondarySession?.config?.thinkingLevel ?? secondaryModelRuntime?.settings.defaultThinkingLevel;
   const resolvedNewThreadProvider = newThreadProvider ?? (newThreadDefaultEnabled ? newThreadRuntime?.settings.defaultProvider : undefined);
   const resolvedNewThreadModelId = newThreadModelId ?? (newThreadDefaultEnabled ? newThreadRuntime?.settings.defaultModelId : undefined);
   const resolvedNewThreadThinkingLevel = newThreadThinkingLevel ?? newThreadRuntime?.settings.defaultThinkingLevel;
   const selectedSessionModelOnboarding = deriveModelOnboardingState(selectedModelRuntime, {
     provider: resolvedSessionProvider,
     modelId: resolvedSessionModelId,
+  });
+  const secondarySessionModelOnboarding = deriveModelOnboardingState(secondaryModelRuntime, {
+    provider: resolvedSecondaryProvider,
+    modelId: resolvedSecondaryModelId,
   });
   const newThreadModelOnboarding = deriveModelOnboardingState(newThreadRuntime, {
     provider: resolvedNewThreadProvider,
@@ -565,7 +623,6 @@ export default function App() {
   const queuedComposerMessages = snapshot?.queuedComposerMessages ?? [];
   const editingQueuedMessageId = snapshot?.editingQueuedMessageId;
   const runningLabel = useRunningLabel(selectedSession?.status === "running" ? selectedSession.runningSince : undefined);
-  const selectedSessionKey = selectedWorkspace && selectedSession ? `${selectedWorkspace.id}:${selectedSession.id}` : "";
   const isTerminalVisibleForSelectedThread = Boolean(selectedSessionKey) && openTerminalSessionKey === selectedSessionKey;
   const isTerminalTakeoverForSelectedThread = Boolean(selectedSessionKey) && takeoverTerminalSessionKey === selectedSessionKey;
   const activeTranscript =
@@ -1666,22 +1723,34 @@ export default function App() {
     });
   };
 
-  const handleSecondarySubmit = () => {
+  const handleSecondarySubmit = (options: { readonly deliverAs?: "steer" | "followUp" } = {}) => {
     if (!secondarySession || !secondaryWorkspaceId || !api || !secondaryDraft.trim()) return;
+    if (secondarySessionModelOnboarding.requiresModelSelection) {
+      setSnapshot((current) => current ? { ...current, lastError: secondarySessionModelOnboarding.emptyModelDescription } : current);
+      return;
+    }
     // Deliver straight to the secondary session via a targeted submit — no
     // selection toggle, so the primary pane keeps focus and the split never
     // collapses/flickers mid-send.
     const target = { workspaceId: secondaryWorkspaceId, sessionId: secondarySession.id };
     const draft = secondaryDraft;
     setSecondaryDraft("");
-    void updateSnapshot(api, setSnapshot, () => api.submitComposerFor(target, draft))
-      .catch(() => { setSecondaryDraft(draft); });
+    void updateSnapshot(api, setSnapshot, () =>
+      api.submitComposerFor(
+        target,
+        draft,
+        secondarySession.status === "running" ? { deliverAs: options.deliverAs ?? "followUp" } : undefined,
+      ),
+    ).catch((error) => {
+      setSecondaryDraft(draft);
+      setSnapshot((current) => (current ? { ...current, lastError: errorMessage(error) } : current));
+    });
   };
 
   const handleSecondaryComposerKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
-      handleSecondarySubmit();
+      handleSecondarySubmit({ deliverAs: (e.metaKey || e.ctrlKey) ? "steer" : "followUp" });
     }
   };
 
@@ -1812,6 +1881,11 @@ export default function App() {
     if (!selectedWorkspace || !selectedSession) {
       return;
     }
+    const key = `${selectedWorkspace.id}:${selectedSession.id}`;
+    setPaneModelSelections((current) => ({
+      ...current,
+      [key]: { ...current[key], provider, modelId },
+    }));
     void updateSnapshot(api, setSnapshot, () =>
       api.setSessionModel(selectedWorkspace.id, selectedSession.id, provider, modelId),
     );
@@ -1821,10 +1895,47 @@ export default function App() {
     if (!selectedWorkspace || !selectedSession) {
       return;
     }
+    const key = `${selectedWorkspace.id}:${selectedSession.id}`;
+    setPaneModelSelections((current) => ({
+      ...current,
+      [key]: { ...current[key], thinkingLevel: level },
+    }));
     void updateSnapshot(api, setSnapshot, () =>
       api.setSessionThinkingLevel(
         selectedWorkspace.id,
         selectedSession.id,
+        level as NonNullable<RuntimeSnapshot["settings"]["defaultThinkingLevel"]>,
+      ),
+    );
+  };
+
+  const handleSetSecondarySessionModel = (provider: string, modelId: string) => {
+    if (!secondaryWorkspaceId || !secondarySession) {
+      return;
+    }
+    const key = `${secondaryWorkspaceId}:${secondarySession.id}`;
+    setPaneModelSelections((current) => ({
+      ...current,
+      [key]: { ...current[key], provider, modelId },
+    }));
+    void updateSnapshot(api, setSnapshot, () =>
+      api.setSessionModel(secondaryWorkspaceId, secondarySession.id, provider, modelId),
+    );
+  };
+
+  const handleSetSecondarySessionThinking = (level: string) => {
+    if (!secondaryWorkspaceId || !secondarySession) {
+      return;
+    }
+    const key = `${secondaryWorkspaceId}:${secondarySession.id}`;
+    setPaneModelSelections((current) => ({
+      ...current,
+      [key]: { ...current[key], thinkingLevel: level },
+    }));
+    void updateSnapshot(api, setSnapshot, () =>
+      api.setSessionThinkingLevel(
+        secondaryWorkspaceId,
+        secondarySession.id,
         level as NonNullable<RuntimeSnapshot["settings"]["defaultThinkingLevel"]>,
       ),
     );
@@ -2278,6 +2389,7 @@ export default function App() {
     { id: "general", label: nav("General", "通用", "一般", "一般") },
     { id: "providers", label: nav("Providers", "提供商", "提供者", "プロバイダー") },
     { id: "models", label: nav("Models", "模型", "模型", "モデル") },
+    { id: "tools", label: nav("External tools", "外部工具", "外部工具", "外部ツール") },
     { id: "notifications", label: nav("Notifications", "通知", "通知", "通知") },
   ] as const;
 
@@ -2311,6 +2423,7 @@ export default function App() {
         ) : null}
         <Suspense fallback={<ViewFallback />}><SettingsView
           workspace={settingsWorkspace}
+          workspaces={rootWorkspaceOptions}
           runtime={settingsSection === "models" ? settingsModelRuntime : settingsRuntime}
           section={settingsSection}
           notificationPreferences={snapshot.notificationPreferences}
@@ -2582,9 +2695,13 @@ export default function App() {
         ) : selectedWorkspace && selectedSession ? (
           <>
 {isInDualPane && secondarySession ? (
-            <div className="dual-pane">
+            <div
+              className="dual-pane"
+              style={{
+                gridTemplateColumns: `minmax(0, ${splitRatio}fr) var(--dual-pane-divider-track-width) minmax(0, ${1 - splitRatio}fr)`,
+              }}
+            >
               <div className={`dual-pane__col${activePaneIndex === 0 ? " dual-pane__col--active" : ""}`}
-                   style={{ flex: `0 0 ${splitRatio * 100}%` }}
                    onClick={() => setActivePaneIndex(0)}>
                 <section className="canvas canvas--thread">
               <div className="conversation conversation--thread">
@@ -2670,7 +2787,6 @@ export default function App() {
               </div>
               <div className="dual-pane__divider" ref={dividerRef} />
               <div className={`dual-pane__col${activePaneIndex === 1 ? " dual-pane__col--active" : ""}`}
-                   style={{ flex: "1 1 0%", minWidth: 0 }}
                    onClick={() => setActivePaneIndex(1)}>
                 <section className="canvas canvas--thread">
                   <div className="conversation conversation--thread">
@@ -2709,9 +2825,9 @@ export default function App() {
                   runningLabel={runningLabel}
                   attachments={[]}
                   queuedMessages={[]}
-                  provider={resolvedSessionProvider}
-                  modelId={resolvedSessionModelId}
-                  thinkingLevel={resolvedSessionThinkingLevel}
+                  provider={resolvedSecondaryProvider}
+                  modelId={resolvedSecondaryModelId}
+                  thinkingLevel={resolvedSecondaryThinkingLevel}
                   slashSections={[]}
                   slashOptions={[]}
                   showSlashMenu={false}
@@ -2728,10 +2844,10 @@ export default function App() {
                   onSteerQueuedMessage={() => {}}
                   onSelectSlashCommand={() => {}}
                   onSelectSlashOption={() => {}}
-                  onSetModel={() => {}}
-                  onSetThinking={() => {}}
-                  modelOnboarding={selectedSessionModelOnboarding}
-                  onOpenModelSettings={(section: any) => openSettings(selectedWorkspace?.rootWorkspaceId ?? selectedWorkspace?.id, section)}
+                  onSetModel={handleSetSecondarySessionModel}
+                  onSetThinking={handleSetSecondarySessionThinking}
+                  modelOnboarding={secondarySessionModelOnboarding}
+                  onOpenModelSettings={(section) => openSettings(secondaryWorkspace?.rootWorkspaceId ?? secondaryWorkspace?.id, section)}
                   onSubmit={handleSecondarySubmit}
                   showMentionMenu={false}
                   mentionOptions={[]}
@@ -2740,7 +2856,7 @@ export default function App() {
                   lastError={snapshot?.lastError}
                   extensionDockExpanded={false}
                   onToggleExtensionDock={() => {}}
-                  runtime={selectedModelRuntime}
+                  runtime={secondaryModelRuntime}
                 />
               </div>
               {bothPanesRunning ? (

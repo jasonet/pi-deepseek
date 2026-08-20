@@ -10,6 +10,7 @@ export type {
   HostUiRequestEvent,
   RunCompletedEvent,
   RunFailedEvent,
+  RunProgressEvent,
   RunId,
   SessionAttachment,
   SessionClosedEvent,

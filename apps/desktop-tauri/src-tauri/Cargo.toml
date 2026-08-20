@@ -1,7 +1,7 @@
 [package]
 name = "pi-deepseek"
-version = "2.8.1"
-description = "Deepseek GUI app for elegant pi coding agent"
+version = "2.8.2"
+description = "Pi-Deepseek Tauri build for elegant pi coding agent"
 authors = ["Yiding by HKEZ"]
 edition = "2024"
 rust-version = "1.85"

@@ -104,6 +104,10 @@ function resolveAsarPath(desktopDir, packagePlatform) {
     return path.join(releaseDir, "linux-unpacked", "resources", "app.asar");
   }
 
+  if (packagePlatform === "win32" || packagePlatform === "windows" || packagePlatform === "win") {
+    return path.join(desktopDir, "release", "win-unpacked", "resources", "app.asar");
+  }
+
   throw new Error(`Unsupported packaged runtime dependency target: ${packagePlatform}`);
 }
 

@@ -1,0 +1,14 @@
+{
+  "name": "pi-treg",
+  "displayName": "Treg tool catalog",
+  "version": "0.1.1",
+  "private": true,
+  "description": "A policy-aware bridge from Pi to the Treg hosted tool catalog.",
+  "type": "module",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0"
+  },
+  "pi": {
+    "extensions": ["./index.ts"]
+  }
+}

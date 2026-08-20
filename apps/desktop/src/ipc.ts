@@ -118,6 +118,9 @@ export const desktopIpc = {
   getDshWebStatus: "pi-gui:get-dsh-web-status",
   startDshWeb: "pi-gui:start-dsh-web",
   stopDshWeb: "pi-gui:stop-dsh-web",
+  getTregStatus: "pi-gui:get-treg-status",
+  saveTregSettings: "pi-gui:save-treg-settings",
+  installTregHarnessPlugin: "pi-gui:install-treg-harness-plugin",
   setComposerWorkMode: "pi-gui:set-composer-work-mode",
   getComposerWorkMode: "pi-gui:get-composer-work-mode",
   terminalEnsurePanel: "pi-gui:terminal-ensure-panel",
@@ -243,6 +246,28 @@ export type DshWebStatus =
       readonly state: "error";
       readonly message: string;
     };
+
+export interface TregSettings {
+  readonly enabled: boolean;
+  readonly piEnabled: boolean;
+  readonly harnessEnabled: boolean;
+  readonly serviceUrl: string;
+  readonly paidCalls: "disabled" | "ask";
+  readonly allowMutatingCalls: boolean;
+  readonly workspaceRoots: readonly string[];
+}
+
+export type SaveTregSettingsInput = TregSettings;
+
+export interface TregStatus {
+  readonly settings: TregSettings;
+  readonly tokenConfigured: boolean;
+  readonly tokenSource?: "env" | "config";
+  readonly connected: boolean;
+  readonly balanceUsd?: number;
+  readonly harnessInstalled: boolean;
+  readonly message?: string;
+}
 
 export interface DesktopShortcutInput {
   readonly modifier: boolean;
@@ -408,6 +433,9 @@ export interface PiDesktopApi {
   getDshWebStatus(): Promise<DshWebStatus>;
   startDshWeb(): Promise<DshWebStatus>;
   stopDshWeb(): Promise<DshWebStatus>;
+  getTregStatus(): Promise<TregStatus>;
+  saveTregSettings(settings: SaveTregSettingsInput): Promise<TregStatus>;
+  installTregHarnessPlugin(): Promise<{ ok: boolean; message: string }>;
   setComposerWorkMode(mode: string): Promise<DesktopAppState>;
   getComposerWorkMode(): Promise<string>;
   ensureTerminalPanel(

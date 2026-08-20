@@ -4146,14 +4146,16 @@ mark.thread-find-active {
   border-color: rgba(224, 84, 103, 0.2);
 }
 
-/* ── Dual-pane layout (flex, jitter-free) ── */
+/* Dual-pane layout. The middle track owns the divider's full footprint so a
+   50/50 split gives both transcript and composer columns the same width. */
 .dual-pane {
+  --dual-pane-divider-track-width: 10px;
   position: relative;
-  display: flex;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
   flex: 1;
   min-height: 0;
   overflow: hidden;
-  gap: 0;
 }
 
 /* Contextual advisory shown only while both paired sessions run concurrently.
@@ -4191,13 +4193,14 @@ mark.thread-find-active {
 }
 
 .dual-pane__col {
-  flex: 1;
+  width: 100%;
   min-width: 0;
   /* Mirror .main's row model: scrollable canvas + always-visible composer.
-     Grid (not flex) guarantees the composer row keeps its height even when the
-     timeline is tall, so the left pane's composer never gets clipped. */
+     Subgrid gives both panes one shared composer row, so model notices or
+     wrapped footer text cannot offset the transcript baselines. */
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
+  grid-row: 1 / -1;
+  grid-template-rows: subgrid;
   overflow: hidden;
   border-radius: 6px;
   transition: box-shadow 0.15s ease;
@@ -4217,11 +4220,25 @@ mark.thread-find-active {
 /* Composer sits in the auto row; never shrinks. */
 .dual-pane__col > .composer {
   min-height: 0;
+  display: flex;
+}
+
+.dual-pane__col > .composer > .conversation--composer {
+  flex: 1;
+}
+
+.dual-pane__col > .composer .composer__surface,
+.dual-pane__col > .composer .composer__editor {
+  height: 100%;
+}
+
+.dual-pane__col > .composer .composer__editor {
+  align-content: space-between;
 }
 
 .dual-pane__divider {
+  grid-row: 1 / -1;
   width: 6px;
-  flex-shrink: 0;
   cursor: col-resize;
   background: var(--line);
   border-radius: 3px;

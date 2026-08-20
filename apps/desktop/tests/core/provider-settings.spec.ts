@@ -92,6 +92,24 @@ test("settings discovers and saves an OpenAI-compatible custom provider", async 
       }));
       return;
     }
+    if (request.url === "/props") {
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(JSON.stringify({ chat_template: "{% if enable_thinking %}think{% endif %}" }));
+      return;
+    }
+    if (request.url === "/v1/chat/completions" && request.method === "POST") {
+      response.writeHead(200, {
+        "content-type": "text/event-stream",
+        "cache-control": "no-cache",
+      });
+      response.write(`data: ${JSON.stringify({
+        id: "probe-completion",
+        object: "chat.completion.chunk",
+        choices: [{ index: 0, delta: { content: "OK" }, finish_reason: null }],
+      })}\n\n`);
+      response.end("data: [DONE]\n\n");
+      return;
+    }
     response.writeHead(404).end();
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -106,6 +124,18 @@ test("settings discovers and saves an OpenAI-compatible custom provider", async 
     withDefaultModel: false,
     enabledModels: ["openai/gpt-4o"],
   });
+  await writeFile(
+    join(agentDir, "models.json"),
+    `${JSON.stringify({
+      providers: {
+        "custom-lab-llama-cpp": {
+          compat: { thinkingFormat: "qwen-chat-template", supportsStore: true },
+          models: [],
+        },
+      },
+    }, null, 2)}\n`,
+    "utf8",
+  );
 
   const harness = await launchDesktop(userDataDir, {
     agentDir,
@@ -125,7 +155,7 @@ test("settings discovers and saves an OpenAI-compatible custom provider", async 
     await dialog.getByLabel("Provider name").fill("Lab llama.cpp");
     await dialog.getByLabel("Base URL").fill(`http://127.0.0.1:${address.port}/v1`);
     await dialog.getByRole("button", { name: "Test connection" }).click();
-    await expect(dialog).toContainText("Connected. Found 1 model.");
+    await expect(dialog).toContainText("Connected. Found 1 model and verified streaming.");
     await expect(dialog).toContainText(modelId);
     await expect(dialog.getByLabel("Images")).toBeChecked();
     await dialog.getByLabel("Reasoning").check();
@@ -138,6 +168,13 @@ test("settings discovers and saves an OpenAI-compatible custom provider", async 
     const modelsConfig = JSON.parse(await readFile(join(agentDir, "models.json"), "utf8"));
     const customProvider = modelsConfig.providers["custom-lab-llama-cpp"];
     expect(customProvider.api).toBe("openai-completions");
+    expect(customProvider.compat).toEqual({
+      supportsDeveloperRole: false,
+      supportsReasoningEffort: false,
+      supportsUsageInStreaming: false,
+      maxTokensField: "max_tokens",
+      thinkingFormat: "qwen-chat-template",
+    });
     expect(customProvider.models[0]).toMatchObject({
       id: modelId,
       reasoning: true,

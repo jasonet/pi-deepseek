@@ -7,13 +7,11 @@ import lockfile from "proper-lockfile";
 import { parseDocument } from "yaml";
 
 import type { DshWebStatus } from "../src/ipc";
+import { withDshFileLock } from "./dsh-file-lock";
 
 const DEFAULT_DSH_WEB_URL = "http://127.0.0.1:3080";
 const DSH_PROBE_TIMEOUT_MS = 2_000;
 const DSH_CREDENTIAL_PROBE_TIMEOUT_MS = 2_000;
-const DSH_LOCK_TIMEOUT_MS = 2_000;
-const DSH_LOCK_RETRY_INITIAL_MS = 20;
-const DSH_LOCK_RETRY_MAX_MS = 200;
 const DEEPSEEK_BALANCE_URL = "https://api.deepseek.com/user/balance";
 const DSH_START_COMMAND = "env -u DEEPSEEK_API_KEY npx @deepseek-ai/dsh web";
 const DSH_NOT_RUNNING_MESSAGE =
@@ -345,33 +343,6 @@ async function writeDshCredentials(
     if (!expectedPiSource) return commit();
     return (await withPiAuthLock(expectedPiSource.authPath, commit)) ?? false;
   });
-}
-
-// Mirrors @deepseek-ai/dsh-atomic-write@0.1.0-rc.6 without importing its ESM-only package
-// into the CommonJS Electron main bundle. DSH uses this exact sibling-lock protocol.
-async function withDshFileLock<T>(path: string, operation: () => Promise<T>): Promise<T> {
-  await mkdir(dirname(path), { recursive: true, mode: 0o700 });
-  const lockPath = `${path}.lock`;
-  const deadline = Date.now() + DSH_LOCK_TIMEOUT_MS;
-  let delay = DSH_LOCK_RETRY_INITIAL_MS;
-  for (;;) {
-    try {
-      await writeFile(lockPath, `${process.pid}\n`, { encoding: "utf8", flag: "wx", mode: 0o600 });
-      break;
-    } catch (error) {
-      if (!isNodeError(error) || error.code !== "EEXIST") throw error;
-    }
-    if (Date.now() >= deadline) {
-      throw new Error(`Timed out waiting for the DSH credentials writer lock at ${lockPath}.`);
-    }
-    await new Promise((resolveDelay) => setTimeout(resolveDelay, delay));
-    delay = Math.min(delay * 2, DSH_LOCK_RETRY_MAX_MS);
-  }
-  try {
-    return await operation();
-  } finally {
-    await rm(lockPath, { force: true });
-  }
 }
 
 async function writePrivateFile(path: string, text: string): Promise<void> {

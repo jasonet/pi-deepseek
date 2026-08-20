@@ -7,6 +7,7 @@ import { SettingsGeneralSection } from "./settings-general-section";
 import { SettingsModelsSection } from "./settings-models-section";
 import { SettingsNotificationsSection } from "./settings-notifications-section";
 import { SettingsProvidersSection } from "./settings-providers-section";
+import { SettingsTregSection } from "./settings-treg-section";
 import { type SettingsSection, sectionTitle, sectionDescription } from "./settings-utils";
 import { useT } from "./i18n";
 
@@ -14,6 +15,7 @@ export type { SettingsSection } from "./settings-utils";
 
 interface SettingsViewProps {
   readonly workspace?: WorkspaceRecord;
+  readonly workspaces: readonly WorkspaceRecord[];
   readonly runtime?: RuntimeSnapshot;
   readonly section: SettingsSection;
   readonly notificationPreferences: NotificationPreferences;
@@ -51,6 +53,7 @@ interface SettingsViewProps {
 
 export function SettingsView({
   workspace,
+  workspaces,
   runtime,
   section,
   notificationPreferences,
@@ -87,7 +90,7 @@ export function SettingsView({
 }: SettingsViewProps) {
   const t = useT();
 
-  if (!workspace && section !== "general" && section !== "channels" && section !== "notifications" && section !== "appearance") {
+  if (!workspace && section !== "general" && section !== "channels" && section !== "tools" && section !== "notifications" && section !== "appearance") {
     return (
       <section className="canvas canvas--empty">
         <div className="empty-panel">
@@ -176,6 +179,8 @@ export function SettingsView({
               onSetAutoUpdateEnabled={onSetAutoUpdateEnabled}
             />
           ) : null}
+
+          {section === "tools" ? <SettingsTregSection workspaces={workspaces} /> : null}
         </div>
       </div>
     </section>

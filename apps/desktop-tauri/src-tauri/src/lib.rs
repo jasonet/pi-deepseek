@@ -113,8 +113,14 @@ fn resolve_node_path(app: &tauri::AppHandle) -> String {
 /// Spawn the Node sidecar and start the stdout reader thread that resolves
 /// pending requests and forwards events to the webview.
 fn start_sidecar(app: &tauri::AppHandle) -> Result<Sidecar, String> {
+    use tauri::path::BaseDirectory;
     let server = resolve_server_path(app)?;
     let node = resolve_node_path(app);
+    let bundled_extensions = app
+        .path()
+        .resolve("sidecar/extensions", BaseDirectory::Resource)
+        .ok()
+        .filter(|path| path.exists());
 
     // Ensure the spawned node (and any node-pty children it starts) can find the
     // node bin dir on PATH even under a minimal GUI environment.
@@ -130,9 +136,12 @@ fn start_sidecar(app: &tauri::AppHandle) -> Result<Sidecar, String> {
         }
     }
 
-    let mut child = Command::new(&node)
-        .arg(&server)
-        .env("PATH", child_path)
+    let mut command = Command::new(&node);
+    command.arg(&server).env("PATH", child_path);
+    if let Some(extensions) = bundled_extensions {
+        command.env("PI_BUNDLED_EXTENSIONS_DIR", extensions);
+    }
+    let mut child = command
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::inherit())

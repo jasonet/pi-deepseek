@@ -44,11 +44,21 @@ export interface RuntimeCustomModelRecord {
   readonly maxTokens: number;
 }
 
+export type RuntimeCustomModelThinkingFormat =
+  | "auto"
+  | "openai"
+  | "openrouter"
+  | "deepseek"
+  | "zai"
+  | "qwen"
+  | "qwen-chat-template";
+
 export interface RuntimeCustomModelProviderRecord {
   readonly id: string;
   readonly name: string;
   readonly baseUrl: string;
   readonly hasApiKey: boolean;
+  readonly thinkingFormat: RuntimeCustomModelThinkingFormat;
   readonly models: readonly RuntimeCustomModelRecord[];
 }
 
@@ -58,6 +68,7 @@ export interface SaveRuntimeCustomModelProviderInput {
   readonly baseUrl: string;
   /** Omit while editing to preserve the currently stored key. */
   readonly apiKey?: string;
+  readonly thinkingFormat?: RuntimeCustomModelThinkingFormat;
   readonly models: readonly RuntimeCustomModelRecord[];
 }
 
@@ -70,6 +81,7 @@ export type ProbeRuntimeCustomModelProviderResult =
   | {
       readonly ok: true;
       readonly message: string;
+      readonly thinkingFormat: RuntimeCustomModelThinkingFormat;
       readonly models: readonly RuntimeCustomModelRecord[];
     }
   | {

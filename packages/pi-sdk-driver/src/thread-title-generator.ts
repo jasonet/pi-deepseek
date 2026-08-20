@@ -42,6 +42,9 @@ export async function generateThreadTitle(
   if (!prompt || options.signal?.aborted) {
     return null;
   }
+  if (options.model?.provider.startsWith("custom-")) {
+    return null;
+  }
 
   const settingsManager = SettingsManager.inMemory({
     compaction: { enabled: false },
@@ -80,6 +83,9 @@ export async function generateThreadTitle(
       return null;
     }
     if (!session.model) {
+      return null;
+    }
+    if (session.model.provider.startsWith("custom-")) {
       return null;
     }
     const auth = await session.modelRegistry.getApiKeyAndHeaders(session.model);

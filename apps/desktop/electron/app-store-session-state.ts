@@ -21,18 +21,22 @@ export function applySessionEventState(
       workspace.id === event.sessionRef.workspaceId
         ? {
             ...workspace,
-            sessions: workspace.sessions.map((session) =>
-              session.id === event.sessionRef.sessionId
-                ? updateSessionRecord(session, {
-                    snapshot: snapshotForEvent(event),
-                    status: statusForEvent(session.status, event),
-                    transcript,
-                    preview,
-                    runningSince: runningSinceBySession.get(key),
-                    lastViewedAt,
-                  })
-                : session,
-            ),
+            sessions: workspace.sessions.map((session) => {
+              if (session.id !== event.sessionRef.sessionId) {
+                return session;
+              }
+              return {
+                ...updateSessionRecord(session, {
+                  snapshot: snapshotForEvent(event),
+                  status: statusForEvent(session.status, event),
+                  transcript,
+                  preview,
+                  runningSince: runningSinceBySession.get(key),
+                  lastViewedAt,
+                }),
+                transcriptRevision: (session.transcriptRevision ?? 0) + 1,
+              };
+            }),
           }
         : workspace,
     ),

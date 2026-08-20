@@ -19,6 +19,7 @@ const EXTENSIONS = [
   { id: "pi-mcp-unity", sentinel: "@modelcontextprotocol/sdk" },
   { id: "pi-mcp-higgsfield", sentinel: "@modelcontextprotocol/sdk" },
   { id: "pi-understand", sentinel: "@understand-anything/core" },
+  { id: "pi-treg", sentinel: "@modelcontextprotocol/sdk" },
 ];
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));

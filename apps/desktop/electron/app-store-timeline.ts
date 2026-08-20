@@ -10,6 +10,13 @@ import {
   makeTranscriptMessageWithAttachments,
 } from "./app-store-utils";
 
+const TRANSIENT_WORKING_LABELS = new Set([
+  "Working…",
+  "Connecting to custom model...",
+  "Generating response...",
+  "Compacting conversation context...",
+]);
+
 export interface RunMetrics {
   readonly startedAt: string;
   toolCount: number;
@@ -136,8 +143,25 @@ export function applyTimelineEvent(
         const activity = makeActivityItem("Working…");
         state.activeWorkingActivityBySession.set(key, activity.id);
         transcript.push(activity);
+      } else if (event.snapshot.status !== "running") {
+        clearRunState(transcript, key, event.sessionRef, state);
       }
       break;
+    case "runProgress": {
+      const activityId = state.activeWorkingActivityBySession.get(key);
+      const index = activityId ? transcript.findIndex((item) => item.id === activityId) : -1;
+      if (index >= 0 && transcript[index]?.kind === "activity") {
+        transcript[index] = {
+          ...transcript[index],
+          label: event.message,
+        };
+      } else {
+        const activity = makeActivityItem(event.message);
+        state.activeWorkingActivityBySession.set(key, activity.id);
+        transcript.push(activity);
+      }
+      break;
+    }
     case "queuedMessageStarted":
       clearActiveAssistantMessage(state.activeAssistantMessageBySession, event.sessionRef);
       appendQueuedUserMessage(transcriptCache, event.sessionRef, event.message);
@@ -276,6 +300,12 @@ function clearRunState(
 ): void {
   clearActiveAssistantMessage(state.activeAssistantMessageBySession, sessionRef);
   removeWorkingActivity(transcript, state.activeWorkingActivityBySession.get(key));
+  for (let index = transcript.length - 1; index >= 0; index -= 1) {
+    const item = transcript[index];
+    if (item?.kind === "activity" && TRANSIENT_WORKING_LABELS.has(item.label)) {
+      transcript.splice(index, 1);
+    }
+  }
   state.activeWorkingActivityBySession.delete(key);
   state.runningSinceBySession.delete(key);
   state.runMetricsBySession.delete(key);

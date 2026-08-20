@@ -142,6 +142,7 @@ export interface SessionRecord {
   readonly id: string;
   readonly title: string;
   readonly updatedAt: string;
+  readonly transcriptRevision?: number;
   readonly lastViewedAt?: string;
   readonly archivedAt?: string;
   readonly preview: string;

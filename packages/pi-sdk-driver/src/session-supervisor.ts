@@ -147,6 +147,7 @@ interface PromptTemplateAdapter {
 }
 
 const NEW_THREAD_PLACEHOLDER_TITLE = "New thread";
+const DEFAULT_CUSTOM_MODEL_TIMEOUT_MS = 300_000;
 
 interface SkillAdapter {
   readonly name: string;
@@ -164,6 +165,9 @@ export class SessionSupervisor {
   private readonly modelRegistry: ModelRegistry | undefined;
   private readonly composer: SystemPromptComposer;
   private readonly records = new Map<string, ManagedSessionRecord>();
+  private readonly configuredAgents = new WeakSet<object>();
+  private readonly customCompactionTimeouts = new WeakMap<ManagedSessionRecord, ReturnType<typeof setTimeout>>();
+  private readonly timedOutCustomCompactions = new WeakSet<ManagedSessionRecord>();
 
   constructor(options: PiSdkDriverOptions = {}) {
     this.catalogs = options.catalogFilePath
@@ -441,10 +445,20 @@ export class SessionSupervisor {
       if (isQueuedMessage) {
         await this.queuePrompt(session, promptText, input.deliverAs!, images);
       } else {
-        await session.prompt(promptText, {
-          ...(images && images.length > 0 ? { images } : {}),
-          source: "interactive",
-        });
+        const restoreAutoRetry = isCustomProvider(session.agent.state.model.provider) && session.autoRetryEnabled;
+        if (restoreAutoRetry) {
+          session.settingsManager.applyOverrides({ retry: { enabled: false } });
+        }
+        try {
+          await session.prompt(promptText, {
+            ...(images && images.length > 0 ? { images } : {}),
+            source: "interactive",
+          });
+        } finally {
+          if (restoreAutoRetry) {
+            session.settingsManager.applyOverrides({ retry: { enabled: true } });
+          }
+        }
       }
 
       if (isExtensionCommand) {
@@ -460,6 +474,7 @@ export class SessionSupervisor {
       record.status = isQueuedMessage ? "running" : isExtensionCommand ? "idle" : "failed";
       record.updatedAt = nowIso();
       record.preview = error instanceof Error ? error.message : String(error);
+      await record.eventQueue.catch(() => {});
       await this.persistSnapshot(record);
       await this.emit(record, {
         type: "runFailed",
@@ -504,6 +519,8 @@ export class SessionSupervisor {
       return;
     }
 
+    this.clearCustomCompactionTimeout(record);
+    record.session.abortCompaction();
     await record.session.abort();
     record.runningRunId = undefined;
     record.status = "idle";
@@ -709,7 +726,8 @@ export class SessionSupervisor {
     record.session = session;
     record.sessionFile = sessionFile;
     record.title = sessionEntry.title;
-    record.status = sessionEntry.status;
+    record.status = session.isStreaming || session.isCompacting ? "running" : "idle";
+    record.runningRunId = record.status === "running" ? record.runningRunId ?? crypto.randomUUID() : undefined;
     record.updatedAt = sessionEntry.updatedAt;
     record.archivedAt = sessionEntry.archivedAt;
     record.preview = sessionEntry.previewSnippet ?? undefined;
@@ -777,6 +795,7 @@ export class SessionSupervisor {
   }
 
   private async disposeRecordRuntime(record: ManagedSessionRecord): Promise<void> {
+    this.clearCustomCompactionTimeout(record);
     const runtime = record.runtime;
     const session = record.session;
     record.runtime = undefined;
@@ -815,6 +834,7 @@ export class SessionSupervisor {
 
     record.session = session;
     record.sessionFile = session.sessionFile ?? session.sessionManager.getSessionFile();
+    this.configureCustomProviderStream(record, session);
     record.unsubscribeAgent?.();
     record.unsubscribeAgent = session.subscribe((event) => {
       void this.handleAgentEvent(record, event);
@@ -841,6 +861,73 @@ export class SessionSupervisor {
       record.bindingExtensions = false;
     }
     record.sessionCommands = this.collectSessionCommands(session);
+  }
+
+  private configureCustomProviderStream(record: ManagedSessionRecord, session: AgentSession): void {
+    if (this.configuredAgents.has(session.agent)) {
+      return;
+    }
+    this.configuredAgents.add(session.agent);
+
+    const upstreamStream = session.agent.streamFn;
+    session.agent.streamFn = async (model, context, options) => {
+      if (!isCustomProvider(model.provider)) {
+        return upstreamStream(model, context, options);
+      }
+
+      await this.emit(record, {
+        type: "runProgress",
+        sessionRef: record.ref,
+        timestamp: nowIso(),
+        message: "Connecting to custom model...",
+        phase: "connecting",
+        ...(record.runningRunId ? { runId: record.runningRunId } : {}),
+      });
+
+      const onResponse = options?.onResponse;
+      return upstreamStream(model, context, {
+        ...options,
+        timeoutMs: options?.timeoutMs ?? customModelTimeoutMs(),
+        maxRetries: options?.maxRetries ?? 0,
+        onResponse: async (response, responseModel) => {
+          await this.emit(record, {
+            type: "runProgress",
+            sessionRef: record.ref,
+            timestamp: nowIso(),
+            message: "Generating response...",
+            phase: "generating",
+            ...(record.runningRunId ? { runId: record.runningRunId } : {}),
+          });
+          await onResponse?.(response, responseModel);
+        },
+      });
+    };
+  }
+
+  private startCustomCompactionTimeout(record: ManagedSessionRecord): void {
+    this.clearCustomCompactionTimeout(record);
+    if (!record.session || !isCustomProvider(record.session.agent.state.model.provider)) {
+      return;
+    }
+
+    this.timedOutCustomCompactions.delete(record);
+    const timeout = setTimeout(() => {
+      this.timedOutCustomCompactions.add(record);
+      record.session?.abortCompaction();
+    }, customModelTimeoutMs());
+    timeout.unref?.();
+    this.customCompactionTimeouts.set(record, timeout);
+  }
+
+  private clearCustomCompactionTimeout(record: ManagedSessionRecord): boolean {
+    const timeout = this.customCompactionTimeouts.get(record);
+    if (timeout) {
+      clearTimeout(timeout);
+      this.customCompactionTimeouts.delete(record);
+    }
+    const timedOut = this.timedOutCustomCompactions.has(record);
+    this.timedOutCustomCompactions.delete(record);
+    return timedOut;
   }
 
   private async bindSessionRuntime(record: ManagedSessionRecord): Promise<void> {
@@ -1342,6 +1429,9 @@ export class SessionSupervisor {
 
     switch (event.type) {
       case "agent_start":
+        record.runningRunId ??= crypto.randomUUID();
+        record.status = "running";
+        return [sessionUpdatedEvent(record)];
       case "turn_start":
         record.status = "running";
         return [sessionUpdatedEvent(record)];
@@ -1402,6 +1492,58 @@ export class SessionSupervisor {
         }, record);
       case "turn_end":
         return [sessionUpdatedEvent(record)];
+      case "compaction_start":
+        this.startCustomCompactionTimeout(record);
+        record.status = "running";
+        return [{
+          type: "runProgress" as const,
+          sessionRef: record.ref,
+          timestamp,
+          message: "Compacting conversation context...",
+          phase: "compacting" as const,
+          ...(record.runningRunId ? { runId: record.runningRunId } : {}),
+        }, sessionUpdatedEvent(record)];
+      case "compaction_end": {
+        const timedOut = this.clearCustomCompactionTimeout(record);
+        const activeRunId = record.runningRunId;
+        const errorMessage = timedOut
+          ? "Conversation compaction timed out. Start a new thread or reduce the current context."
+          : event.errorMessage;
+
+        if (event.willRetry || activeRunId) {
+          record.status = "running";
+          record.runningRunId ??= crypto.randomUUID();
+          return errorMessage
+            ? [{
+                type: "runProgress" as const,
+                sessionRef: record.ref,
+                timestamp,
+                message: errorMessage,
+                phase: "compacting" as const,
+                runId: record.runningRunId,
+              }, sessionUpdatedEvent(record)]
+            : [sessionUpdatedEvent(record)];
+        }
+
+        record.updatedAt = timestamp;
+        record.runningRunId = undefined;
+        if (errorMessage) {
+          record.status = "failed";
+          record.preview = errorMessage;
+          return toDriverEvents({
+            type: "runFailed" as const,
+            sessionRef: record.ref,
+            timestamp,
+            error: {
+              message: errorMessage,
+              code: timedOut ? "COMPACTION_TIMEOUT" : "COMPACTION_FAILED",
+            },
+          }, record);
+        }
+
+        record.status = "idle";
+        return [sessionUpdatedEvent(record)];
+      }
       case "agent_end": {
         const outcome = determineRunOutcome(event.messages);
         const runId = record.runningRunId;
@@ -2018,6 +2160,18 @@ function sessionUpdatedEvent(record: ManagedSessionRecord): SessionDriverEvent {
     timestamp: record.updatedAt,
     snapshot: buildSnapshot(record),
   };
+}
+
+function isCustomProvider(provider: string): boolean {
+  return provider.startsWith("custom-");
+}
+
+function customModelTimeoutMs(): number {
+  const configured = Number(process.env.PI_APP_CUSTOM_MODEL_TIMEOUT_MS);
+  if (!Number.isFinite(configured) || configured <= 0) {
+    return DEFAULT_CUSTOM_MODEL_TIMEOUT_MS;
+  }
+  return Math.min(Math.max(Math.round(configured), 250), 600_000);
 }
 
 function toDriverEvents(

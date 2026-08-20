@@ -107,6 +107,12 @@ export async function startThread(store: AppStoreInternals, input: StartThreadIn
       ...(initialModel ? { initialModel } : {}),
       ...(initialThinkingLevel ? { initialThinkingLevel } : {}),
     });
+    const sessionConfig = session.config;
+    const titleModel =
+      initialModel ??
+      (sessionConfig?.provider && sessionConfig.modelId
+        ? { provider: sessionConfig.provider, modelId: sessionConfig.modelId }
+        : undefined);
     const key = sessionKey(session.ref);
     store.sessionState.transcriptCache.set(key, []);
     store.sessionState.loadedTranscriptKeys.add(key);
@@ -145,7 +151,7 @@ export async function startThread(store: AppStoreInternals, input: StartThreadIn
         void store.withError(error);
       });
     }
-    if (prompt) {
+    if (prompt && !titleModel?.provider.startsWith("custom-")) {
       // Defer the AI title refinement so the user's real first prompt gets the
       // network and event-loop priority. The title call is cheap (Flash, no
       // thinking) and the sidebar already shows the instant local title, so the
@@ -156,7 +162,7 @@ export async function startThread(store: AppStoreInternals, input: StartThreadIn
           requestToken: pendingAutoTitle.requestToken,
           placeholderTitle: localTitle,
           signal: autoTitleAbortController.signal,
-          ...(initialModel ? { model: initialModel } : {}),
+          ...(titleModel ? { model: titleModel } : {}),
         });
       }, 1500);
       autoTitleAbortController.signal.addEventListener("abort", () => clearTimeout(titleTimer), { once: true });

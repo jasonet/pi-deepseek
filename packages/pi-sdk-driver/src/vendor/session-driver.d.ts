@@ -127,6 +127,12 @@ declare module "@pi-gui/session-driver" {
     readonly text: string;
   }
 
+  export interface RunProgressEvent extends SessionEventBase {
+    readonly type: "runProgress";
+    readonly phase: "connecting" | "generating" | "compacting";
+    readonly message: string;
+  }
+
   export interface QueuedMessageStartedEvent extends SessionEventBase {
     readonly type: "queuedMessageStarted";
     readonly message: SessionQueuedMessage;
@@ -261,6 +267,7 @@ declare module "@pi-gui/session-driver" {
     | SessionOpenedEvent
     | SessionUpdatedEvent
     | AssistantDeltaEvent
+    | RunProgressEvent
     | QueuedMessageStartedEvent
     | ToolStartedEvent
     | ToolUpdatedEvent
@@ -366,11 +373,21 @@ declare module "@pi-gui/session-driver/runtime-types" {
     readonly maxTokens: number;
   }
 
+  export type RuntimeCustomModelThinkingFormat =
+    | "auto"
+    | "openai"
+    | "openrouter"
+    | "deepseek"
+    | "zai"
+    | "qwen"
+    | "qwen-chat-template";
+
   export interface RuntimeCustomModelProviderRecord {
     readonly id: string;
     readonly name: string;
     readonly baseUrl: string;
     readonly hasApiKey: boolean;
+    readonly thinkingFormat: RuntimeCustomModelThinkingFormat;
     readonly models: readonly RuntimeCustomModelRecord[];
   }
 
@@ -379,6 +396,7 @@ declare module "@pi-gui/session-driver/runtime-types" {
     readonly name: string;
     readonly baseUrl: string;
     readonly apiKey?: string;
+    readonly thinkingFormat?: RuntimeCustomModelThinkingFormat;
     readonly models: readonly RuntimeCustomModelRecord[];
   }
 

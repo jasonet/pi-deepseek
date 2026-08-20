@@ -11,6 +11,8 @@ import {
   type TerminalExitEvent,
   type TerminalPanelSnapshot,
   type TerminalSize,
+  type SaveTregSettingsInput,
+  type TregStatus,
 } from "../src/ipc";
 import type {
   NavigateSessionTreeOptions,
@@ -265,6 +267,12 @@ contextBridge.exposeInMainWorld("piApp", {
     ipcRenderer.invoke(desktopIpc.startDshWeb) as Promise<DshWebStatus>,
   stopDshWeb: () =>
     ipcRenderer.invoke(desktopIpc.stopDshWeb) as Promise<DshWebStatus>,
+  getTregStatus: () =>
+    ipcRenderer.invoke(desktopIpc.getTregStatus) as Promise<TregStatus>,
+  saveTregSettings: (settings: SaveTregSettingsInput) =>
+    ipcRenderer.invoke(desktopIpc.saveTregSettings, settings) as Promise<TregStatus>,
+  installTregHarnessPlugin: () =>
+    ipcRenderer.invoke(desktopIpc.installTregHarnessPlugin) as Promise<{ ok: boolean; message: string }>,
   setComposerWorkMode: (mode: string) =>
     ipcRenderer.invoke(desktopIpc.setComposerWorkMode, mode) as Promise<DesktopAppState>,
   getComposerWorkMode: () =>

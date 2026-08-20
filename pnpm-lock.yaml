@@ -30,6 +30,9 @@ importers:
       '@earendil-works/pi-coding-agent':
         specifier: ^0.74.0
         version: 0.74.0(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(ws@8.21.0)(zod@4.4.3)
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.29.0
+        version: 1.29.0(zod@4.4.3)
       '@pi-gui/pi-sdk-driver':
         specifier: workspace:*
         version: link:../../packages/pi-sdk-driver

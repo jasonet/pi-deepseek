@@ -2,17 +2,20 @@ import type {
   ProbeRuntimeCustomModelProviderInput,
   ProbeRuntimeCustomModelProviderResult,
   RuntimeCustomModelRecord,
+  RuntimeCustomModelThinkingFormat,
 } from "@pi-gui/session-driver/runtime-types";
 
 const PROBE_TIMEOUT_MS = 15_000;
+const COMPLETION_PROBE_TIMEOUT_MS = 60_000;
 
 export async function probeCustomModelProvider(
   input: ProbeRuntimeCustomModelProviderInput,
   fetcher: typeof fetch,
 ): Promise<ProbeRuntimeCustomModelProviderResult> {
   let modelsUrl: URL;
+  let baseUrl: string;
   try {
-    const baseUrl = normalizeBaseUrl(input.baseUrl);
+    baseUrl = normalizeBaseUrl(input.baseUrl);
     modelsUrl = new URL(`${baseUrl}/models`);
   } catch (error) {
     return { ok: false, message: error instanceof Error ? error.message : String(error) };
@@ -41,9 +44,22 @@ export async function probeCustomModelProvider(
     if (models.length === 0) {
       return { ok: false, message: "Connected, but the server returned no models." };
     }
+
+    const thinkingFormat = await detectThinkingFormat(baseUrl, headers, fetcher);
+    const completionError = await probeStreamingCompletion({
+      baseUrl,
+      modelId: models[0]!.id,
+      headers,
+      thinkingFormat,
+      fetcher,
+    });
+    if (completionError) {
+      return { ok: false, message: completionError };
+    }
     return {
       ok: true,
-      message: `Connected. Found ${models.length} model${models.length === 1 ? "" : "s"}.`,
+      message: `Connected. Found ${models.length} model${models.length === 1 ? "" : "s"} and verified streaming.`,
+      thinkingFormat,
       models,
     };
   } catch (error) {
@@ -53,6 +69,98 @@ export async function probeCustomModelProvider(
       message: message.includes("timeout") ? "Connection timed out after 15 seconds." : `Connection failed: ${message}`,
     };
   }
+}
+
+async function probeStreamingCompletion(input: {
+  readonly baseUrl: string;
+  readonly modelId: string;
+  readonly headers: Readonly<Record<string, string>>;
+  readonly thinkingFormat: RuntimeCustomModelThinkingFormat;
+  readonly fetcher: typeof fetch;
+}): Promise<string | undefined> {
+  try {
+    const response = await input.fetcher(new URL(`${input.baseUrl}/chat/completions`), {
+      method: "POST",
+      headers: {
+        ...input.headers,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model: input.modelId,
+        messages: [{ role: "user", content: "Reply OK" }],
+        stream: true,
+        max_tokens: 1,
+        ...(input.thinkingFormat === "qwen-chat-template"
+          ? { chat_template_kwargs: { enable_thinking: false, preserve_thinking: true } }
+          : {}),
+      }),
+      signal: AbortSignal.timeout(COMPLETION_PROBE_TIMEOUT_MS),
+    });
+    if (!response.ok) {
+      const detail = (await response.text()).trim().slice(0, 300);
+      return `Chat completion returned HTTP ${response.status}${detail ? `: ${detail}` : "."}`;
+    }
+    if (!response.body) {
+      return "Chat completion returned no response stream.";
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let pending = "";
+    try {
+      while (pending.length < 64_000) {
+        const chunk = await reader.read();
+        pending += decoder.decode(chunk.value, { stream: !chunk.done });
+        const events = pending.split(/\r?\n\r?\n/);
+        pending = events.pop() ?? "";
+        for (const event of events) {
+          for (const line of event.split(/\r?\n/)) {
+            if (!line.startsWith("data:")) continue;
+            const data = line.slice(5).trim();
+            if (!data || data === "[DONE]") continue;
+            const payload = JSON.parse(data) as unknown;
+            if (isRecord(payload) && Array.isArray(payload.choices)) {
+              return undefined;
+            }
+          }
+        }
+        if (chunk.done) break;
+      }
+      return "Chat completion did not return an OpenAI-compatible SSE event.";
+    } finally {
+      await reader.cancel().catch(() => undefined);
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return /timeout|aborted/i.test(message)
+      ? "Chat completion timed out after 60 seconds. Model discovery works, but generation did not start."
+      : `Chat completion failed: ${message}`;
+  }
+}
+
+async function detectThinkingFormat(
+  baseUrl: string,
+  headers: Readonly<Record<string, string>>,
+  fetcher: typeof fetch,
+): Promise<RuntimeCustomModelThinkingFormat> {
+  try {
+    const base = new URL(baseUrl);
+    base.pathname = `${base.pathname.replace(/\/(?:v1)\/?$/i, "").replace(/\/$/, "")}/props`;
+    const response = await fetcher(base, {
+      headers,
+      signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
+    });
+    if (!response.ok) {
+      return "auto";
+    }
+    const payload = await response.json() as unknown;
+    if (isRecord(payload) && readString(payload.chat_template)?.includes("enable_thinking")) {
+      return "qwen-chat-template";
+    }
+  } catch {
+    // /props is a llama.cpp extension; generic OpenAI-compatible servers may not expose it.
+  }
+  return "auto";
 }
 
 function normalizeBaseUrl(value: string): string {

@@ -26,6 +26,7 @@ interface ComposerPanelProps {
   readonly composerRef: RefObject<HTMLTextAreaElement | null>;
   readonly runningLabel: string;
   readonly attachments: readonly ComposerAttachment[];
+  readonly attachmentsEnabled?: boolean;
   readonly queuedMessages: readonly QueuedComposerMessage[];
   readonly editingQueuedMessageId?: string;
   readonly provider: string | undefined;
@@ -77,6 +78,7 @@ export function ComposerPanel({
   composerRef,
   runningLabel,
   attachments,
+  attachmentsEnabled,
   queuedMessages,
   editingQueuedMessageId,
   provider,
@@ -117,8 +119,10 @@ export function ComposerPanel({
   onToggleExtensionDock,
 }: ComposerPanelProps) {
   const t = useT();
-  const hasComposerInput = composerDraft.trim().length > 0 || attachments.length > 0;
   const isFx = selectedSession.backendId === "fx";
+  const canAttach = attachmentsEnabled ?? !isFx;
+  const activeAttachments = canAttach ? attachments : [];
+  const hasComposerInput = composerDraft.trim().length > 0 || activeAttachments.length > 0;
   const primaryActionIsStop = selectedSession.status === "running" && (isFx || !hasComposerInput);
 
   return (
@@ -134,7 +138,8 @@ export function ComposerPanel({
           composerDraft={composerDraft}
           setComposerDraft={setComposerDraft}
           composerRef={composerRef}
-          attachments={attachments}
+          attachments={activeAttachments}
+          attachmentsEnabled={canAttach}
           queuedMessages={queuedMessages}
           editingQueuedMessageId={editingQueuedMessageId}
           slashSections={slashSections}
@@ -203,7 +208,7 @@ export function ComposerPanel({
                     aria-label="Attach files"
                     className="icon-button composer__attach"
                     type="button"
-                    disabled={isFx}
+                    disabled={!canAttach}
                     onClick={onPickAttachments}
                   >
                     <PlusIcon />
@@ -215,7 +220,7 @@ export function ComposerPanel({
                     type="button"
                     disabled={
                       !primaryActionIsStop &&
-                      ((!composerDraft.trim() && attachments.length === 0) || (!isFx && modelOnboarding.requiresModelSelection))
+                      ((!composerDraft.trim() && activeAttachments.length === 0) || (!isFx && modelOnboarding.requiresModelSelection))
                     }
                     onClick={primaryActionIsStop ? (onStop ?? onSubmit) : onSubmit}
                   >

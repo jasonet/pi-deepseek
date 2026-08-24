@@ -20,6 +20,7 @@ interface ComposerSurfaceProps {
   readonly setComposerDraft: (draft: string) => void;
   readonly composerRef: RefObject<HTMLTextAreaElement | null>;
   readonly attachments: readonly ComposerAttachment[];
+  readonly attachmentsEnabled?: boolean;
   readonly queuedMessages: readonly import("./desktop-state").QueuedComposerMessage[];
   readonly editingQueuedMessageId?: string;
   readonly slashSections: readonly ComposerSlashCommandSection[];
@@ -63,6 +64,7 @@ export function ComposerSurface({
   setComposerDraft,
   composerRef,
   attachments,
+  attachmentsEnabled = true,
   queuedMessages,
   editingQueuedMessageId,
   slashSections,
@@ -105,7 +107,7 @@ export function ComposerSurface({
   };
 
   const handleDragEnter = (event: DragEvent<HTMLDivElement>) => {
-    if (!hasFilesInDataTransfer(event.dataTransfer)) {
+    if (!attachmentsEnabled || !hasFilesInDataTransfer(event.dataTransfer)) {
       return;
     }
     event.preventDefault();
@@ -124,7 +126,7 @@ export function ComposerSurface({
   };
 
   const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
-    if (!hasFilesInDataTransfer(event.dataTransfer)) {
+    if (!attachmentsEnabled || !hasFilesInDataTransfer(event.dataTransfer)) {
       return;
     }
     event.preventDefault();
@@ -136,6 +138,10 @@ export function ComposerSurface({
 
   const handleDrop = (event: DragEvent<HTMLDivElement>) => {
     clearDragState();
+    if (!attachmentsEnabled) {
+      event.preventDefault();
+      return;
+    }
     onComposerDrop(event);
   };
 
@@ -143,7 +149,7 @@ export function ComposerSurface({
     <div
       className={`composer__surface ${isDragActive ? "composer__surface--drag-active" : ""}`}
       data-testid={`${textareaTestId}-surface`}
-      onPaste={onComposerPaste}
+      onPaste={attachmentsEnabled ? onComposerPaste : undefined}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}

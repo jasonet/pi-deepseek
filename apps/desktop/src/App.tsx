@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ClipboardEvent, type Dispatch, type DragEvent, type KeyboardEvent, type SetStateAction } from "react";
-import type { SessionTreeSnapshot } from "@pi-gui/session-driver/types";
+import type { AgentBackendId, SessionTreeSnapshot } from "@pi-gui/session-driver/types";
 import type { RuntimeSnapshot } from "@pi-gui/session-driver/runtime-types";
 import {
   getSelectedSession,
@@ -61,6 +61,7 @@ const DiffPanel = lazy(() => import("./diff-panel").then((m) => ({ default: m.Di
 const TerminalPanel = lazy(() => import("./terminal-panel").then((m) => ({ default: m.TerminalPanel })));
 const TreeModal = lazy(() => import("./tree-modal").then((m) => ({ default: m.TreeModal })));
 import { SecondarySurface } from "./secondary-surface";
+import { HarnessEngineSwitch } from "./harness-engine-switch";
 import type { SettingsSection } from "./settings-view";
 import type { DiffPanelFileRequest } from "./diff-panel";
 
@@ -316,11 +317,7 @@ export default function App() {
   const [dualPaneEnabled, setDualPaneEnabled] = useState(true);
   const [activePaneIndex, setActivePaneIndex] = useState(0);
   const [splitRatio, setSplitRatio] = useState(0.5);
-  // When the user explicitly clicks the partner session in the sidebar, we pin it
-  // to the RIGHT pane instead of switching the primary. This records {primaryId,
-  // secondaryId} so the auto-pick effect honors that choice while the same primary
-  // stays selected, and falls back to most-recent pairing once the primary changes.
-  const manualSecondaryRef = useRef<{ primaryId: string; secondaryId: string; } | null>(null);
+  const [panesSwapped, setPanesSwapped] = useState(false);
   const secondaryWorkspace = secondaryWorkspaceId && snapshot
     ? snapshot.workspaces.find((w) => w.id === secondaryWorkspaceId)
     : undefined;
@@ -352,7 +349,6 @@ export default function App() {
     setSecondarySessionId(undefined);
     setSecondaryWorkspaceId(undefined);
     setActivePaneIndex(0);
-    manualSecondaryRef.current = null;
   }, []);
 
   // Auto-pair the secondary pane with the OTHER most-recent non-archived session
@@ -365,29 +361,20 @@ export default function App() {
       if (secondarySessionId) clearSecondary();
       return;
     }
-    // Honor a manual partner pick (sidebar click) while the same primary is
-    // selected and the chosen session is still a valid non-archived partner.
-    const manual = manualSecondaryRef.current;
     const candidates = [...selectedWorkspace.sessions]
       .filter((s) => !s.archivedAt && s.id !== selectedSession.id)
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-    if (manual && manual.primaryId !== selectedSession.id) {
-      manualSecondaryRef.current = null;
-    }
-    const stillValidManual =
-      manualSecondaryRef.current &&
-      manualSecondaryRef.current.primaryId === selectedSession.id &&
-      candidates.some((s) => s.id === manualSecondaryRef.current!.secondaryId);
     const pairedCandidate =
       selectedSession.backendId === "pi"
         ? candidates.find(
             (candidate) => candidate.backendId === "fx" && candidate.companionSessionId === selectedSession.id,
           )
         : candidates.find((candidate) => candidate.id === selectedSession.companionSessionId);
-    const preferredCandidates = candidates.filter((candidate) => candidate.backendId !== selectedSession.backendId);
-    const partner = stillValidManual
-      ? candidates.find((s) => s.id === manualSecondaryRef.current!.secondaryId)
-      : (pairedCandidate ?? preferredCandidates[0] ?? candidates[0]);
+    const hasFxSessions = selectedSession.backendId === "fx" || candidates.some((candidate) => candidate.backendId === "fx");
+    // Once a workspace contains fx sessions, only show the fx session explicitly
+    // linked to this Pi task. This avoids briefly pairing a new Pi task with an
+    // older task's fx session while its own companion is still starting.
+    const partner = pairedCandidate ?? (hasFxSessions ? undefined : candidates[0]);
     if (!partner) {
       if (secondarySessionId) clearSecondary();
       return;
@@ -397,6 +384,12 @@ export default function App() {
       setSecondarySessionId(partner.id);
     }
   }, [dualPaneEnabled, selectedWorkspace, selectedSession, secondarySessionId, secondaryWorkspaceId, clearSecondary]);
+
+  // Every selected pair starts in its canonical order: Pi left and fx right.
+  // Switching the controls only changes visual placement, never session state.
+  useEffect(() => {
+    setPanesSwapped(false);
+  }, [selectedSession?.id, secondarySession?.id]);
 
   // Keep the secondary pane's transcript fresh without reloading it for unrelated
   // primary-session state ticks. Its per-session revision covers assistant and
@@ -1705,7 +1698,8 @@ export default function App() {
       return;
     }
 
-    const hasComposerInput = composerDraft.trim().length > 0 || composerAttachments.length > 0;
+    const activeAttachments = selectedSession.backendId === "fx" ? [] : composerAttachments;
+    const hasComposerInput = composerDraft.trim().length > 0 || activeAttachments.length > 0;
     if (selectedSession.status === "running" && !hasComposerInput) {
       void updateSnapshot(api, setSnapshot, () => api.cancelCurrentRun());
       return;
@@ -1722,7 +1716,7 @@ export default function App() {
       return;
     }
 
-    const treeCommand = parseTreeComposerCommand(composerDraft);
+    const treeCommand = selectedSession.backendId === "pi" ? parseTreeComposerCommand(composerDraft) : undefined;
     if (treeCommand?.type === "error") {
       setSnapshot((current) =>
         current
@@ -2209,19 +2203,18 @@ export default function App() {
   };
 
   const handleSelectSession = (target: { workspaceId: string; sessionId: string }) => {
-    // In dual-pane, clicking the *other* session in the same project updates only
-    // the RIGHT pane — the left pane keeps its session — and makes the right pane
-    // the active one with its composer focused for input.
+    // Clicking the session already visible in the companion pane focuses it.
+    // Any other sidebar row selects a new task and lets its pair replace both panes.
     if (
       isInDualPane &&
-      selectedSession &&
       selectedWorkspace &&
+      selectedSession &&
+      secondarySession &&
       target.workspaceId === selectedWorkspace.id &&
-      target.sessionId !== selectedSession.id
+      target.sessionId === secondarySession.id &&
+      (selectedSession.companionSessionId === secondarySession.id ||
+        secondarySession.companionSessionId === selectedSession.id)
     ) {
-      manualSecondaryRef.current = { primaryId: selectedSession.id, secondaryId: target.sessionId };
-      setSecondaryWorkspaceId(target.workspaceId);
-      setSecondarySessionId(target.sessionId);
       setActivePaneIndex(1);
       window.requestAnimationFrame(() => secondaryComposerRef.current?.focus());
       return;
@@ -2233,6 +2226,22 @@ export default function App() {
     setTakeoverTerminalSessionKey("");
     void updateSnapshot(api, setSnapshot, () => api.selectSession(target)).then(() => {
       focusComposer();
+    });
+  };
+
+  const handleSelectHarness = (pane: "left" | "right", engine: AgentBackendId) => {
+    if (!selectedSession || !secondarySession) {
+      return;
+    }
+    const nextSwapped = pane === "left"
+      ? selectedSession.backendId !== engine
+      : selectedSession.backendId === engine;
+    setPanesSwapped(nextSwapped);
+    const selectedIsActive = selectedSession.backendId === engine;
+    setActivePaneIndex(selectedIsActive ? 0 : 1);
+    window.requestAnimationFrame(() => {
+      if (selectedIsActive) focusComposer();
+      else secondaryComposerRef.current?.focus();
     });
   };
 
@@ -2774,23 +2783,27 @@ export default function App() {
               }}
             >
               <div className={`dual-pane__col${activePaneIndex === 0 ? " dual-pane__col--active" : ""}`}
+                   style={{ gridColumn: panesSwapped ? 3 : 1 }}
                    onClick={() => setActivePaneIndex(0)}
                       >
                 <section className="canvas canvas--thread">
               <div className="conversation conversation--thread">
                 <div className="chat-header">
-                  <div className="chat-header__eyebrow">
-                    {selectedWorkspace.kind === "worktree"
-                      ? `${rootWorkspace?.name ?? selectedWorkspace.name} · ${selectedWorktree?.name ?? selectedWorkspace.branchName ?? "Worktree"}`
-                      : `${selectedWorkspace.name} · Local`}
+                  <div className="chat-header__topline">
+                    <HarnessEngineSwitch
+                      activeEngine={selectedSession.backendId}
+                      availableEngines={[selectedSession.backendId, secondarySession.backendId]}
+                      paneLabel={panesSwapped ? "Right" : "Left"}
+                      onSelect={(engine) => handleSelectHarness(panesSwapped ? "right" : "left", engine)}
+                    />
+                    <div className="chat-header__eyebrow">
+                      {selectedWorkspace.kind === "worktree"
+                        ? `${rootWorkspace?.name ?? selectedWorkspace.name} · ${selectedWorktree?.name ?? selectedWorkspace.branchName ?? "Worktree"}`
+                        : `${selectedWorkspace.name} · Local`}
+                    </div>
                   </div>
                   <div className="chat-header__row">
                     <h1 className="chat-header__title">{displayedSessionTitle}</h1>
-                                <span
-                                  className={`agent-backend-badge agent-backend-badge--${selectedSession.backendId}`}
-                                >
-                                  {selectedSession.backendId}
-                                </span>
                     <div className="chat-header__status">
                       {selectedSession.status === "running" ? runningLabel : formatRelativeTime(selectedSession.updatedAt)}
                     </div>
@@ -2867,25 +2880,29 @@ export default function App() {
                   onToggleExtensionDock={handleToggleExtensionDock}
                 />
               </div>
-              <div className="dual-pane__divider" ref={dividerRef} />
+              <div className="dual-pane__divider" ref={dividerRef} style={{ gridColumn: 2 }} />
               <div className={`dual-pane__col${activePaneIndex === 1 ? " dual-pane__col--active" : ""}`}
+                   style={{ gridColumn: panesSwapped ? 1 : 3 }}
                    onClick={() => setActivePaneIndex(1)}
                       >
                 <section className="canvas canvas--thread">
                   <div className="conversation conversation--thread">
                     <div className="chat-header">
-                      <div className="chat-header__eyebrow">
-                        {secondaryWorkspace && secondaryWorkspace.kind === "worktree"
-                          ? `${secondaryRootWorkspace?.name ?? secondaryWorkspace.name} · ${secondaryWorktree?.name ?? secondaryWorkspace.branchName ?? "Worktree"}`
-                          : `${secondaryWorkspace?.name ?? "Workspace"} · Local`}
+                      <div className="chat-header__topline">
+                        <HarnessEngineSwitch
+                          activeEngine={secondarySession.backendId}
+                          availableEngines={[selectedSession.backendId, secondarySession.backendId]}
+                          paneLabel={panesSwapped ? "Left" : "Right"}
+                          onSelect={(engine) => handleSelectHarness(panesSwapped ? "left" : "right", engine)}
+                        />
+                        <div className="chat-header__eyebrow">
+                          {secondaryWorkspace && secondaryWorkspace.kind === "worktree"
+                            ? `${secondaryRootWorkspace?.name ?? secondaryWorkspace.name} · ${secondaryWorktree?.name ?? secondaryWorkspace.branchName ?? "Worktree"}`
+                            : `${secondaryWorkspace?.name ?? "Workspace"} · Local`}
+                        </div>
                       </div>
                       <div className="chat-header__row">
                         <h1 className="chat-header__title">{secondarySession.title ?? "Session"}</h1>
-                                <span
-                                  className={`agent-backend-badge agent-backend-badge--${secondarySession.backendId}`}
-                                >
-                                  {secondarySession.backendId}
-                                </span>
                         <div className="chat-header__status">
                           {secondarySession.status === "running" ? runningLabel : formatRelativeTime(secondarySession.updatedAt)}
                         </div>
@@ -2912,6 +2929,7 @@ export default function App() {
                   composerRef={secondaryComposerRef}
                   runningLabel={runningLabel}
                   attachments={[]}
+                  attachmentsEnabled={false}
                   queuedMessages={[]}
                   provider={resolvedSecondaryProvider}
                   modelId={resolvedSecondaryModelId}
@@ -2922,10 +2940,8 @@ export default function App() {
                   showSlashOptionMenu={false}
                   onClearSlashCommand={() => {}}
                   onComposerKeyDown={handleSecondaryComposerKeyDown}
-                          onComposerPaste={secondarySession.backendId === "fx" ? () => {} : handleComposerPaste}
-                          onComposerDrop={
-                            secondarySession.backendId === "fx" ? (event) => event.preventDefault() : handleComposerDrop
-                          }
+                          onComposerPaste={() => {}}
+                          onComposerDrop={(event) => event.preventDefault()}
                   onPickAttachments={() => {}}
                   onRemoveAttachment={() => {}}
                   onEditQueuedMessage={() => {}}
@@ -3008,7 +3024,7 @@ export default function App() {
               </div>
             </section>
           )}
-            <ComposerPanel
+            {!isInDualPane ? <ComposerPanel
               key={selectedSessionKey}
               activeSlashCommand={slashMenu.activeSlashFlow?.command}
               activeSlashCommandMeta={slashMenu.activeSlashFlow?.command?.description}
@@ -3065,7 +3081,7 @@ export default function App() {
               extensionDock={selectedExtensionDock}
               extensionDockExpanded={isSelectedExtensionDockExpanded}
               onToggleExtensionDock={handleToggleExtensionDock}
-            />
+            /> : null}
             {activeExtensionDialog ? (
               <ExtensionDialog dialog={activeExtensionDialog} onRespond={handleRespondToExtensionDialog} />
             ) : null}

@@ -37,8 +37,23 @@ test("starts a Pi + fx task and streams fx through the right pane", async () => 
     await expect(window.locator(".dual-pane")).toBeVisible({ timeout: 30_000 });
     const panes = window.locator(".dual-pane__col");
     await expect(panes).toHaveCount(2);
-    await expect(panes.nth(0).locator(".agent-backend-badge")).toHaveText("pi");
-    await expect(panes.nth(1).locator(".agent-backend-badge")).toHaveText("fx");
+    await expect(window.getByTestId("composer")).toHaveCount(2);
+    const primaryPane = panes.nth(0);
+    const secondaryPane = panes.nth(1);
+    const leftPi = primaryPane.getByRole("button", {
+      name: "Use Pi harness in left pane",
+    });
+    const leftFx = primaryPane.getByRole("button", {
+      name: "Use fx harness in left pane",
+    });
+    const rightPi = secondaryPane.getByRole("button", {
+      name: "Use Pi harness in right pane",
+    });
+    const rightFx = secondaryPane.getByRole("button", {
+      name: "Use fx harness in right pane",
+    });
+    await expect(leftPi).toHaveAttribute("aria-pressed", "true");
+    await expect(rightFx).toHaveAttribute("aria-pressed", "true");
 
     const pairedSessions = (await getDesktopState(window)).workspaces.flatMap(
       (workspace) => workspace.sessions,
@@ -82,22 +97,57 @@ test("starts a Pi + fx task and streams fx through the right pane", async () => 
       )
       .toContain("FX_DUAL_OK");
 
+    await primaryPane.getByTestId("composer").fill("PI_DRAFT");
+    await secondaryPane.getByTestId("composer").fill("FX_DRAFT");
+    await leftFx.click();
+    await expect(primaryPane).toHaveAttribute("style", /grid-column: 3/);
+    await expect(secondaryPane).toHaveAttribute("style", /grid-column: 1/);
+    const swappedLeftFx = secondaryPane.getByRole("button", {
+      name: "Use fx harness in left pane",
+    });
+    const swappedLeftPi = secondaryPane.getByRole("button", {
+      name: "Use Pi harness in left pane",
+    });
+    const swappedRightPi = primaryPane.getByRole("button", {
+      name: "Use Pi harness in right pane",
+    });
+    await expect(swappedLeftFx).toHaveAttribute("aria-pressed", "true");
+    await expect(swappedRightPi).toHaveAttribute("aria-pressed", "true");
+    await expect(secondaryPane.getByTestId("composer")).toHaveValue("FX_DRAFT");
+    await expect(primaryPane.getByTestId("composer")).toHaveValue("PI_DRAFT");
+    expect((await getDesktopState(window)).selectedSessionId).toBe(
+      piSession?.id,
+    );
+
+    await swappedLeftPi.click();
+    await expect(primaryPane).toHaveAttribute("style", /grid-column: 1/);
+    await expect(secondaryPane).toHaveAttribute("style", /grid-column: 3/);
+    await expect(leftPi).toHaveAttribute("aria-pressed", "true");
+    await expect(rightFx).toHaveAttribute("aria-pressed", "true");
+    await expect(primaryPane.getByTestId("composer")).toHaveValue("PI_DRAFT");
+    await expect(secondaryPane.getByTestId("composer")).toHaveValue("FX_DRAFT");
+    await primaryPane.getByTestId("composer").fill("");
+    await secondaryPane.getByTestId("composer").fill("");
+
     await startThreadViaIpc(window, { prompt: "" });
     await expect
-      .poll(async () => {
-        const state = await getDesktopState(window);
-        const workspace = state.workspaces.find(
-          (candidate) => candidate.id === state.selectedWorkspaceId,
-        );
-        const selected = workspace?.sessions.find(
-          (session) => session.id === state.selectedSessionId,
-        );
-        return workspace?.sessions.find(
-          (session) =>
-            session.backendId === "fx" &&
-            session.companionSessionId === selected?.id,
-        )?.title;
-      })
+      .poll(
+        async () => {
+          const state = await getDesktopState(window);
+          const workspace = state.workspaces.find(
+            (candidate) => candidate.id === state.selectedWorkspaceId,
+          );
+          const selected = workspace?.sessions.find(
+            (session) => session.id === state.selectedSessionId,
+          );
+          return workspace?.sessions.find(
+            (session) =>
+              session.backendId === "fx" &&
+              session.companionSessionId === selected?.id,
+          )?.title;
+        },
+        { timeout: 30_000 },
+      )
       .toBe("New thread");
     await expect(
       window.locator(".dual-pane__col").nth(0).locator(".chat-header__title"),

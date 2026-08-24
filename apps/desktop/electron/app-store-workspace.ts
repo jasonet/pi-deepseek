@@ -129,17 +129,25 @@ export async function archiveSession(
   console.log("[Archive Main] Start:", target.workspaceId, target.sessionId);
 
   return store.withErrorHandling(async () => {
-    const sessionRef = toSessionRef(target);
-    store.clearPendingAutoTitle(sessionRef);
-    await store.driver.archiveSession(sessionRef);
+    const pairedTarget = pairedSessionTarget(store.state, target);
+    const targets = pairedTarget ? [target, pairedTarget] : [target];
+    for (const sessionTarget of targets) {
+      const sessionRef = toSessionRef(sessionTarget);
+      store.clearPendingAutoTitle(sessionRef);
+      await store.driver.archiveSession(sessionRef);
+    }
     console.log("[Archive Main] Driver done, refreshing state...");
-    const result = store.refreshState(selectionAfterArchiving(store.state, target));
+    const result = store.refreshState(selectionAfterArchiving(store.state, target, targets));
     console.log("[Archive Main] State refreshed, returning");
     return result;
   });
 }
 
-function selectionAfterArchiving(state: DesktopAppState, target: WorkspaceSessionTarget): RefreshStateOptions {
+function selectionAfterArchiving(
+  state: DesktopAppState,
+  target: WorkspaceSessionTarget,
+  archivedTargets: readonly WorkspaceSessionTarget[],
+): RefreshStateOptions {
   if (state.selectedWorkspaceId !== target.workspaceId || state.selectedSessionId !== target.sessionId) {
     return {
       selectedWorkspaceId: state.selectedWorkspaceId,
@@ -165,7 +173,12 @@ function selectionAfterArchiving(state: DesktopAppState, target: WorkspaceSessio
     .filter((w) => w.id === rootWorkspaceId || w.rootWorkspaceId === rootWorkspaceId)
     .flatMap((w) =>
       w.sessions
-        .filter((s) => s.id !== target.sessionId || w.id !== target.workspaceId)
+        .filter(
+          (session) =>
+            !archivedTargets.some(
+              (archived) => archived.workspaceId === w.id && archived.sessionId === session.id,
+            ),
+        )
         .filter((s) => !s.archivedAt)
         .map((s) => ({ workspaceId: w.id, session: s })),
     )
@@ -194,9 +207,13 @@ export async function unarchiveSession(
   await store.initialize();
 
   return store.withErrorHandling(async () => {
-    const sessionRef = toSessionRef(target);
-    store.clearPendingAutoTitle(sessionRef);
-    await store.driver.unarchiveSession(sessionRef);
+    const pairedTarget = pairedSessionTarget(store.state, target);
+    const targets = pairedTarget ? [target, pairedTarget] : [target];
+    for (const sessionTarget of targets) {
+      const sessionRef = toSessionRef(sessionTarget);
+      store.clearPendingAutoTitle(sessionRef);
+      await store.driver.unarchiveSession(sessionRef);
+    }
     return store.refreshState({
       selectedWorkspaceId: store.state.selectedWorkspaceId,
       selectedSessionId:
@@ -207,6 +224,21 @@ export async function unarchiveSession(
       activeView: "threads",
     });
   });
+}
+
+function pairedSessionTarget(
+  state: DesktopAppState,
+  target: WorkspaceSessionTarget,
+): WorkspaceSessionTarget | undefined {
+  const workspace = state.workspaces.find((entry) => entry.id === target.workspaceId);
+  const session = workspace?.sessions.find((entry) => entry.id === target.sessionId);
+  if (!workspace || !session) return undefined;
+  const companion = session.backendId === "pi"
+    ? workspace.sessions.find(
+        (entry) => entry.backendId === "fx" && entry.companionSessionId === session.id,
+      )
+    : workspace.sessions.find((entry) => entry.id === session.companionSessionId);
+  return companion ? { workspaceId: workspace.id, sessionId: companion.id } : undefined;
 }
 
 export async function createSession(store: AppStoreInternals, input: CreateSessionInput): Promise<DesktopAppState> {

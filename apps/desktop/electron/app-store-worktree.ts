@@ -3,7 +3,7 @@ import { basename, join } from "node:path";
 import { homedir } from "node:os";
 import { sessionKey } from "@pi-gui/pi-sdk-driver";
 import type { WorktreeCatalogEntry } from "@pi-gui/catalogs";
-import type { WorkspaceRef } from "@pi-gui/session-driver";
+import type { SessionRef, SessionSnapshot, WorkspaceRef } from "@pi-gui/session-driver";
 import type { CreateWorktreeInput, DesktopAppState, RemoveWorktreeInput, StartThreadInput } from "../src/desktop-state";
 import { sendMessageToSession } from "./app-store-composer";
 import type { CreateWorktreeOptions } from "./worktree-manager";
@@ -20,19 +20,15 @@ export async function createWorktree(store: AppStoreInternals, input: CreateWork
   }
 
   return store.withErrorHandling(async () => {
-    const createOptions = buildWorktreeOptions(
-      store,
+    const createOptions = buildWorktreeOptions(store,
       rootWorkspace,
-      input.fromSessionWorkspaceId,
-      input.fromSessionId,
-    );
+      input.fromSessionWorkspaceId, input.fromSessionId);
     const created = await store.worktreeManager.createWorktree(rootWorkspace, createOptions);
     const synced = await store.driver.syncWorkspace(created.path, created.displayName);
     if (input.fromSessionId) {
-      await store.driver.createSession(
-        synced.workspace,
-        { title: sessionTitleForWorktree(store, input.fromSessionWorkspaceId ?? input.workspaceId, input.fromSessionId) },
-      );
+      await store.driver.createSession(synced.workspace, {
+        title: sessionTitleForWorktree(store, input.fromSessionWorkspaceId ?? input.workspaceId, input.fromSessionId),
+      });
     }
 
     return store.refreshState({
@@ -128,11 +124,7 @@ export async function startThread(store: AppStoreInternals, input: StartThreadIn
     // Set selection eagerly so that any subscription replay events
     // (fired by ensureSessionReady inside refreshState) read the new
     // session ID instead of the stale one.
-    store.state = {
-      ...store.state,
-      selectedWorkspaceId: session.ref.workspaceId,
-      selectedSessionId: session.ref.sessionId,
-    };
+    store.claimSessionSelection(session.ref);
     const state = await store.refreshState({
       selectedWorkspaceId: session.ref.workspaceId,
       selectedSessionId: session.ref.sessionId,
@@ -151,6 +143,10 @@ export async function startThread(store: AppStoreInternals, input: StartThreadIn
         void store.withError(error);
       });
     }
+    // fx startup must never delay Pi's first paint or first prompt. The companion
+    // is added to the catalog in the background and the dual pane appears as soon
+    // as ACP initialization succeeds.
+    const fxSessionPromise = startFxCompanion(store, targetWorkspace, session.ref, localTitle, prompt);
     if (prompt && !titleModel?.provider.startsWith("custom-")) {
       // Defer the AI title refinement so the user's real first prompt gets the
       // network and event-loop priority. The title call is cheap (Flash, no
@@ -158,6 +154,7 @@ export async function startThread(store: AppStoreInternals, input: StartThreadIn
       // short delay is invisible. Abort cancellation still applies via the signal.
       const titleTimer = setTimeout(() => {
         void generateAndApplyAutoTitle(store, session.ref, targetWorkspace, {
+          companionSessionRefPromise: fxSessionPromise.then((fxSession) => fxSession?.ref),
           prompt,
           requestToken: pendingAutoTitle.requestToken,
           placeholderTitle: localTitle,
@@ -217,7 +214,8 @@ export async function syncAndListWorktrees(
   }
 
   const syncRoots = [...groups.values()]
-    .map((group) =>
+    .map(
+      (group) =>
       [...group].sort((left, right) => {
         const leftIsExistingPrimary = existingPrimaryByWorkspaceId.has(left.workspace.workspaceId);
         const rightIsExistingPrimary = existingPrimaryByWorkspaceId.has(right.workspace.workspaceId);
@@ -300,6 +298,7 @@ async function generateAndApplyAutoTitle(
   sessionRef: { workspaceId: string; sessionId: string },
   workspace: WorkspaceRef,
   options: {
+    readonly companionSessionRefPromise?: Promise<SessionRef | undefined>;
     readonly prompt: string;
     readonly requestToken: string;
     readonly placeholderTitle: string;
@@ -341,8 +340,81 @@ async function generateAndApplyAutoTitle(
 
     store.clearPendingAutoTitle(sessionRef);
     await store.driver.renameSession(sessionRef, generatedTitle);
+    const companionSessionRef = await options.companionSessionRefPromise;
+    if (companionSessionRef) {
+      const companion = store.sessionFromState(companionSessionRef);
+      if (
+        companion &&
+        (companion.title === options.placeholderTitle || companion.title === NEW_THREAD_PLACEHOLDER_TITLE)
+      ) {
+        await store.driver.renameSession(companionSessionRef, generatedTitle);
+  }
+    }
   } catch {
     clearMatchingPendingTitle();
+  }
+}
+
+async function startFxCompanion(
+  store: AppStoreInternals,
+  workspace: WorkspaceRef,
+  piSessionRef: SessionRef,
+  initialTitle: string,
+  prompt: string,
+): Promise<SessionSnapshot | undefined> {
+  try {
+    if (!(await store.driver.isFxAvailable())) {
+      await store.withError(
+        new Error("fx companion is unavailable on this platform or the bundled runtime is missing."),
+      );
+      return undefined;
+    }
+    const currentTitle = store.sessionFromState(piSessionRef)?.title ?? initialTitle;
+    const fxSession = await store.driver.createSession(workspace, {
+      backendId: "fx",
+      companionSessionId: piSessionRef.sessionId,
+      title: currentTitle,
+    });
+    const [{ workspaces }, { sessions }] = await Promise.all([
+      store.driver.listWorkspaces(),
+      store.driver.listSessions(workspace.workspaceId),
+    ]);
+    const piSession = sessions.find(
+      (entry) => entry.sessionRef.sessionId === piSessionRef.sessionId && entry.backendId === "pi",
+    );
+    if (!workspaces.some((entry) => entry.workspaceId === workspace.workspaceId) || !piSession) {
+      await store.driver.discardFxSession(fxSession.ref);
+      return undefined;
+    }
+    if (piSession.archivedAt) {
+      await store.driver.archiveSession(fxSession.ref);
+      await store.driver.closeSession(fxSession.ref);
+      return fxSession;
+    }
+    const key = sessionKey(fxSession.ref);
+    store.sessionState.transcriptCache.set(key, []);
+    store.sessionState.loadedTranscriptKeys.add(key);
+    store.updateSessionConfig(fxSession.ref, fxSession.config);
+    await store.ensureSessionSubscribed(fxSession.ref);
+    await store.refreshState({
+      selectedWorkspaceId: store.state.selectedWorkspaceId,
+      selectedSessionId: store.state.selectedSessionId,
+      activeView: store.state.activeView,
+      markSelectedSessionViewed: false,
+    });
+    if (prompt) {
+      void sendMessageToSession(store, fxSession.ref, prompt, [], {
+        rollbackOptimisticMessageOnError: false,
+      }).catch((error) => {
+        void store.withError(error);
+      });
+    }
+    return fxSession;
+  } catch (error) {
+    await store.withError(
+      new Error(`fx companion could not start: ${error instanceof Error ? error.message : String(error)}`),
+    );
+    return undefined;
   }
 }
 

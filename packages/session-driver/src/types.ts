@@ -2,6 +2,7 @@ export type WorkspaceId = string;
 export type SessionId = string;
 export type RunId = string;
 export type Timestamp = string;
+export type AgentBackendId = "pi" | "fx";
 
 export interface WorkspaceRef {
   readonly workspaceId: WorkspaceId;
@@ -28,6 +29,7 @@ export interface SessionQueuedMessage {
 }
 
 export interface SessionSnapshot {
+  readonly backendId: AgentBackendId;
   readonly ref: SessionRef;
   readonly workspace: WorkspaceRef;
   readonly title: string;
@@ -116,6 +118,8 @@ export interface SessionMessageInput {
 }
 
 export interface CreateSessionOptions {
+  readonly backendId?: AgentBackendId;
+  readonly companionSessionId?: SessionId;
   readonly title?: string;
   readonly initialModel?: SessionModelSelection;
   readonly initialThinkingLevel?: string;

@@ -430,9 +430,12 @@ export async function setSessionThinkingLevel(
   });
 }
 
-export async function cancelCurrentRun(store: AppStoreInternals): Promise<DesktopAppState> {
+export async function cancelCurrentRun(
+  store: AppStoreInternals,
+  target?: WorkspaceSessionTarget,
+): Promise<DesktopAppState> {
   await store.initialize();
-  const sessionRef = store.selectedSessionRef();
+  const sessionRef = target ? toSessionRef(target) : store.selectedSessionRef();
   if (!sessionRef) {
     return store.emit();
   }

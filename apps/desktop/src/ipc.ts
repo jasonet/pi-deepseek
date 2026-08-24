@@ -67,6 +67,7 @@ export const desktopIpc = {
   createSession: "pi-gui:create-session",
   startThread: "pi-gui:start-thread",
   cancelCurrentRun: "pi-gui:cancel-current-run",
+  cancelCurrentRunFor: "pi-gui:cancel-current-run-for",
   setActiveView: "pi-gui:set-active-view",
   setSidebarCollapsed: "pi-gui:set-sidebar-collapsed",
   setWorkspaceCollapsed: "pi-gui:set-workspace-collapsed",
@@ -354,6 +355,7 @@ export interface PiDesktopApi {
   createSession(input: CreateSessionInput): Promise<DesktopAppState>;
   startThread(input: StartThreadInput): Promise<DesktopAppState>;
   cancelCurrentRun(): Promise<DesktopAppState>;
+  cancelCurrentRunFor(target: WorkspaceSessionTarget): Promise<DesktopAppState>;
   setActiveView(view: AppView): Promise<DesktopAppState>;
   setSidebarCollapsed(collapsed: boolean): Promise<DesktopAppState>;
   setWorkspaceCollapsed(workspaceId: string, collapsed: boolean): Promise<DesktopAppState>;

@@ -165,6 +165,8 @@ contextBridge.exposeInMainWorld("piApp", {
   startThread: (input: StartThreadInput) =>
     ipcRenderer.invoke(desktopIpc.startThread, input) as Promise<DesktopAppState>,
   cancelCurrentRun: () => ipcRenderer.invoke(desktopIpc.cancelCurrentRun) as Promise<DesktopAppState>,
+  cancelCurrentRunFor: (target: WorkspaceSessionTarget) =>
+    ipcRenderer.invoke(desktopIpc.cancelCurrentRunFor, target) as Promise<DesktopAppState>,
   setActiveView: (view: AppView) =>
     ipcRenderer.invoke(desktopIpc.setActiveView, view) as Promise<DesktopAppState>,
   setSidebarCollapsed: (collapsed: boolean) =>

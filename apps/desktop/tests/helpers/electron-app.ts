@@ -1393,8 +1393,8 @@ export async function startThreadFromSurface(
   }
   await expect(startButton).toBeEnabled({ timeout: 15_000 });
   await startButton.click();
-  await expect(window.getByTestId("composer")).toBeVisible({ timeout: 15_000 });
-  await expect(window.getByTestId("composer")).toBeFocused({ timeout: 15_000 });
+  await expect(window.getByTestId("composer").first()).toBeVisible({ timeout: 15_000 });
+  await expect(window.getByTestId("composer").first()).toBeFocused({ timeout: 15_000 });
 }
 
 export async function startThreadViaIpc(
@@ -1452,7 +1452,7 @@ export async function startThreadViaIpc(
       nextPrompt: prompt,
     },
   );
-  await expect(window.getByTestId("composer")).toBeVisible({ timeout: 15_000 });
+  await expect(window.getByTestId("composer").first()).toBeVisible({ timeout: 15_000 });
 }
 
 export async function createNamedThread(
@@ -1500,7 +1500,7 @@ export async function createNamedThread(
 
   await createSessionViaIpc(window, targetWorkspaceId, title);
   await selectSession(window, title);
-  const composer = window.getByTestId("composer");
+  const composer = window.getByTestId("composer").first();
   await expect(composer).toBeVisible({ timeout: 15_000 });
   await composer.click();
   await expect(composer).toBeFocused({ timeout: 15_000 });

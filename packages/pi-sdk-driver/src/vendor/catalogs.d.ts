@@ -1,5 +1,5 @@
 declare module "@pi-gui/catalogs" {
-  import type { SessionRef, WorkspaceId } from "@pi-gui/session-driver";
+  import type { AgentBackendId, SessionRef, WorkspaceId } from "@pi-gui/session-driver";
 
   export type { SessionRef, WorkspaceId };
 
@@ -37,6 +37,8 @@ declare module "@pi-gui/catalogs" {
   export type SessionStatus = "idle" | "running" | "failed";
 
   export interface SessionCatalogEntry {
+    backendId: AgentBackendId;
+    companionSessionId?: string;
     sessionRef: SessionRef;
     workspaceId: WorkspaceId;
     title: string;

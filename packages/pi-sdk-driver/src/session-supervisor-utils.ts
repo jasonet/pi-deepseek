@@ -11,6 +11,7 @@ import type {
 } from "@pi-gui/session-driver";
 import type { SessionQueuedMessage } from "@pi-gui/session-driver/types";
 import type { SessionTranscriptAttachment, SessionTranscriptMessage } from "./transcript.js";
+import { PI_BACKEND_ID } from "./backend-contract.js";
 
 const FILE_ATTACHMENT_BLOCK_START = "<pi-deepseek-file-attachments>";
 const FILE_ATTACHMENT_BLOCK_END = "</pi-deepseek-file-attachments>";
@@ -30,6 +31,7 @@ export interface SnapshotSource {
 
 export function buildSnapshot(source: SnapshotSource): SessionSnapshot {
   return {
+    backendId: PI_BACKEND_ID,
     ref: { ...source.ref },
     workspace: { ...source.workspace },
     title: source.title.trim() || deriveWorkspaceTitle(source.workspace),

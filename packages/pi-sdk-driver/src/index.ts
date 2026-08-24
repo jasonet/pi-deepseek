@@ -1,4 +1,5 @@
 export { JsonCatalogStore } from "./json-catalog-store.js";
+export type { SessionFileCatalogStorage } from "./json-catalog-store.js";
 export {
   applyHostUiRequestToExtensionUiState,
   createEmptyExtensionUiState,

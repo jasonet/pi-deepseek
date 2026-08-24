@@ -1,4 +1,5 @@
-import type { PiSdkDriver, JsonCatalogStore } from "@pi-gui/pi-sdk-driver";
+import type { JsonCatalogStore } from "@pi-gui/pi-sdk-driver";
+import type { DesktopAgentDriver } from "./desktop-agent-driver";
 import type { CreateSessionOptions, SessionConfig, SessionRef, SessionSnapshot, WorkspaceRef } from "@pi-gui/session-driver";
 import type { RuntimeCommandRecord, RuntimeSnapshot } from "@pi-gui/session-driver/runtime-types";
 import type {
@@ -30,7 +31,7 @@ export interface AppStoreInternals {
   readonly pendingRuntimeCommandsBySession: Map<string, PendingRuntimeCommandExecution>;
 
   /* ── Infrastructure ────────────────────────────────────── */
-  readonly driver: PiSdkDriver;
+  readonly driver: DesktopAgentDriver;
   readonly catalogStore: JsonCatalogStore;
   readonly worktreeManager: GitWorktreeManager;
   readonly attachmentStore: JsonFileStore<ComposerAttachment[]>;
@@ -41,11 +42,14 @@ export interface AppStoreInternals {
   emit(): DesktopAppState;
   withError(error: unknown): Promise<DesktopAppState>;
   withErrorHandling(fn: () => Promise<DesktopAppState>): Promise<DesktopAppState>;
+  claimSessionSelection(sessionRef: SessionRef): void;
   selectSessionFast(target: WorkspaceSessionTarget): Promise<DesktopAppState>;
   workspaceRefFromState(workspaceId: string): WorkspaceRef | undefined;
   selectedSessionRef(): SessionRef | undefined;
   getExtensionFilePath(workspaceId: string, filePath: string): string | undefined;
-  sessionFromState(sessionRef: SessionRef): { archivedAt?: string; updatedAt: string; title: string; status: string } | undefined;
+  sessionFromState(
+    sessionRef: SessionRef,
+  ): { archivedAt?: string; updatedAt: string; title: string; status: string } | undefined;
   ensureSessionReady(sessionRef: SessionRef): Promise<SessionSnapshot | undefined>;
   ensureSessionSubscription(sessionRef: SessionRef): Promise<void>;
   ensureSessionSubscribed(sessionRef: SessionRef): Promise<void>;

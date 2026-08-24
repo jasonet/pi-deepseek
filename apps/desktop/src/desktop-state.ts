@@ -1,4 +1,4 @@
-import type { HostUiRequest, SessionConfig } from "@pi-gui/session-driver";
+import type { AgentBackendId, HostUiRequest, SessionConfig, SessionId } from "@pi-gui/session-driver";
 import type { ModelSettingsSnapshot, RuntimeCommandRecord, RuntimeSnapshot } from "@pi-gui/session-driver/runtime-types";
 export type SessionStatus = "idle" | "running" | "failed";
 export type { SessionRole, TranscriptMessage } from "./timeline-types";
@@ -139,6 +139,8 @@ export interface QueuedComposerMessage {
 }
 
 export interface SessionRecord {
+  readonly backendId: AgentBackendId;
+  readonly companionSessionId?: SessionId;
   readonly id: string;
   readonly title: string;
   readonly updatedAt: string;

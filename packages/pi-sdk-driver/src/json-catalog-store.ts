@@ -14,6 +14,7 @@ import type {
   WorktreeId,
 } from "@pi-gui/catalogs";
 import { sessionKey } from "./session-supervisor-utils.js";
+import { PI_BACKEND_ID } from "./backend-contract.js";
 
 type CatalogFileState = {
   version: 2;
@@ -380,9 +381,10 @@ function cloneWorkspaceEntry(entry: WorkspaceCatalogEntry): WorkspaceCatalogEntr
   return { ...entry };
 }
 
-function cloneSessionEntry(entry: SessionCatalogEntry): SessionCatalogEntry {
+function cloneSessionEntry(entry: SessionCatalogEntry | (Omit<SessionCatalogEntry, "backendId"> & { backendId?: unknown })): SessionCatalogEntry {
   return {
     ...entry,
+    backendId: entry.backendId === "fx" || entry.sessionRef.sessionId.startsWith("fx:") ? "fx" : PI_BACKEND_ID,
     sessionRef: { ...entry.sessionRef },
   };
 }

@@ -54,7 +54,9 @@ const SettingsView = lazy(() => import("./settings-view").then((m) => ({ default
 const SkillsView = lazy(() => import("./skills-view").then((m) => ({ default: m.SkillsView })));
 const ExtensionsView = lazy(() => import("./extensions-view").then((m) => ({ default: m.ExtensionsView })));
 const ConnectPhoneView = lazy(() => import("./connect-phone-view").then((m) => ({ default: m.ConnectPhoneView })));
-const DeepSeekHarnessView = lazy(() => import("./deepseek-harness-view").then((m) => ({ default: m.DeepSeekHarnessView })));
+const DeepSeekHarnessView = lazy(() => import("./deepseek-harness-view").then((m) => ({ default: m.DeepSeekHarnessView
+  })),
+);
 const DiffPanel = lazy(() => import("./diff-panel").then((m) => ({ default: m.DiffPanel })));
 const TerminalPanel = lazy(() => import("./terminal-panel").then((m) => ({ default: m.TerminalPanel })));
 const TreeModal = lazy(() => import("./tree-modal").then((m) => ({ default: m.TreeModal })));
@@ -207,7 +209,7 @@ export default function App() {
   const timelinePaneRef = useRef<HTMLDivElement | null>(null);
   const lastTranscriptMarkerRef = useRef("");
   const pinnedToBottomRef = useRef(true);
-  const previousTimelinePaneSizeRef = useRef<{ width: number; height: number } | null>(null);
+  const previousTimelinePaneSizeRef = useRef<{ width: number; height: number; } | null>(null);
   const lastTimelineScrollTopBySessionRef = useRef(new Map<string, number>());
   const lastTimelinePinnedBySessionRef = useRef(new Map<string, boolean>());
   const preserveBottomOnNextPaneResizeRef = useRef(false);
@@ -318,7 +320,7 @@ export default function App() {
   // to the RIGHT pane instead of switching the primary. This records {primaryId,
   // secondaryId} so the auto-pick effect honors that choice while the same primary
   // stays selected, and falls back to most-recent pairing once the primary changes.
-  const manualSecondaryRef = useRef<{ primaryId: string; secondaryId: string } | null>(null);
+  const manualSecondaryRef = useRef<{ primaryId: string; secondaryId: string; } | null>(null);
   const secondaryWorkspace = secondaryWorkspaceId && snapshot
     ? snapshot.workspaces.find((w) => w.id === secondaryWorkspaceId)
     : undefined;
@@ -326,15 +328,16 @@ export default function App() {
     ? secondaryWorkspace.sessions.find((s) => s.id === secondarySessionId && !s.archivedAt)
     : undefined;
   // A valid dual-pane is any secondary session distinct from the primary.
-  const isInDualPane = Boolean(
-    secondarySession && selectedSession && secondarySession.id !== selectedSession.id,
-  );
+  const isInDualPane = Boolean(secondarySession && selectedSession && secondarySession.id !== selectedSession.id);
   const selectedSessionKey = selectedWorkspace && selectedSession ? `${selectedWorkspace.id}:${selectedSession.id}` : "";
   const secondarySessionKey = secondaryWorkspace && secondarySession ? `${secondaryWorkspace.id}:${secondarySession.id}` : "";
 
   const [secondaryDraft, setSecondaryDraft] = useState("");
   const [paneModelSelections, setPaneModelSelections] = useState<
-    Record<string, { readonly provider?: string; readonly modelId?: string; readonly thinkingLevel?: string }>
+    Record<
+      string, { readonly provider?: string; readonly modelId?: string; readonly thinkingLevel?: string;
+      }
+    >
   >({});
   const secondaryComposerRef = useRef<HTMLTextAreaElement>(null);
   const secondaryTimelinePaneRef = useRef<HTMLDivElement | null>(null);
@@ -375,9 +378,16 @@ export default function App() {
       manualSecondaryRef.current &&
       manualSecondaryRef.current.primaryId === selectedSession.id &&
       candidates.some((s) => s.id === manualSecondaryRef.current!.secondaryId);
+    const pairedCandidate =
+      selectedSession.backendId === "pi"
+        ? candidates.find(
+            (candidate) => candidate.backendId === "fx" && candidate.companionSessionId === selectedSession.id,
+          )
+        : candidates.find((candidate) => candidate.id === selectedSession.companionSessionId);
+    const preferredCandidates = candidates.filter((candidate) => candidate.backendId !== selectedSession.backendId);
     const partner = stillValidManual
       ? candidates.find((s) => s.id === manualSecondaryRef.current!.secondaryId)
-      : candidates[0];
+      : (pairedCandidate ?? preferredCandidates[0] ?? candidates[0]);
     if (!partner) {
       if (secondarySessionId) clearSecondary();
       return;
@@ -416,12 +426,9 @@ export default function App() {
         setSecondaryTranscript(null);
       });
     return () => { cancelled = true; };
-  }, [
-    api,
+  }, [api,
     secondaryWorkspaceId,
-    secondarySessionId,
-    secondarySession?.transcriptRevision,
-  ]);
+    secondarySessionId, secondarySession?.transcriptRevision]);
 
   // Stick the secondary (right) pane to the latest message, mirroring the primary
   // pane. Stays pinned to the bottom as new text streams in unless the user
@@ -522,12 +529,18 @@ export default function App() {
     const nextRootWorkspace =
       (nextRootWorkspaceId ? snapshot.workspaces.find((workspace) => workspace.id === nextRootWorkspaceId) : undefined)
       ?? selectedWorkspace;
-    const nextRootWorkspaceOptions = [...new Set(snapshot.workspaces.map((workspace) => resolveRepoWorkspaceId(snapshot.workspaces, workspace.id) ?? workspace.id))]
+    const nextRootWorkspaceOptions = [
+        ...new Set(
+          snapshot.workspaces.map(
+            (workspace) => resolveRepoWorkspaceId(snapshot.workspaces, workspace.id) ?? workspace.id,
+          ),
+        ),
+      ]
       .map((workspaceId) => snapshot.workspaces.find((workspace) => workspace.id === workspaceId))
       .filter((workspace): workspace is WorkspaceRecord => Boolean(workspace));
 
     return {
-      activeWorktrees: nextRootWorkspace ? snapshot.worktreesByWorkspace[nextRootWorkspace.id] ?? [] : [],
+      activeWorktrees: nextRootWorkspace ? (snapshot.worktreesByWorkspace[nextRootWorkspace.id] ?? []) : [],
       linkedWorktreeByWorkspaceId: nextLinkedWorktreeByWorkspaceId,
       rootWorkspace: nextRootWorkspace,
       rootWorkspaceOptions: nextRootWorkspaceOptions,
@@ -565,7 +578,7 @@ export default function App() {
   const skillsRuntime = skillsWorkspace ? snapshot?.runtimeByWorkspace[skillsWorkspace.id] : undefined;
   const extensionsRuntime = extensionsWorkspace ? snapshot?.runtimeByWorkspace[extensionsWorkspace.id] : undefined;
   const extensionsCommandCompatibility = extensionsWorkspace
-    ? snapshot?.extensionCommandCompatibilityByWorkspace[extensionsWorkspace.id] ?? []
+    ? (snapshot?.extensionCommandCompatibilityByWorkspace[extensionsWorkspace.id] ?? [])
     : [];
   const newThreadWorkspace =
     rootWorkspaceOptions.find((entry) => entry.id === newThreadRootWorkspaceId) ?? rootWorkspaceOptions[0];
@@ -622,7 +635,9 @@ export default function App() {
   const composerAttachments = attachmentsClearedOnSubmit ? [] : (snapshot?.composerAttachments ?? []);
   const queuedComposerMessages = snapshot?.queuedComposerMessages ?? [];
   const editingQueuedMessageId = snapshot?.editingQueuedMessageId;
-  const runningLabel = useRunningLabel(selectedSession?.status === "running" ? selectedSession.runningSince : undefined);
+  const runningLabel = useRunningLabel(
+    selectedSession?.status === "running" ? selectedSession.runningSince : undefined,
+  );
   const isTerminalVisibleForSelectedThread = Boolean(selectedSessionKey) && openTerminalSessionKey === selectedSessionKey;
   const isTerminalTakeoverForSelectedThread = Boolean(selectedSessionKey) && takeoverTerminalSessionKey === selectedSessionKey;
   const activeTranscript =
@@ -633,11 +648,10 @@ export default function App() {
     selectedTranscript.sessionId === selectedSession.id
       ? selectedTranscript.transcript
       : [];
-  const isTranscriptLoading = Boolean(selectedSession) && activeTranscript.length === 0 && (
-    !selectedTranscript ||
+  const isTranscriptLoading = Boolean(selectedSession) && activeTranscript.length === 0 &&
+    (!selectedTranscript ||
     selectedTranscript.workspaceId !== selectedWorkspace?.id ||
-    selectedTranscript.sessionId !== selectedSession?.id
-  );
+    selectedTranscript.sessionId !== selectedSession?.id);
   const secondaryTranscriptMessages =
     secondaryTranscript &&
     secondaryTranscript.workspaceId === secondaryWorkspaceId &&
@@ -645,15 +659,17 @@ export default function App() {
       ? secondaryTranscript.transcript
       : [];
   const isSecondaryTranscriptLoading =
-    Boolean(secondarySession) && secondaryTranscriptMessages.length === 0 && (
-      !secondaryTranscript ||
+    Boolean(secondarySession) && secondaryTranscriptMessages.length === 0 &&
+    (!secondaryTranscript ||
       secondaryTranscript.workspaceId !== secondaryWorkspaceId ||
-      secondaryTranscript.sessionId !== secondarySessionId
-    );
-  const selectedSessionCommands = selectedSession ? snapshot?.sessionCommandsBySession[selectedSessionKey] ?? [] : [];
+      secondaryTranscript.sessionId !== secondarySessionId);
+  const selectedSessionCommands = selectedSession ? (snapshot?.sessionCommandsBySession[selectedSessionKey] ?? []) : [];
   const selectedExtensionUi = selectedSession ? snapshot?.sessionExtensionUiBySession[selectedSessionKey] : undefined;
+  const secondaryExtensionUi = secondarySession
+    ? snapshot?.sessionExtensionUiBySession[secondarySessionKey]
+    : undefined;
   const selectedWorkspaceCommandCompatibility = selectedWorkspace
-    ? snapshot?.extensionCommandCompatibilityByWorkspace[selectedWorkspace.id] ?? []
+    ? (snapshot?.extensionCommandCompatibilityByWorkspace[selectedWorkspace.id] ?? [])
     : [];
   useEffect(() => {
     if (snapshot && snapshot.workspaces.length === 0) {
@@ -668,6 +684,7 @@ export default function App() {
   const selectedExtensionDock = useMemo(() => buildExtensionDockModel(selectedExtensionUi), [selectedExtensionUi]);
   const displayedSessionTitle = selectedExtensionUi?.title ?? selectedSession?.title ?? "";
   const activeExtensionDialog = selectedExtensionUi?.pendingDialogs[0];
+  const activeSecondaryExtensionDialog = secondaryExtensionUi?.pendingDialogs[0];
   const isSelectedExtensionDockExpanded = dockExpandedBySession[selectedSessionKey] ?? false;
   const persistedComposerDraft = snapshot?.composerDraft ?? "";
   const threadGroups = useMemo(
@@ -704,7 +721,8 @@ export default function App() {
     setNewThreadComposerError(undefined);
     setNewThreadPrompt(value);
   }, []);
-  const scrollTimelineToBottom = useCallback((behavior: ScrollBehavior = "auto") => {
+  const scrollTimelineToBottom = useCallback(
+    (behavior: ScrollBehavior = "auto") => {
     const pane = timelinePaneRef.current;
     if (!pane) {
       return;
@@ -734,12 +752,13 @@ export default function App() {
     };
 
     align(6);
-  }, [selectedSessionKey]);
+  },
+    [selectedSessionKey],
+  );
 
-  const requestPinnedBottomAlignment = useCallback((
-    behavior: ScrollBehavior = "auto",
-    options?: { readonly preferExactRestore?: boolean },
-  ) => {
+  const requestPinnedBottomAlignment = useCallback(
+    (behavior: ScrollBehavior = "auto",
+    options?: { readonly preferExactRestore?: boolean }) => {
     if (exactBottomRestoreSessionKeyRef.current === selectedSessionKey && selectedSessionKey) {
       pendingPinnedBottomBehaviorRef.current = behavior;
       deferredPinnedBottomAlignmentRef.current = true;
@@ -755,7 +774,8 @@ export default function App() {
     }
 
     scrollTimelineToBottom(behavior);
-  }, [activeTranscript.length, scrollTimelineToBottom, selectedSessionKey]);
+  }, [activeTranscript.length, scrollTimelineToBottom, selectedSessionKey],
+  );
 
   const finalizeTimelineVirtualizationDisable = useCallback(() => {
     const pane = timelinePaneRef.current;
@@ -820,7 +840,8 @@ export default function App() {
     });
   }, [scrollTimelineToBottom, selectedSessionKey, snapshot?.activeView]);
 
-  const setTimelinePaneElement = useCallback((node: HTMLDivElement | null) => {
+  const setTimelinePaneElement = useCallback(
+    (node: HTMLDivElement | null) => {
     timelinePaneRef.current = node;
     if (!node) {
       return;
@@ -866,9 +887,11 @@ export default function App() {
       }
       setDisableTimelineVirtualization(false);
     });
-  }, [scrollTimelineToBottom, selectedSessionKey, snapshot?.activeView]);
+  }, [scrollTimelineToBottom, selectedSessionKey, snapshot?.activeView],
+  );
 
-  const schedulePinnedBottomRealignment = useCallback((delayFrames = 0) => {
+  const schedulePinnedBottomRealignment = useCallback(
+    (delayFrames = 0) => {
     const waitForFrames = (remainingFrames: number) => {
       window.requestAnimationFrame(() => {
         if (remainingFrames > 0) {
@@ -886,7 +909,9 @@ export default function App() {
     };
 
     waitForFrames(delayFrames);
-  }, [requestPinnedBottomAlignment]);
+  },
+    [requestPinnedBottomAlignment],
+  );
 
   const handleViewFileInDiff = useCallback((path: string) => {
     setShowDiffPanel(true);
@@ -975,7 +1000,10 @@ export default function App() {
   }, [api, selectedSession, selectedWorkspace]);
 
   const navigateTreeSelection = useCallback(
-    (targetId: string, options?: { readonly summarize?: boolean; readonly customInstructions?: string }) => {
+    (
+      targetId: string, options?: { readonly summarize?: boolean; readonly customInstructions?: string;
+      },
+    ) => {
       if (!api || !selectedWorkspace || !selectedSession) {
         return;
       }
@@ -1159,16 +1187,16 @@ export default function App() {
       return;
     }
     setSettingsWorkspaceId((current) =>
-      rootWorkspaceOptions.some((workspace) => workspace.id === current) ? current : (current || rootWorkspaceOptions[0]?.id || ""),
+      rootWorkspaceOptions.some((workspace) => workspace.id === current) ? current : current || rootWorkspaceOptions[0]?.id || "",
     );
     setSkillsWorkspaceId((current) =>
-      rootWorkspaceOptions.some((workspace) => workspace.id === current) ? current : (current || rootWorkspaceOptions[0]?.id || ""),
+      rootWorkspaceOptions.some((workspace) => workspace.id === current) ? current : current || rootWorkspaceOptions[0]?.id || "",
     );
     setExtensionsWorkspaceId((current) =>
-      rootWorkspaceOptions.some((workspace) => workspace.id === current) ? current : (current || rootWorkspaceOptions[0]?.id || ""),
+      rootWorkspaceOptions.some((workspace) => workspace.id === current) ? current : current || rootWorkspaceOptions[0]?.id || "",
     );
     setNewThreadRootWorkspaceId((current) =>
-      rootWorkspaceOptions.some((workspace) => workspace.id === current) ? current : (current || rootWorkspaceOptions[0]?.id || ""),
+      rootWorkspaceOptions.some((workspace) => workspace.id === current) ? current : current || rootWorkspaceOptions[0]?.id || "",
     );
   }, [rootWorkspaceOptions]);
 
@@ -1186,10 +1214,9 @@ export default function App() {
 
   const resetNewThreadSurface = (workspaceId?: string) => {
     const nextWorkspaceId =
-      (workspaceId && (
-        rootWorkspaceOptions.find((workspace) => workspace.id === workspaceId)?.id ||
-        (snapshot ? resolveRepoWorkspaceId(snapshot.workspaces, workspaceId) : undefined)
-      )) ||
+      (workspaceId &&
+        (rootWorkspaceOptions.find((workspace) => workspace.id === workspaceId)?.id ||
+        (snapshot ? resolveRepoWorkspaceId(snapshot.workspaces, workspaceId) : undefined))) ||
       rootWorkspace?.id ||
       visibleWorkspaces[0]?.id ||
       "";
@@ -1321,8 +1348,8 @@ export default function App() {
         const currentId = selectedSession?.id ?? selectedWorkspace?.sessions[0]?.id;
         const currentIdx = allSessions.findIndex((s) => s.id === currentId);
         const nextIdx = event.shiftKey
-          ? (currentIdx <= 0 ? allSessions.length - 1 : currentIdx - 1)
-          : (currentIdx >= allSessions.length - 1 || currentIdx === -1 ? 0 : currentIdx + 1);
+          ? currentIdx <= 0 ? allSessions.length - 1 : currentIdx - 1
+          : currentIdx >= allSessions.length - 1 || currentIdx === -1 ? 0 : currentIdx + 1;
         if (!api) return;
         const nextSession = allSessions[nextIdx];
         if (!nextSession) return;
@@ -1424,11 +1451,8 @@ export default function App() {
       resetExactBottomRestoreState();
     }
 
-    if (
-      snapshot.activeView === "threads" &&
-      previousActiveViewRef.current !== "threads" &&
-      selectedSession
-    ) {
+    if (snapshot.activeView === "threads" &&
+      previousActiveViewRef.current !== "threads" && selectedSession) {
       focusComposer();
       if (pinnedToBottomRef.current || preserveBottomOnNextPaneResizeRef.current) {
         preserveBottomOnNextPaneResizeRef.current = true;
@@ -1604,9 +1628,12 @@ export default function App() {
     terminalVisibleInCurrentView ? "main--with-terminal" : "",
     isInDualPane ? "main--dual-pane" : "",
     showTerminalTakeover ? "main--terminal-takeover" : "",
-  ].filter(Boolean).join(" ");
+  ]
+    .filter(Boolean)
+    .join(" ");
   const terminalPanel = terminalVisibleInCurrentView && selectedWorkspace ? (
-    <Suspense fallback={<ViewFallback />}><TerminalPanel
+    <Suspense fallback={<ViewFallback />}>
+        <TerminalPanel
       workspace={selectedWorkspace}
       sessionId={selectedSession?.id ?? ""}
       height={terminalHeight}
@@ -1623,7 +1650,8 @@ export default function App() {
         setTakeoverTerminalSessionKey((current) => (current === selectedSessionKey ? "" : current));
         focusComposer();
       }}
-    /></Suspense>
+        />
+      </Suspense>
   ) : null;
 
   const setActiveView = (view: AppView) => {
@@ -1683,10 +1711,14 @@ export default function App() {
       return;
     }
 
+    if (selectedSession.backendId === "fx" && selectedSession.status === "running") {
+      return;
+    }
+
     if (!hasComposerInput) {
       return;
     }
-    if (selectedSessionModelOnboarding.requiresModelSelection) {
+    if (selectedSession.backendId === "pi" && selectedSessionModelOnboarding.requiresModelSelection) {
       return;
     }
 
@@ -1712,7 +1744,9 @@ export default function App() {
     setAttachmentsClearedOnSubmit(true);
     void (async () => {
       const nextState = await updateSnapshot(api, setSnapshot, () =>
-        api.submitComposer(previousDraft, selectedSession.status === "running" ? { deliverAs: options.deliverAs ?? "followUp" } : undefined),
+        api.submitComposer(
+          previousDraft, selectedSession.status === "running" ? { deliverAs: options.deliverAs ?? "followUp" } : undefined,
+        ),
       );
       setComposerDraft(nextState.composerDraft);
       setAttachmentsClearedOnSubmit(false);
@@ -1725,8 +1759,10 @@ export default function App() {
 
   const handleSecondarySubmit = (options: { readonly deliverAs?: "steer" | "followUp" } = {}) => {
     if (!secondarySession || !secondaryWorkspaceId || !api || !secondaryDraft.trim()) return;
-    if (secondarySessionModelOnboarding.requiresModelSelection) {
-      setSnapshot((current) => current ? { ...current, lastError: secondarySessionModelOnboarding.emptyModelDescription } : current);
+    if (secondarySession.backendId === "fx" && secondarySession.status === "running") return;
+    if (secondarySession.backendId === "pi" && secondarySessionModelOnboarding.requiresModelSelection) {
+      setSnapshot((current) => current ? { ...current, lastError: secondarySessionModelOnboarding.emptyModelDescription } : current,
+      );
       return;
     }
     // Deliver straight to the secondary session via a targeted submit — no
@@ -1750,7 +1786,7 @@ export default function App() {
   const handleSecondaryComposerKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
-      handleSecondarySubmit({ deliverAs: (e.metaKey || e.ctrlKey) ? "steer" : "followUp" });
+      handleSecondarySubmit({ deliverAs: e.metaKey || e.ctrlKey ? "steer" : "followUp" });
     }
   };
 
@@ -2005,8 +2041,7 @@ export default function App() {
       return "Select a workspace first.";
     }
     const state = await updateSnapshot(api, setSnapshot, () =>
-      api.logoutProvider(settingsWorkspace.id, providerId),
-    );
+      api.logoutProvider(settingsWorkspace.id, providerId));
     return state.lastError;
   };
 
@@ -2048,21 +2083,27 @@ export default function App() {
     if (!extensionsWorkspace) {
       return Promise.resolve();
     }
-    return updateSnapshot(api, setSnapshot, () => api.installPackage(extensionsWorkspace.id, source)).then(() => undefined);
+    return updateSnapshot(api, setSnapshot, () => api.installPackage(extensionsWorkspace.id, source)).then(
+      () => undefined,
+    );
   };
 
   const handleRemovePackage = (source: string) => {
     if (!extensionsWorkspace) {
       return Promise.resolve();
     }
-    return updateSnapshot(api, setSnapshot, () => api.removePackage(extensionsWorkspace.id, source)).then(() => undefined);
+    return updateSnapshot(api, setSnapshot, () => api.removePackage(extensionsWorkspace.id, source)).then(
+      () => undefined,
+    );
   };
 
   const handleUpdatePackages = (source?: string) => {
     if (!extensionsWorkspace) {
       return Promise.resolve();
     }
-    return updateSnapshot(api, setSnapshot, () => api.updatePackages(extensionsWorkspace.id, source)).then(() => undefined);
+    return updateSnapshot(api, setSnapshot, () => api.updatePackages(extensionsWorkspace.id, source)).then(
+      () => undefined,
+    );
   };
 
   const handleGetAppendSystemPrompt = () =>
@@ -2089,12 +2130,12 @@ export default function App() {
   };
 
   const handleSetAutoUpdateEnabled = (enabled: boolean) => {
-    setSnapshot((prev) => prev ? { ...prev, autoUpdateEnabled: enabled, revision: prev.revision + 1 } : prev);
+    setSnapshot((prev) => (prev ? { ...prev, autoUpdateEnabled: enabled, revision: prev.revision + 1 } : prev));
     void api?.setAutoUpdateEnabled(enabled);
   };
 
   const handleSetSkipAutoTitle = (enabled: boolean) => {
-    setSnapshot((prev) => prev ? { ...prev, skipAutoTitle: enabled, revision: prev.revision + 1 } : prev);
+    setSnapshot((prev) => (prev ? { ...prev, skipAutoTitle: enabled, revision: prev.revision + 1 } : prev));
     void api?.setSkipAutoTitle(enabled);
   };
 
@@ -2157,9 +2198,7 @@ export default function App() {
       return;
     }
     setNotificationPermissionPending(true);
-    void api
-      .openSystemNotificationSettings()
-      .finally(() => {
+    void api.openSystemNotificationSettings().finally(() => {
         setNotificationPermissionPending(false);
       });
   };
@@ -2211,6 +2250,23 @@ export default function App() {
       api.respondToHostUiRequest(selectedWorkspace.id, selectedSession.id, response),
     ).then(() => {
       focusComposer();
+    });
+  };
+
+  const handleRespondToSecondaryExtensionDialog = (
+    response:
+      | { readonly requestId: string; readonly value: string }
+      | { readonly requestId: string; readonly confirmed: boolean }
+      | { readonly requestId: string; readonly cancelled: true },
+  ) => {
+    if (!secondaryWorkspace || !secondarySession) {
+      return;
+    }
+
+    void updateSnapshot(api, setSnapshot, () =>
+      api.respondToHostUiRequest(secondaryWorkspace.id, secondarySession.id, response),
+    ).then(() => {
+      window.requestAnimationFrame(() => secondaryComposerRef.current?.focus());
     });
   };
 
@@ -2271,18 +2327,19 @@ export default function App() {
     setNewThreadPrompt("");
     setNewThreadAttachments([]);
     wsMenu.expandWorkspace(newThreadRootWorkspaceId);
-    void updateSnapshot(api, setSnapshot, () =>
-      api.startThread(input),
-    ).then(() => {
+    void updateSnapshot(api, setSnapshot, () => api.startThread(input))
+      .then(() => {
       setNewThreadProvider(undefined);
       setNewThreadModelId(undefined);
       setNewThreadThinkingLevel(undefined);
       setNewThreadEnvironment("local");
-    }).catch(() => {
+      })
+      .catch(() => {
       // Restore the prompt so a failed start doesn't silently lose user input.
       setNewThreadPrompt(submittedPrompt);
       setNewThreadAttachments(submittedAttachments);
-    }).finally(() => {
+      })
+      .finally(() => {
       startingThreadRef.current = false;
     });
   };
@@ -2311,9 +2368,11 @@ export default function App() {
   };
 
   const handleComposerKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (handleClipboardImageShortcut(event, (clipboardImage) => {
+    if (
+      handleClipboardImageShortcut(event, (clipboardImage) => {
       void updateSnapshot(api, setSnapshot, () => api.addComposerAttachments([clipboardImage]));
-    })) {
+      })
+    ) {
       return;
     }
 
@@ -2325,9 +2384,11 @@ export default function App() {
       return;
     }
 
-    if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing && selectedSession?.status === "running") {
+    if (
+      event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing && selectedSession?.status === "running"
+    ) {
       event.preventDefault();
-      submitComposerDraft({ deliverAs: (event.metaKey || event.ctrlKey) ? "steer" : "followUp" });
+      submitComposerDraft({ deliverAs: event.metaKey || event.ctrlKey ? "steer" : "followUp" });
       return;
     }
 
@@ -2339,7 +2400,7 @@ export default function App() {
     if (!composerDraft.trim() && composerAttachments.length === 0) {
       return;
     }
-    if (selectedSessionModelOnboarding.requiresModelSelection) {
+    if (selectedSession?.backendId === "pi" && selectedSessionModelOnboarding.requiresModelSelection) {
       return;
     }
 
@@ -2347,9 +2408,11 @@ export default function App() {
   };
 
   const handleNewThreadComposerKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (handleClipboardImageShortcut(event, (clipboardImage) => {
+    if (
+      handleClipboardImageShortcut(event, (clipboardImage) => {
       setNewThreadAttachments((current) => [...current, clipboardImage]);
-    })) {
+      })
+    ) {
       return;
     }
 
@@ -2421,7 +2484,8 @@ export default function App() {
             </label>
           </div>
         ) : null}
-        <Suspense fallback={<ViewFallback />}><SettingsView
+        <Suspense fallback={<ViewFallback />}>
+            <SettingsView
           workspace={settingsWorkspace}
           workspaces={rootWorkspaceOptions}
           runtime={settingsSection === "models" ? settingsModelRuntime : settingsRuntime}
@@ -2461,7 +2525,8 @@ export default function App() {
           onSetLocale={(value) => {
             void updateSnapshot(api, setSnapshot, () => api.setLocale(value));
           }}
-        /></Suspense>
+            />
+          </Suspense>
       </SecondarySurface>
       </LocaleProvider>
     );
@@ -2476,8 +2541,7 @@ export default function App() {
             <span>Workspace</span>
             <select
               value={skillsWorkspace?.id ?? ""}
-              onChange={(event) => setSkillsWorkspaceId(event.target.value)}
-            >
+              onChange={(event) => setSkillsWorkspaceId(event.target.value)}>
               {rootWorkspaceOptions.map((workspace) => (
                 <option key={workspace.id} value={workspace.id}>
                   {workspace.name}
@@ -2486,7 +2550,8 @@ export default function App() {
             </select>
           </label>
         </div>
-        <Suspense fallback={<ViewFallback />}><SkillsView
+        <Suspense fallback={<ViewFallback />}>
+            <SkillsView
           workspace={skillsWorkspace}
           runtime={skillsRuntime}
           onOpenSkillFolder={handleOpenSkillFolder}
@@ -2504,7 +2569,8 @@ export default function App() {
                 : "Create a new skill for this workspace and explain which files you will add.",
             )
           }
-        /></Suspense>
+            />
+          </Suspense>
       </SecondarySurface>
       </LocaleProvider>
     );
@@ -2514,12 +2580,14 @@ export default function App() {
     return (
       <LocaleProvider locale={snapshot.locale}>
       <SecondarySurface onBack={() => setActiveView("threads")} testId="connect-phone-surface" title="连接手机">
-        <Suspense fallback={<ViewFallback />}><ConnectPhoneView
+        <Suspense fallback={<ViewFallback />}>
+            <ConnectPhoneView
           channels={snapshot.imChannels}
           onSaveChannel={handleSaveImChannel}
           onRemoveChannel={handleRemoveImChannel}
           onConnected={handleImConnected}
-        /></Suspense>
+            />
+          </Suspense>
       </SecondarySurface>
       </LocaleProvider>
     );
@@ -2544,7 +2612,8 @@ export default function App() {
             </select>
           </label>
         </div>
-        <Suspense fallback={<ViewFallback />}><ExtensionsView
+        <Suspense fallback={<ViewFallback />}>
+            <ExtensionsView
           workspace={extensionsWorkspace}
           runtime={extensionsRuntime}
           commandCompatibility={extensionsCommandCompatibility}
@@ -2563,7 +2632,8 @@ export default function App() {
           onUpdatePackages={handleUpdatePackages}
           onGetAppendSystemPrompt={handleGetAppendSystemPrompt}
           onSetAppendSystemPrompt={handleSetAppendSystemPrompt}
-        /></Suspense>
+            />
+          </Suspense>
       </SecondarySurface>
       </LocaleProvider>
     );
@@ -2654,7 +2724,9 @@ export default function App() {
               activeSlashCommandMeta={newThreadSlashMenu.activeSlashFlow?.command?.description}
               slashSections={newThreadSlashMenu.slashSections}
               slashOptions={newThreadSlashMenu.slashOptions}
-              selectedSlashCommand={newThreadSlashMenu.activeSlashOptionCommand ?? newThreadSlashMenu.selectedSlashCommand}
+                    selectedSlashCommand={
+                      newThreadSlashMenu.activeSlashOptionCommand ?? newThreadSlashMenu.selectedSlashCommand
+                    }
               selectedSlashOption={newThreadSlashMenu.selectedSlashOption}
               showSlashMenu={newThreadSlashMenu.showSlashMenu}
               showSlashOptionMenu={newThreadSlashMenu.showSlashOptionMenu}
@@ -2702,7 +2774,8 @@ export default function App() {
               }}
             >
               <div className={`dual-pane__col${activePaneIndex === 0 ? " dual-pane__col--active" : ""}`}
-                   onClick={() => setActivePaneIndex(0)}>
+                   onClick={() => setActivePaneIndex(0)}
+                      >
                 <section className="canvas canvas--thread">
               <div className="conversation conversation--thread">
                 <div className="chat-header">
@@ -2713,6 +2786,11 @@ export default function App() {
                   </div>
                   <div className="chat-header__row">
                     <h1 className="chat-header__title">{displayedSessionTitle}</h1>
+                                <span
+                                  className={`agent-backend-badge agent-backend-badge--${selectedSession.backendId}`}
+                                >
+                                  {selectedSession.backendId}
+                                </span>
                     <div className="chat-header__status">
                       {selectedSession.status === "running" ? runningLabel : formatRelativeTime(selectedSession.updatedAt)}
                     </div>
@@ -2764,8 +2842,12 @@ export default function App() {
                   onSetModel={handleSetSessionModel}
                   onSetThinking={handleSetSessionThinking}
                   modelOnboarding={selectedSessionModelOnboarding}
-                  onOpenModelSettings={(section) => openSettings(selectedWorkspace?.rootWorkspaceId ?? selectedWorkspace?.id, section)}
+                  onOpenModelSettings={(section) => openSettings(selectedWorkspace?.rootWorkspaceId ?? selectedWorkspace?.id, section)
+                          }
                   onSubmit={submitComposerDraft}
+                          onStop={() => {
+                            void updateSnapshot(api, setSnapshot, () => api.cancelCurrentRun());
+                          }}
                   runningLabel={runningLabel}
                   selectedSession={selectedSession}
                   lastError={snapshot?.lastError}
@@ -2787,7 +2869,8 @@ export default function App() {
               </div>
               <div className="dual-pane__divider" ref={dividerRef} />
               <div className={`dual-pane__col${activePaneIndex === 1 ? " dual-pane__col--active" : ""}`}
-                   onClick={() => setActivePaneIndex(1)}>
+                   onClick={() => setActivePaneIndex(1)}
+                      >
                 <section className="canvas canvas--thread">
                   <div className="conversation conversation--thread">
                     <div className="chat-header">
@@ -2798,6 +2881,11 @@ export default function App() {
                       </div>
                       <div className="chat-header__row">
                         <h1 className="chat-header__title">{secondarySession.title ?? "Session"}</h1>
+                                <span
+                                  className={`agent-backend-badge agent-backend-badge--${secondarySession.backendId}`}
+                                >
+                                  {secondarySession.backendId}
+                                </span>
                         <div className="chat-header__status">
                           {secondarySession.status === "running" ? runningLabel : formatRelativeTime(secondarySession.updatedAt)}
                         </div>
@@ -2834,8 +2922,10 @@ export default function App() {
                   showSlashOptionMenu={false}
                   onClearSlashCommand={() => {}}
                   onComposerKeyDown={handleSecondaryComposerKeyDown}
-                  onComposerPaste={handleComposerPaste}
-                  onComposerDrop={handleComposerDrop}
+                          onComposerPaste={secondarySession.backendId === "fx" ? () => {} : handleComposerPaste}
+                          onComposerDrop={
+                            secondarySession.backendId === "fx" ? (event) => event.preventDefault() : handleComposerDrop
+                          }
                   onPickAttachments={() => {}}
                   onRemoveAttachment={() => {}}
                   onEditQueuedMessage={() => {}}
@@ -2847,22 +2937,40 @@ export default function App() {
                   onSetModel={handleSetSecondarySessionModel}
                   onSetThinking={handleSetSecondarySessionThinking}
                   modelOnboarding={secondarySessionModelOnboarding}
-                  onOpenModelSettings={(section) => openSettings(secondaryWorkspace?.rootWorkspaceId ?? secondaryWorkspace?.id, section)}
+                  onOpenModelSettings={(section) => openSettings(secondaryWorkspace?.rootWorkspaceId ?? secondaryWorkspace?.id, section)
+                          }
                   onSubmit={handleSecondarySubmit}
+                          onStop={() => {
+                            if (!secondaryWorkspaceId) return;
+                            void updateSnapshot(api, setSnapshot, () =>
+                              api.cancelCurrentRunFor({
+                                workspaceId: secondaryWorkspaceId,
+                                sessionId: secondarySession.id,
+                              }),
+                            );
+                          }}
                   showMentionMenu={false}
                   mentionOptions={[]}
                   selectedMentionIndex={0}
                   onSelectMention={() => {}}
-                  lastError={snapshot?.lastError}
+                          lastError={secondarySession.backendId === "fx" ? undefined : snapshot?.lastError}
                   extensionDockExpanded={false}
                   onToggleExtensionDock={() => {}}
                   runtime={secondaryModelRuntime}
                 />
+                        {activeSecondaryExtensionDialog ? (
+                          <ExtensionDialog
+                            dialog={activeSecondaryExtensionDialog}
+                            onRespond={handleRespondToSecondaryExtensionDialog}
+                          />
+                        ) : null}
               </div>
               {bothPanesRunning ? (
                 <div className="dual-pane__hint" role="status">
                   <span className="dual-pane__hint-dot" />
-                  {"两个会话在同一项目目录并行运行 · 读取互不影响；请避免两个会话同时写入相同文件（如同时运行 / push）"}
+                          {
+                            "两个会话在同一项目目录并行运行 · 读取互不影响；请避免两个会话同时写入相同文件（如同时运行 / push）"
+                          }
                 </div>
               ) : null}
             </div>
@@ -2936,6 +3044,9 @@ export default function App() {
                 openSettings(selectedWorkspace?.rootWorkspaceId ?? selectedWorkspace?.id, section)
               }
               onSubmit={submitComposerDraft}
+                    onStop={() => {
+                      void updateSnapshot(api, setSnapshot, () => api.cancelCurrentRun());
+                    }}
               runningLabel={runningLabel}
               selectedSession={selectedSession}
               lastError={snapshot.lastError}
@@ -2959,14 +3070,16 @@ export default function App() {
               <ExtensionDialog dialog={activeExtensionDialog} onRespond={handleRespondToExtensionDialog} />
             ) : null}
             {treeModalState.open ? (
-              <Suspense fallback={<ViewFallback />}><TreeModal
+              <Suspense fallback={<ViewFallback />}>
+                      <TreeModal
                 error={treeModalState.error}
                 loading={treeModalState.loading}
                 submitting={treeModalState.submitting}
                 tree={treeModalState.tree}
                 onClose={closeTreeModal}
                 onNavigate={navigateTreeSelection}
-              /></Suspense>
+                      />
+                    </Suspense>
             ) : null}
           </>
         ) : selectedWorkspace ? (
@@ -2979,7 +3092,8 @@ export default function App() {
                 <button
                   className="button button--primary"
                   type="button"
-                  onClick={() => openNewThreadSurface(selectedWorkspace?.rootWorkspaceId ?? selectedWorkspace?.id)}
+                  onClick={() => openNewThreadSurface(selectedWorkspace?.rootWorkspaceId ?? selectedWorkspace?.id)
+                        }
                 >
                   New thread
                 </button>
@@ -3000,13 +3114,15 @@ export default function App() {
           </>
         )}
         {diffVisibleInCurrentView && selectedWorkspace && selectedSession ? (
-          <Suspense fallback={<ViewFallback />}><DiffPanel
+          <Suspense fallback={<ViewFallback />}>
+              <DiffPanel
             workspaceId={selectedWorkspace.id}
             sessionId={selectedSession.id}
             api={api}
             sessionStatus={selectedSession.status}
             fileRequest={diffFileRequest}
-          /></Suspense>
+              />
+            </Suspense>
         ) : null}
       </main>
     </div>

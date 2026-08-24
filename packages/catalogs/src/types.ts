@@ -1,4 +1,4 @@
-import type { SessionRef, SessionStatus, WorkspaceId } from "@pi-gui/session-driver";
+import type { AgentBackendId, SessionRef, SessionStatus, WorkspaceId } from "@pi-gui/session-driver";
 
 export type { SessionRef, SessionStatus, WorkspaceId };
 
@@ -34,6 +34,8 @@ export interface WorktreeCatalogSnapshot {
 }
 
 export interface SessionCatalogEntry {
+  backendId: AgentBackendId;
+  companionSessionId?: string;
   sessionRef: SessionRef;
   workspaceId: WorkspaceId;
   title: string;

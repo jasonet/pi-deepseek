@@ -3,6 +3,7 @@ declare module "@pi-gui/session-driver" {
   export type SessionId = string;
   export type RunId = string;
   export type Timestamp = string;
+  export type AgentBackendId = "pi" | "fx";
   export type RuntimeSourceScope = "user" | "project" | "temporary";
   export type RuntimeSourceOrigin = "package" | "top-level";
   export type RuntimeCommandSource = "extension" | "prompt" | "skill";
@@ -39,6 +40,7 @@ declare module "@pi-gui/session-driver" {
   }
 
   export interface SessionSnapshot {
+    readonly backendId: AgentBackendId;
     readonly ref: SessionRef;
     readonly workspace: WorkspaceRef;
     readonly title: string;
@@ -86,6 +88,8 @@ declare module "@pi-gui/session-driver" {
   }
 
   export interface CreateSessionOptions {
+    readonly backendId?: AgentBackendId;
+    readonly companionSessionId?: SessionId;
     readonly title?: string;
     readonly initialModel?: SessionModelSelection;
     readonly initialThinkingLevel?: string;

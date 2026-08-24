@@ -210,6 +210,8 @@ function buildSessionRecord(
   const preview = previewFromTranscript(transcript) ?? session.previewSnippet ?? session.title;
   const lastViewedAt = lastViewedAtBySession.get(key);
   return {
+    backendId: session.backendId,
+    companionSessionId: session.companionSessionId,
     id: session.sessionRef.sessionId,
     title: session.title,
     updatedAt: session.updatedAt,

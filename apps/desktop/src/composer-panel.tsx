@@ -55,6 +55,7 @@ interface ComposerPanelProps {
   readonly modelOnboarding: ModelOnboardingState;
   readonly onOpenModelSettings: (section: ModelOnboardingSettingsSection) => void;
   readonly onSubmit: () => void;
+  readonly onStop?: () => void;
   readonly onRetryLast?: () => void;
   readonly showMentionMenu: boolean;
   readonly mentionOptions: readonly string[];
@@ -105,6 +106,7 @@ export function ComposerPanel({
   modelOnboarding,
   onOpenModelSettings,
   onSubmit,
+  onStop,
   onRetryLast,
   showMentionMenu,
   mentionOptions,
@@ -116,7 +118,8 @@ export function ComposerPanel({
 }: ComposerPanelProps) {
   const t = useT();
   const hasComposerInput = composerDraft.trim().length > 0 || attachments.length > 0;
-  const primaryActionIsStop = selectedSession.status === "running" && !hasComposerInput;
+  const isFx = selectedSession.backendId === "fx";
+  const primaryActionIsStop = selectedSession.status === "running" && (isFx || !hasComposerInput);
 
   return (
     <footer className="composer">
@@ -125,7 +128,7 @@ export function ComposerPanel({
           lastError={lastError}
           activeSlashCommand={activeSlashCommand}
           activeSlashCommandMeta={activeSlashCommandMeta}
-          topNotice={(
+          topNotice={isFx ? undefined : (
             <ModelOnboardingNoticeBanner notice={modelOnboarding.notice} onOpenSettings={onOpenModelSettings} />
           )}
           composerDraft={composerDraft}
@@ -174,10 +177,16 @@ export function ComposerPanel({
                 ) : null}
                 <div className="composer__hint">
                   {selectedSession.status === "running"
-                    ? `${runningLabel} · Enter to queue · Cmd+Enter to steer`
+                    ? isFx
+                      ? `${runningLabel} · Stop before sending another message`
+                      : `${runningLabel} · Enter to queue · Cmd+Enter to steer`
                     : "Enter to send · Shift+Enter for newline"}
                   {" · "}
-                  <ModelSelector
+                  {isFx ? (
+                    <span className="composer__backend-model">
+                      fx · {selectedSession.config?.modelId ?? "system model"}
+                    </span>
+                  ) : <ModelSelector
                     runtime={runtime}
                     provider={provider}
                     modelId={modelId}
@@ -187,13 +196,14 @@ export function ComposerPanel({
                     emptyModelTitle={modelOnboarding.emptyModelTitle}
                     onSetModel={onSetModel}
                     onSetThinking={onSetThinking}
-                  />
+                  />}
                 </div>
                 <div className="composer__actions">
                   <button
                     aria-label="Attach files"
                     className="icon-button composer__attach"
                     type="button"
+                    disabled={isFx}
                     onClick={onPickAttachments}
                   >
                     <PlusIcon />
@@ -205,9 +215,9 @@ export function ComposerPanel({
                     type="button"
                     disabled={
                       !primaryActionIsStop &&
-                      ((!composerDraft.trim() && attachments.length === 0) || modelOnboarding.requiresModelSelection)
+                      ((!composerDraft.trim() && attachments.length === 0) || (!isFx && modelOnboarding.requiresModelSelection))
                     }
-                    onClick={onSubmit}
+                    onClick={primaryActionIsStop ? (onStop ?? onSubmit) : onSubmit}
                   >
                     {primaryActionIsStop ? <StopSquareIcon /> : <ArrowUpIcon />}
                   </button>

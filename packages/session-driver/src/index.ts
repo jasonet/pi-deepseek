@@ -1,4 +1,5 @@
 export type {
+  AgentBackendId,
   AssistantDeltaEvent,
   CreateSessionOptions,
   ExtensionCompatibilityIssue,

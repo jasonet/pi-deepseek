@@ -75,9 +75,11 @@ import {
   type CreateAgentSessionOptionsWithResourceLoader,
 } from "./npm-package-fallback.js";
 import { SystemPromptComposer, type PromptComposeContext } from "./system-prompt-composer.js";
+import { PI_BACKEND_ID } from "./backend-contract.js";
 
 export interface PiSdkDriverOptions {
   readonly catalogFilePath?: string;
+  readonly catalogStorage?: SessionFileCatalogStorage;
   readonly createAgentSessionRuntimeImpl?: (
     options?: CreateAgentSessionOptionsWithResourceLoader,
   ) => Promise<AgentSessionRuntime>;
@@ -170,9 +172,9 @@ export class SessionSupervisor {
   private readonly timedOutCustomCompactions = new WeakSet<ManagedSessionRecord>();
 
   constructor(options: PiSdkDriverOptions = {}) {
-    this.catalogs = options.catalogFilePath
+    this.catalogs = options.catalogStorage ?? (options.catalogFilePath
       ? new JsonCatalogStore({ catalogFilePath: options.catalogFilePath })
-      : new JsonCatalogStore();
+      : new JsonCatalogStore());
     this.createAgentSessionRuntimeImpl =
       options.createAgentSessionRuntimeImpl ?? ((createOptions) => createAgentSessionRuntimeWithNpmFallback(createOptions));
     this.modelRegistry = options.modelRegistry;
@@ -238,6 +240,9 @@ export class SessionSupervisor {
       await Promise.all(
         existingSessions.map(async (session) => {
           const key = sessionKey(session.sessionRef);
+          if (session.backendId !== "pi") {
+            return session;
+          }
           if (discoveredKeys.has(key) || !session.sessionFilePath) {
             return undefined;
           }
@@ -1596,6 +1601,7 @@ export class SessionSupervisor {
   private async persistSnapshot(record: ManagedSessionRecord): Promise<void> {
     const snapshot = buildSnapshot(record);
     await this.catalogs.sessions.upsertSession({
+      backendId: PI_BACKEND_ID,
       sessionRef: snapshot.ref,
       workspaceId: snapshot.ref.workspaceId,
       title: snapshot.title,
@@ -1684,6 +1690,7 @@ export class SessionSupervisor {
     const archivedAt = runtimeSnapshot?.archivedAt ?? existingEntry?.archivedAt;
     const titleFromInfo = titleFromSessionInfo(info);
     const entry: SessionCatalogSnapshot["sessions"][number] = {
+      backendId: PI_BACKEND_ID,
       sessionRef: {
         workspaceId: workspace.workspaceId,
         sessionId: info.id,
@@ -1729,6 +1736,7 @@ export class SessionSupervisor {
         ? { ...sessionEntry, archivedAt }
         : {
             sessionRef: sessionEntry.sessionRef,
+            backendId: sessionEntry.backendId,
             workspaceId: sessionEntry.workspaceId,
             title: sessionEntry.title,
             updatedAt: sessionEntry.updatedAt,

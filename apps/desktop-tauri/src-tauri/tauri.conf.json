@@ -31,7 +31,8 @@
       "sidecar/server.mjs": "sidecar/server.mjs",
       "sidecar/node": "sidecar/node",
       "sidecar/node_modules": "sidecar/node_modules",
-      "sidecar/extensions": "sidecar/extensions"
+      "sidecar/extensions": "sidecar/extensions",
+      "sidecar/fx": "sidecar/fx"
     },
     "icon": [
       "icons/32x32.png",

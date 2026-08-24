@@ -121,6 +121,11 @@ fn start_sidecar(app: &tauri::AppHandle) -> Result<Sidecar, String> {
         .resolve("sidecar/extensions", BaseDirectory::Resource)
         .ok()
         .filter(|path| path.exists());
+    let bundled_fx = app
+        .path()
+        .resolve("sidecar/fx", BaseDirectory::Resource)
+        .ok()
+        .filter(|path| path.exists());
 
     // Ensure the spawned node (and any node-pty children it starts) can find the
     // node bin dir on PATH even under a minimal GUI environment.
@@ -140,6 +145,9 @@ fn start_sidecar(app: &tauri::AppHandle) -> Result<Sidecar, String> {
     command.arg(&server).env("PATH", child_path);
     if let Some(extensions) = bundled_extensions {
         command.env("PI_BUNDLED_EXTENSIONS_DIR", extensions);
+    }
+    if let Some(fx_root) = bundled_fx {
+        command.env("PI_FX_BUNDLED_ROOT", fx_root);
     }
     let mut child = command
         .stdin(Stdio::piped())

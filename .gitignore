@@ -43,3 +43,4 @@ docs/dev/
 
 # Staged extension tarball (built by scripts/stage-mcp-bridge.mjs)
 apps/desktop/resources/extensions/*.tgz
+apps/desktop/resources/fx/

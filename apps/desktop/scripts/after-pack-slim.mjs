@@ -1,14 +1,29 @@
 /**
- * afterPack hook — strip unused Electron components to reduce bundle size.
- * Removes: SwiftShader (GPU fallback, ~16MB), GLESv2 (~7MB), PDF plugin, EGL.
+ * afterPack hook — strip unused Electron components and non-host fx binaries.
  */
 import fs from "fs";
 import path from "path";
 
 export default async function afterPack(context) {
-  const { appOutDir, packager } = context;
+  const { appOutDir, arch, packager } = context;
+  const platform = packager.platform.nodeName;
+  const archName = { 1: "x64", 3: "arm64" }[arch];
+  const resourcesPath = platform === "darwin"
+    ? path.join(appOutDir, `${packager.appInfo.productFilename}.app`, "Contents", "Resources")
+    : path.join(appOutDir, "resources");
+  const fxRoot = path.join(resourcesPath, "fx");
 
-  if (packager.platform.nodeName !== "darwin") {
+  if (fs.existsSync(fxRoot) && archName && (platform === "darwin" || platform === "linux")) {
+    const activeTarget = `${platform}-${archName}`;
+    for (const target of fs.readdirSync(fxRoot)) {
+      if (target !== activeTarget) fs.rmSync(path.join(fxRoot, target), { recursive: true, force: true });
+    }
+    console.log(`[afterPack] Kept fx runtime: ${activeTarget}`);
+  } else if (fs.existsSync(fxRoot) && platform === "win32") {
+    fs.rmSync(fxRoot, { recursive: true, force: true });
+  }
+
+  if (platform !== "darwin") {
     console.log("[afterPack] Skipping — not macOS");
     return;
   }

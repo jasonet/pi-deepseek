@@ -33,6 +33,18 @@ Run the built app locally without packaging:
 pnpm --filter @pi-gui/desktop preview
 ```
 
+## Pi + fx Runtime
+
+New tasks open as a paired workspace: Pi is the primary left pane and fx is the secondary right pane. The runtimes stay independent and share only the workspace and desktop session catalog.
+
+The app resolves fx in this order so an existing login is reused:
+
+1. `PI_FX_BINARY` (development and tests)
+2. `fx` on `PATH`, `~/.fx/bin/fx`, or `~/.local/bin/fx`
+3. the architecture-specific fx binary bundled in the app
+
+`pnpm --filter @pi-gui/desktop build` stages the host fx runtime on macOS and Linux. macOS release packaging stages both Apple Silicon and Intel binaries, verifies downloaded release checksums, and includes fx license notices. Upstream fx does not currently publish a Windows runtime, so the paired fx pane is unavailable there. Set `PI_FX_ENABLED=1` only for tests that intentionally exercise the real fx runtime; normal deterministic tests leave it disabled.
+
 Package a Linux AppImage locally:
 
 ```bash

@@ -9,6 +9,8 @@ files:
   - out/**/*
   - package.json
 extraResources:
+  - from: resources/fx
+    to: fx
   - from: resources/icon.png
     to: icon.png
 asar: true

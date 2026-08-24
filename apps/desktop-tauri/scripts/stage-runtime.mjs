@@ -77,6 +77,7 @@ function pruneNativePackages(modulesDir) {
 // 1. Build the sidecar bundle (sidecar/dist/server.mjs).
 run("node", [join(sidecarDir, "build.mjs")]);
 run("node", [join(desktopRoot, "scripts", "stage-mcp-bridge.mjs")]);
+run("node", [join(desktopRoot, "scripts", "stage-fx-runtime.mjs")]);
 
 // 2. Ensure the runtime node_modules exists (real on-disk package tree).
 const stagedModules = join(stagingDir, "node_modules");
@@ -129,6 +130,13 @@ for (const id of ["pi-mcp-unity", "pi-mcp-higgsfield", "pi-understand", "pi-treg
     join(outDir, "extensions", `${id}.tgz`),
   );
 }
+const fxTarget = `${process.platform}-${process.arch}`;
+mkdirSync(join(outDir, "fx"), { recursive: true });
+cpSync(
+  join(desktopRoot, "resources", "fx", fxTarget),
+  join(outDir, "fx", fxTarget),
+  { recursive: true },
+);
 
 // Copy node_modules, dereferencing the handful of .bin symlinks is unnecessary
 // because we drop .bin entirely (the sidecar imports packages, never execs the

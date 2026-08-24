@@ -35,7 +35,16 @@ pnpm --filter @pi-gui/desktop preview
 
 ## Pi + fx Runtime
 
-New tasks open as a paired workspace: Pi is the primary left pane and fx is the secondary right pane. The runtimes stay independent and share only the workspace and desktop session catalog.
+On macOS and Linux, new tasks open as a paired workspace when a compatible fx runtime is available: Pi is the primary left pane and fx is the secondary right pane. The runtimes stay independent and share only the workspace and desktop session catalog.
+
+The engine control in the upper-left of each pane identifies the active harness. Selecting the other engine swaps the paired sessions between panes while preserving their independent runtime, transcript, model, and draft. A paired task defaults to Pi on the left and fx on the right.
+
+| Capability | Pi harness | fx harness |
+| --- | --- | --- |
+| Runtime | In-process `pi-mono` / `pi-coding-agent` integration | Native fx process over ACP |
+| Best at | Full Pi tools, skills, extensions, attachments, queues, steer, and custom/local providers | Independent context, fast parallel review, and native fx provider/session workflows |
+| State | Pi session format managed through the thin desktop driver | fx-owned sessions loaded and resumed by fx |
+| Authentication | Pi provider configuration | Reuses the user's system fx login when compatible |
 
 The app resolves fx in this order so an existing login is reused:
 

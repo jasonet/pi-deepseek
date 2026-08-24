@@ -20,27 +20,26 @@
 
 | 平台 | 架构 | 引擎 | 版本 | 格式 | 大小 | 下载 |
 |------|------|------|------|------|------|------|
-| **macOS** | Apple Silicon (M1–M5) | Electron | v2.8.2 | DMG | 140M | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.8.2/Pi-Deepseek-2.8.2-mac-arm64.dmg) |
-| **macOS** | Intel (x64) | Electron | v2.8.2 | DMG | 151M | [![Download](https://img.shields.io/badge/Download-x64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.8.2/Pi-Deepseek-2.8.2-mac-x64.dmg) |
-| **macOS** | Apple Silicon (M1–M5) | Tauri | v2.8.2 | DMG | 186M | [![Download](https://img.shields.io/badge/Download-arm64-%237C6BF5?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.8.2/Pi-Deepseek-2.8.2-tauri-mac-arm64.dmg) |
-| **Windows** | x64 | Electron | v2.6.9 | 安装版 | 121M | [![Download](https://img.shields.io/badge/Download-Setup-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.9/Pi-Deepseek-2.6.9-win-x64-setup.exe) |
-| **Windows** | x64 | Electron | v2.6.9 | 便携版 | 120M | [![Download](https://img.shields.io/badge/Download-Portable-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.9/Pi-Deepseek-2.6.9-win-x64-portable.exe) |
-| **Linux** | x64 | Electron | v2.6.9 | deb | 147M | [![Download](https://img.shields.io/badge/Download-.deb-%234D6BFE?logo=ubuntu)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.9/Pi-Deepseek-2.6.9-linux-amd64.deb) |
-| **Linux** | x64 | Electron | v2.6.9 | AppImage | 150M | [![Download](https://img.shields.io/badge/Download-AppImage-%234D6BFE?logo=linux)](https://github.com/jasonet/pi-deepseek/releases/download/v2.6.9/Pi-Deepseek-2.6.9-linux-x86_64.AppImage) |
+| **macOS** | Apple Silicon (M1–M5) | Electron | v2.9.0 | DMG | 145 MB | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.9.0/Pi-Deepseek-2.9.0-mac-arm64.dmg) |
+| **macOS** | Intel (x64) | Electron | v2.9.0 | DMG | 157 MB | [![Download](https://img.shields.io/badge/Download-x64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.9.0/Pi-Deepseek-2.9.0-mac-x64.dmg) |
+| **macOS** | Apple Silicon (M1–M5) | Tauri | v2.9.0 | DMG | 154 MB | [![Download](https://img.shields.io/badge/Download-arm64-%237C6BF5?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.9.0/Pi-Deepseek-2.9.0-tauri-mac-arm64.dmg) |
+| **Windows** | x64 | Electron | v2.9.0 | 安装版 | 125 MB | [![Download](https://img.shields.io/badge/Download-Setup-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v2.9.0/Pi-Deepseek-2.9.0-win-x64-setup.exe) |
+| **Windows** | x64 | Electron | v2.9.0 | 便携版 | 125 MB | [![Download](https://img.shields.io/badge/Download-Portable-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v2.9.0/Pi-Deepseek-2.9.0-win-x64-portable.exe) |
+| **Linux** | x64 | Electron | v2.9.0 | deb | 157 MB | [![Download](https://img.shields.io/badge/Download-.deb-%234D6BFE?logo=ubuntu)](https://github.com/jasonet/pi-deepseek/releases/download/v2.9.0/Pi-Deepseek-2.9.0-linux-amd64.deb) |
+| **Linux** | x64 | Electron | v2.9.0 | AppImage | 161 MB | [![Download](https://img.shields.io/badge/Download-AppImage-%234D6BFE?logo=linux)](https://github.com/jasonet/pi-deepseek/releases/download/v2.9.0/Pi-Deepseek-2.9.0-linux-x86_64.AppImage) |
 
-> **v2.8.2 发布 macOS Electron 与 Tauri**：Electron 提供 Apple Silicon 与 Intel 版本，Tauri 提供 Apple Silicon 版本；Windows / Linux 暂保留 v2.6.9。
-> *v2.8.2 ships for macOS Electron on Apple Silicon and Intel, plus Tauri on Apple Silicon. Windows and Linux remain on v2.6.9.*
+> **v2.9.0 发布 macOS / Windows / Linux Electron 版本及 macOS Tauri 版本**：三平台统一版本；在兼容 fx runtime 的平台启用 Pi/fx 双 harness 引擎。
+> *v2.9.0 ships Electron builds for macOS, Windows, and Linux, plus the macOS Tauri build. All Electron builds share the Pi/fx dual-harness workspace model where fx is available.*
 
 > 🧭 **双引擎版本矩阵 / Dual-engine version matrix:**
-> **Electron `v2.8.2`**（macOS）与 **Tauri `v2.8.2`**（macOS arm64）。Electron 为日常使用推荐；Tauri 为更快启动的轻量替代；About 面板会标明 Electron / Tauri 编译版。
-> **Electron `v2.8.2`** (macOS) and **Tauri `v2.8.2`** (macOS arm64). Electron is recommended for daily use; Tauri is the faster-starting lightweight alternative; About identifies the Electron / Tauri build.
+> **Electron `v2.9.0`**（macOS / Windows / Linux）与 **Tauri `v2.9.0`**（macOS arm64）。macOS / Linux Electron 为完整双 harness 体验的推荐版本；Windows 因上游暂未提供 fx binary，当前为 Pi harness。
+> **Electron `v2.9.0`** (macOS / Windows / Linux) and **Tauri `v2.9.0`** (macOS arm64). Electron is recommended for the complete dual-harness experience; About identifies the Electron / Tauri build.
 
-> **v2.8.2 更新 / What's new:**
-> **双版面会话隔离**：左右 pane 各自选择模型、各自提交到对应会话，右侧提交不会切换左侧主会话。
-> **Treg 工具集成**：Settings → External tools 新增 Treg，默认关闭；可授权 Pi 工作区和 DeepSeek Harness 目标，带服务地址、余额、工作区范围、付费调用和外部写入确认控制。
-> **自定义本地 LLM**：自动探测 OpenAI 兼容模型与 llama.cpp thinking 能力，支持 Qwen chat-template 等 Reasoning 协议，并显示连接、生成和上下文压缩进度。
-> **运行恢复**：自定义模型请求与自动压缩都有超时保护；失败、取消或重启后会正确恢复 Composer，不再残留 `Working…` 状态。
-> *Dual-pane sessions now keep model selection and submission isolated per pane. Treg is available under Settings → External tools with explicit workspace, spending, and external-write controls. Custom OpenAI-compatible LLMs gain reasoning-protocol detection, visible progress, and reliable timeout/compaction recovery.*
+> **v2.9.0 更新 / What's new:**
+> **Pi/fx 双 harness 引擎**：检测到兼容 fx runtime 时，新任务默认左 Pi、右 fx；每栏左上角显示引擎图标与名称，并可直接交换两套独立 runtime 的左右位置。
+> **内置 fx**：优先复用系统 fx 及其现有登录，找不到或不兼容时自动回退到应用内置、校验过的 fx runtime。
+> **三平台 Electron 构建**：macOS、Windows、Linux 统一为 2.9.0；上游尚无 Windows fx binary，因此 Windows 保留 Pi harness 并明确提示 fx 不可用。
+> *Where a compatible fx runtime is available, Pi/fx dual harnesses default to Pi on the left and fx on the right, with visible per-pane engine controls that swap the independent runtimes. The app reuses a compatible system fx login first and falls back to the verified bundled runtime on supported platforms.*
 
 > **v2.8.1 更新 / What's new:**
 > **DeepSeek Key 安全互通**：Pi 保存的 Key 或用户环境变量可补全 DeepSeek Harness；Harness 的有效本地凭据也可补全缺失的 Pi 保存配置。环境变量仅读取、不回写；绝不将用户 Key 写入安装包或日志。
@@ -88,6 +87,19 @@
 
 ![dual-pane](./docs/readme/dual-pane.jpg)
 
+## Pi 与 fx 的主要区别 / Pi vs fx
+
+| 能力 | Pi harness | fx harness |
+|---|---|---|
+| Runtime | 应用内的 `pi-mono` / `pi-coding-agent` 运行时 | Vercel fx 原生程序，通过 ACP 接入 |
+| 强项 | 完整工具、Skills、Extensions、图片/文件附件、队列与 steer、自定义/本地模型 | 独立上下文与模型会话、快速并行验证、复用现有 fx 登录与配置 |
+| 会话 | Pi 原生会话格式，由桌面端薄封装管理 | fx 原生 session，由 fx 自己保存和恢复 |
+| 适合 | 主工程实现、深度仓库操作、需要 Pi 扩展生态的任务 | 第二意见、独立方案、并行分析与 fx 工作流 |
+
+2.9 新增 **Pi/fx 双 harness 引擎**。在兼容 fx runtime 的 macOS / Linux Electron 构建中，每个新任务建立一对相互关联但运行时隔离的会话：默认左侧 Pi、右侧 fx；两栏左上角的图标化控件会说明当前 harness，并可一键交换左右位置。两者共享同一项目目录和桌面会话目录，但不合并上下文、认证或 runtime，因此既能发挥各自完整能力，也要避免同时修改同一个文件。
+
+Version 2.9 adds the **Pi/fx dual-harness engine**. On macOS/Linux Electron builds with a compatible fx runtime, every new task creates an isolated companion pair: Pi on the left and fx on the right by default. The icon controls in the upper-left of each pane identify the active harness and can swap their positions. Both harnesses share the project directory and desktop catalog, but keep runtime, authentication, context, and native session storage independent.
+
 本项目在 [`pi-gui`](https://github.com/minghinmatthewlam/pi-gui) 的基础上持续开发，并通过 `@earendil-works/pi-coding-agent` 接入上游 `pi` 运行时。
 
 ![pi-deepseek demo](./docs/readme/demo.gif)
@@ -113,7 +125,7 @@
 - **Open Design MCP 集成**（扩展 → Open Design → 查看 daemon 状态）
 - **Cmd/Ctrl+Tab** 快速切换会话
 - **自动更新**（Settings → Notifications → Auto Update）
-- **双列布局**：同项目多会话并排显示，`Cmd+D` 分列 / `Cmd+W` 关列 / `Cmd+[` `Cmd+]` 切换 / 拖拽调整比例
+- **Pi/fx 双 harness 双列布局**：默认左 Pi、右 fx；图标化引擎控件可交换左右位置，`Cmd+D` 分列 / `Cmd+W` 关列 / `Cmd+[` `Cmd+]` 切换 / 拖拽调整比例
 - **包管理（Packages）** 🆕：在「扩展」面板为工作区安装 / 更新 / 移除 npm / git / 本地包
 - **系统提示词补充** 🆕：在「扩展」面板编辑项目级 `.pi/APPEND_SYSTEM.md` 与全局 `APPEND_SYSTEM.md`，将自定义内容追加到 agent 系统提示词（项目文件优先于全局，对新建 / 重新加载的会话生效）
 - **Dual-engine 统一版本**：Electron + Tauri 同步发版，版本号对齐

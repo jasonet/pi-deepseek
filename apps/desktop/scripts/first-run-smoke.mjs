@@ -19,7 +19,11 @@ await assertPortAvailable("http://127.0.0.1:18790/health", "WeChat bridge RPC 18
 let stdout = "";
 let stderr = "";
 let exitCode;
-const child = spawn(executablePath, [], {
+// GitHub Actions / container runners lack SUID chrome-sandbox, so Electron's
+// Chromium sandbox aborts at startup. Disable it for the smoke on Linux (CI
+// containers); macOS/Windows spawn normally.
+const spawnArgs = process.platform === "linux" ? ["--no-sandbox"] : [];
+const child = spawn(executablePath, spawnArgs, {
   cwd: path.dirname(executablePath),
   env: childEnv,
 });

@@ -1,6 +1,6 @@
 [package]
 name = "pi-deepseek"
-version = "2.9.0"
+version = "2.9.1"
 description = "Pi-Deepseek Tauri build for elegant pi coding agent"
 authors = ["Yiding by HKEZ"]
 edition = "2024"

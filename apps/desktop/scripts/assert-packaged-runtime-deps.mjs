@@ -83,7 +83,17 @@ try {
   await verifyPackagedRuntimeImports(extractedDir);
   await verifyNativeNodePty(asarPath);
 } finally {
-  rmSync(extractedDir, { recursive: true, force: true });
+  try {
+    rmSync(extractedDir, { recursive: true, force: true });
+  } catch (error) {
+    // Windows keeps loaded .node addons memory-mapped until this process exits,
+    // so unlink can fail with EPERM even after the import checks succeed.
+    // Verification already passed; CI runners are ephemeral, so leave the
+    // temp dir behind rather than failing the release.
+    console.warn(
+      `WARN: could not remove temp dir ${extractedDir}: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
 }
 
 console.log(`Verified packaged runtime dependencies in ${asarPath}`);

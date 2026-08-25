@@ -102,6 +102,7 @@ export async function startThread(store: AppStoreInternals, input: StartThreadIn
       title: localTitle,
       ...(initialModel ? { initialModel } : {}),
       ...(initialThinkingLevel ? { initialThinkingLevel } : {}),
+      ...(input.backendId ? { backendId: input.backendId } : {}),
     });
     const sessionConfig = session.config;
     const titleModel =

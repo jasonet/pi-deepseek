@@ -231,6 +231,7 @@ export type StartThreadInput = {
   readonly provider?: string;
   readonly modelId?: string;
   readonly thinkingLevel?: string;
+  readonly backendId?: AgentBackendId;
 };
 
 export interface RemoveWorktreeInput {
@@ -269,6 +270,7 @@ export interface DesktopAppState {
   readonly composerWorkMode: ComposerWorkMode;
   readonly collapsedWorkspaces: Readonly<Record<string, boolean>>;
   readonly expandedArchivedByWorkspace: Readonly<Record<string, boolean>>;
+  readonly fxAvailable: boolean;
   readonly revision: number;
   readonly lastError?: string;
 }
@@ -320,6 +322,7 @@ export function createEmptyDesktopAppState(): DesktopAppState {
     composerWorkMode: "pi-agent",
     collapsedWorkspaces: {},
     expandedArchivedByWorkspace: {},
+    fxAvailable: false,
     revision: 0,
   };
 }

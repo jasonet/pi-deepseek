@@ -1,7 +1,9 @@
 import { useEffect, useRef, type ClipboardEvent, type DragEvent, type KeyboardEvent, type RefObject } from "react";
+import type { AgentBackendId } from "@pi-gui/session-driver";
 import type { RuntimeSnapshot } from "@pi-gui/session-driver/runtime-types";
 import type { ComposerAttachment, NewThreadEnvironment, WorkspaceRecord } from "./desktop-state";
 import { ArrowUpIcon, PiLogoMark, PlusIcon } from "./icons";
+import { HarnessEngineSwitch } from "./harness-engine-switch";
 import {
   MODEL_OPTIONS_EMPTY_TITLE,
   type ComposerSlashCommand,
@@ -20,6 +22,8 @@ interface NewThreadViewProps {
   readonly selectedWorkspaceId: string;
   readonly runtime?: RuntimeSnapshot;
   readonly environment: NewThreadEnvironment;
+  readonly backendId: AgentBackendId;
+  readonly availableBackends?: readonly AgentBackendId[];
   readonly prompt: string;
   readonly attachments: readonly ComposerAttachment[];
   readonly lastError?: string;
@@ -42,6 +46,7 @@ interface NewThreadViewProps {
   readonly selectedMentionIndex: number;
   readonly onChangePrompt: (prompt: string) => void;
   readonly onSelectEnvironment: (environment: NewThreadEnvironment) => void;
+  readonly onSelectBackend: (backendId: AgentBackendId) => void;
   readonly onSelectWorkspace: (workspaceId: string) => void;
   readonly onSetModel: (provider: string, modelId: string) => void;
   readonly onSetThinking: (level: string) => void;
@@ -63,6 +68,8 @@ export function NewThreadView({
   selectedWorkspaceId,
   runtime,
   environment,
+  backendId,
+  availableBackends = ["pi", "fx"],
   prompt,
   attachments,
   lastError,
@@ -85,6 +92,7 @@ export function NewThreadView({
   selectedMentionIndex,
   onChangePrompt,
   onSelectEnvironment,
+  onSelectBackend,
   onSelectWorkspace,
   onSetModel,
   onSetThinking,
@@ -139,6 +147,7 @@ export function NewThreadView({
           </div>
           <div className="new-thread__eyebrow">New thread</div>
           <h1 className="new-thread__title">Let&apos;s build</h1>
+          <div className="new-thread__hero-controls">
           <label className="new-thread__workspace-picker">
             <span className="sr-only">Workspace</span>
             <select
@@ -153,6 +162,13 @@ export function NewThreadView({
               ))}
             </select>
           </label>
+          <HarnessEngineSwitch
+            activeEngine={backendId}
+            availableEngines={availableBackends}
+            paneLabel="Left"
+            onSelect={onSelectBackend}
+          />
+          </div>
         </div>
 
         <div className="new-thread__composer composer">

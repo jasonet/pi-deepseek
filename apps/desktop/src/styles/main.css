@@ -2236,6 +2236,19 @@
   justify-items: center;
 }
 
+/* Workspace picker + harness engine switch (Pi/fx) side by side */
+.new-thread__hero-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.new-thread__hero-controls .harness-engine-switch {
+  gap: 4px;
+}
+
 .new-thread__workspace {
   padding: 10px 14px;
   border-radius: 999px;

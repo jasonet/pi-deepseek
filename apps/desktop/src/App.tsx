@@ -180,6 +180,7 @@ export default function App() {
   const [pendingNewThreadWorkspaceId, setPendingNewThreadWorkspaceId] = useState("");
   const [newThreadRootWorkspaceId, setNewThreadRootWorkspaceId] = useState("");
   const [newThreadEnvironment, setNewThreadEnvironment] = useState<NewThreadEnvironment>("local");
+  const [newThreadBackend, setNewThreadBackend] = useState<AgentBackendId>("pi");
   const [newThreadPrompt, setNewThreadPrompt] = useState("");
   const [newThreadAttachments, setNewThreadAttachments] = useState<readonly ComposerAttachment[]>([]);
   const [newThreadProvider, setNewThreadProvider] = useState<string | undefined>();
@@ -2328,6 +2329,7 @@ export default function App() {
     const input: StartThreadInput = {
       rootWorkspaceId: newThreadRootWorkspaceId,
       environment: newThreadEnvironment,
+      backendId: newThreadBackend,
       ...modelConfig,
     };
     startingThreadRef.current = true;
@@ -2721,6 +2723,8 @@ export default function App() {
               selectedWorkspaceId={newThreadRootWorkspaceId || rootWorkspaceOptions[0]?.id || ""}
               runtime={newThreadRuntime}
               environment={newThreadEnvironment}
+              backendId={newThreadBackend}
+              availableBackends={snapshot.fxAvailable ? ["pi", "fx"] : ["pi"]}
               prompt={newThreadPrompt}
               attachments={newThreadAttachments}
               lastError={newThreadComposerError}
@@ -2745,6 +2749,7 @@ export default function App() {
               selectedMentionIndex={newThreadMentionMenu.selectedIndex}
               onChangePrompt={setNewThreadPrompt}
               onSelectEnvironment={setNewThreadEnvironment}
+              onSelectBackend={setNewThreadBackend}
               onSelectWorkspace={handleSelectNewThreadWorkspace}
               onSetModel={(provider, modelId) => { setNewThreadProvider(provider); setNewThreadModelId(modelId); }}
               onSetThinking={setNewThreadThinkingLevel}

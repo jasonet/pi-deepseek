@@ -1107,6 +1107,7 @@ export class DesktopAppStore implements AppStoreInternals {
       this.state = {
         ...this.state,
         activeView: "threads",
+        fxAvailable: await this.driver.isFxAvailable(),
         modelSettingsScopeMode: persisted.modelSettingsScopeMode ?? this.state.modelSettingsScopeMode,
         globalModelSettings: persisted.appGlobalModelSettings ?? this.state.globalModelSettings,
         notificationPreferences: {

@@ -39,11 +39,14 @@ child.once("exit", (code) => {
 });
 
 try {
-  await waitFor(() => exitCode !== undefined || healthOk("http://127.0.0.1:8789/im/health"), 15_000);
+  // Windows first-run is slow (Defender scanning, asar extraction), so give
+  // packaged app startup a wider window there.
+  const healthTimeoutMs = process.platform === "win32" ? 60_000 : 15_000;
+  await waitFor(() => exitCode !== undefined || healthOk("http://127.0.0.1:8789/im/health"), healthTimeoutMs);
   if (exitCode !== undefined) {
     throw new Error(`Packaged app exited during first-run smoke with code ${exitCode}.`);
   }
-  await waitFor(() => healthOk("http://127.0.0.1:18790/health"), 15_000);
+  await waitFor(() => healthOk("http://127.0.0.1:18790/health"), healthTimeoutMs);
   if (/Uncaught Exception|ERR_MODULE_NOT_FOUND|Cannot find package/i.test(stderr)) {
     throw new Error(`Packaged app stderr contains a startup exception:\n${stderr}`);
   }

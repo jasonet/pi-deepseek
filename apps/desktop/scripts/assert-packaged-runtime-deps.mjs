@@ -73,6 +73,9 @@ try {
   execFileSync(pnpmBinary, ["exec", "asar", "extract", asarPath, extractedDir], {
     cwd: desktopDir,
     stdio: "pipe",
+    // On Windows, .cmd shims must be launched through cmd.exe — execFileSync
+    // with CreateProcess alone fails with EINVAL.
+    shell: process.platform === "win32",
   });
 
   verifyRequiredPackages(extractedDir);

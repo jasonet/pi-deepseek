@@ -106,9 +106,7 @@ Version 2.9 adds the **Pi/fx dual-harness engine**. On macOS/Linux Electron buil
 
 ### DeepSeek Harness 数据图分析（15 张数据图了解 DeepSeek Harness）
 
-<video src="./docs/readme/pi-deepseek-demo.mp4" controls width="540" poster="https://pbs.twimg.com/amplify_video_thumb/2088198977384775680/img/v4JUUemg3DAT6GNb.jpg">
-  <a href="https://x.com/op7418/status/2088199058313957734">观看视频 / Watch on X</a>
-</video>
+<video src="./docs/readme/pi-deepseek-demo.mp4" controls width="540"></video>
 
 > 来源：[15 张数据图帮你了解 DeepSeek Harness — @op7418（歸藏）](https://x.com/op7418/status/2088199058313957734)
 > Source: [15 charts to understand DeepSeek Harness — @op7418 (guizang.ai)](https://x.com/op7418/status/2088199058313957734)

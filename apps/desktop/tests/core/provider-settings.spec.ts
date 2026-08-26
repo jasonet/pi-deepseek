@@ -39,23 +39,23 @@ test("settings lets the user save an API key for a built-in provider", async () 
     const allProviders = window.locator(".settings-section", {
       has: window.locator(".settings-section__title", { hasText: "All providers" }),
     });
-    await allProviders.locator(".settings-disclosure__summary").click();
+    await expect(allProviders.locator(".settings-disclosure")).toHaveAttribute("open", "");
     const openAiRow = allProviders.locator(".settings-row", {
-      has: window.locator(".settings-row__title", { hasText: /^openai$/ }),
+      has: window.locator(".settings-row__title", { hasText: /^OpenAI$/ }),
     });
     await expect(openAiRow).toContainText("API key");
     await openAiRow.getByRole("button", { name: "Set API key" }).click();
 
     const dialog = window.getByTestId("provider-api-key-dialog");
     await expect(dialog).toBeVisible();
-    await dialog.getByLabel("openai API key").fill("test-openai-key");
+    await dialog.getByLabel("OpenAI API key").fill("test-openai-key");
     await dialog.getByRole("button", { name: "Set API key" }).click();
     await expect(dialog).toHaveCount(0);
 
     const connectedProviders = window.locator(".settings-section", {
-      has: window.locator(".settings-section__title", { hasText: "Connected" }),
+      has: window.locator(".settings-section__title", { hasText: /^Connected$/ }),
     });
-    await expect(connectedProviders).toContainText("openai");
+    await expect(connectedProviders).toContainText("OpenAI");
     await expect(connectedProviders).toContainText("API key");
     await expect(connectedProviders.getByRole("button", { name: "Manage" })).toBeVisible();
 
@@ -72,18 +72,18 @@ test("settings lets the user save an API key for a built-in provider", async () 
 
 test("settings discovers and saves an OpenAI-compatible custom provider", async () => {
   test.setTimeout(60_000);
-  const modelId = "local-coder.gguf";
+  const modelId = "/models/gemma-4-26B-A4B-it-mlx";
+  const secondaryModelId = "local-coder.gguf";
+  let completionBody: Record<string, unknown> | undefined;
   const server = createServer((request, response) => {
     if (request.url === "/v1/models") {
       response.writeHead(200, { "content-type": "application/json" });
       response.end(JSON.stringify({
         object: "list",
-        data: [{
-          id: modelId,
-          object: "model",
-          owned_by: "local",
-          meta: { n_ctx: 81_920 },
-        }],
+        data: [
+          { id: secondaryModelId, object: "model", owned_by: "local" },
+          { id: modelId, object: "model", owned_by: "local", meta: { n_ctx: 81_920 } },
+        ],
         models: [{
           name: modelId,
           model: modelId,
@@ -98,16 +98,22 @@ test("settings discovers and saves an OpenAI-compatible custom provider", async 
       return;
     }
     if (request.url === "/v1/chat/completions" && request.method === "POST") {
-      response.writeHead(200, {
-        "content-type": "text/event-stream",
-        "cache-control": "no-cache",
+      let body = "";
+      request.setEncoding("utf8");
+      request.on("data", (chunk) => { body += chunk; });
+      request.on("end", () => {
+        completionBody = JSON.parse(body) as Record<string, unknown>;
+        response.writeHead(200, {
+          "content-type": "text/event-stream",
+          "cache-control": "no-cache",
+        });
+        response.write(`data: ${JSON.stringify({
+          id: "probe-completion",
+          object: "chat.completion.chunk",
+          choices: [{ index: 0, delta: { content: "OK" }, finish_reason: null }],
+        })}\n\n`);
+        response.end("data: [DONE]\n\n");
       });
-      response.write(`data: ${JSON.stringify({
-        id: "probe-completion",
-        object: "chat.completion.chunk",
-        choices: [{ index: 0, delta: { content: "OK" }, finish_reason: null }],
-      })}\n\n`);
-      response.end("data: [DONE]\n\n");
       return;
     }
     response.writeHead(404).end();
@@ -155,10 +161,14 @@ test("settings discovers and saves an OpenAI-compatible custom provider", async 
     await dialog.getByLabel("Provider name").fill("Lab llama.cpp");
     await dialog.getByLabel("Base URL").fill(`http://127.0.0.1:${address.port}/v1`);
     await dialog.getByRole("button", { name: "Test connection" }).click();
-    await expect(dialog).toContainText("Connected. Found 1 model and verified streaming.");
+    await expect(dialog).toContainText("Connected. Found 2 models and verified streaming.");
     await expect(dialog).toContainText(modelId);
-    await expect(dialog.getByLabel("Images")).toBeChecked();
-    await dialog.getByLabel("Reasoning").check();
+    const preferredModel = dialog.locator(".custom-provider-dialog__model", { hasText: modelId });
+    const secondaryModel = dialog.locator(".custom-provider-dialog__model", { hasText: secondaryModelId });
+    await expect(preferredModel.locator("input[type=checkbox]").first()).toBeChecked();
+    await expect(secondaryModel.locator("input[type=checkbox]").first()).not.toBeChecked();
+    await expect(preferredModel.getByLabel("Images")).toBeChecked();
+    await preferredModel.getByLabel("Reasoning").check();
     await dialog.getByRole("button", { name: "Save", exact: true }).click();
 
     const providerRow = window.getByTestId("custom-provider-custom-lab-llama-cpp");
@@ -181,6 +191,8 @@ test("settings discovers and saves an OpenAI-compatible custom provider", async 
       input: ["text", "image"],
       contextWindow: 81_920,
     });
+    expect(customProvider.models).toHaveLength(1);
+    expect(completionBody).toMatchObject({ model: modelId });
     const authConfig = JSON.parse(await readFile(join(agentDir, "auth.json"), "utf8"));
     expect(authConfig["custom-lab-llama-cpp"]).toEqual({ type: "api_key", key: "pi-deepseek-local" });
 
@@ -220,13 +232,15 @@ test("settings shows environment-configured providers as managed externally", as
     await expect(window.locator(".view-header__title")).toHaveText("Providers");
 
     const connectedProviders = window.locator(".settings-section", {
-      has: window.locator(".settings-section__title", { hasText: "Connected" }),
+      has: window.locator(".settings-section__title", { hasText: /^Connected$/ }),
     });
     const openAiRow = connectedProviders.locator(".settings-row", {
-      has: window.locator(".settings-row__title", { hasText: /^openai$/ }),
+      has: window.locator(".settings-row__title", { hasText: /^OpenAI$/ }),
     });
     await expect(openAiRow).toContainText("Environment variable");
-    await expect(openAiRow.getByRole("button", { name: "Managed externally" })).toBeDisabled();
+    await openAiRow.getByRole("button", { name: "Configure" }).click();
+    await expect(window.getByText("External Configuration — OpenAI", { exact: true })).toBeVisible();
+    await window.getByRole("button", { name: "Close", exact: true }).click();
   } finally {
     await harness.close();
     if (previousOpenAiKey === undefined) {
@@ -279,13 +293,15 @@ test("settings keeps models.json provider overrides in the external-config state
     await expect(window.locator(".view-header__title")).toHaveText("Providers");
 
     const connectedProviders = window.locator(".settings-section", {
-      has: window.locator(".settings-section__title", { hasText: "Connected" }),
+      has: window.locator(".settings-section__title", { hasText: /^Connected$/ }),
     });
     const openAiRow = connectedProviders.locator(".settings-row", {
-      has: window.locator(".settings-row__title", { hasText: /^openai$/ }),
+      has: window.locator(".settings-row__title", { hasText: /^OpenAI$/ }),
     });
     await expect(openAiRow).toContainText("Configured externally");
-    await expect(openAiRow.getByRole("button", { name: "Managed externally" })).toBeDisabled();
+    await openAiRow.getByRole("button", { name: "Configure" }).click();
+    await expect(window.getByText("External Configuration — OpenAI", { exact: true })).toBeVisible();
+    await window.getByRole("button", { name: "Close", exact: true }).click();
   } finally {
     await harness.close();
   }
@@ -327,9 +343,9 @@ test("opening the first workspace from the empty state hydrates provider and mod
     await expect(window.locator(".view-header__title")).toHaveText("Providers");
 
     const connectedProviders = window.locator(".settings-section", {
-      has: window.locator(".settings-section__title", { hasText: "Connected" }),
+      has: window.locator(".settings-section__title", { hasText: /^Connected$/ }),
     });
-    await expect(connectedProviders).toContainText("openai");
+    await expect(connectedProviders).toContainText("OpenAI");
     await expect(connectedProviders).toContainText("API key");
 
     await window.getByRole("button", { name: "Models", exact: true }).click();

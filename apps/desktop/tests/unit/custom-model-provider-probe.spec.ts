@@ -47,6 +47,7 @@ test("probe verifies model discovery and an OpenAI-compatible SSE completion", a
       ok: true,
       message: "Connected. Found 1 model and verified streaming.",
       thinkingFormat: "qwen-chat-template",
+      recommendedModelId: "local-model",
       models: [{ id: "local-model", contextWindow: 4_096 }],
     });
     expect(completionBody).toMatchObject({
@@ -56,4 +57,40 @@ test("probe verifies model discovery and an OpenAI-compatible SSE completion", a
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));
   }
+});
+
+test("probe recommends Gemma 4 26B A4B and allows saving when generation is slow", async () => {
+  let completionBody: Record<string, unknown> | undefined;
+  const preferredModelId = "/models/gemma-4-26B-A4B-it-mlx";
+  const fetcher = (async (input: string | URL | Request, init?: RequestInit) => {
+    const url = new URL(input instanceof Request ? input.url : input.toString());
+    if (url.pathname === "/v1/models") {
+      return new Response(JSON.stringify({
+        data: [
+          { id: "other-model" },
+          { id: "mlx-community/diffusiongemma-26B-A4B-it-5bit" },
+          { id: preferredModelId },
+        ],
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+    if (url.pathname === "/props") {
+      return new Response("Not found", { status: 404 });
+    }
+    if (url.pathname === "/v1/chat/completions") {
+      completionBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      throw new DOMException("The operation timed out", "TimeoutError");
+    }
+    return new Response("Not found", { status: 404 });
+  }) as typeof fetch;
+
+  const result = await probeCustomModelProvider({
+    baseUrl: "http://127.0.0.1:8080/v1",
+  }, fetcher);
+
+  expect(result).toMatchObject({
+    ok: true,
+    recommendedModelId: preferredModelId,
+    message: "Connected. Found 3 models. Model generation did not start within 15 seconds; you can still save this provider.",
+  });
+  expect(completionBody).toMatchObject({ model: preferredModelId });
 });

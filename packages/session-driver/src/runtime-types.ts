@@ -83,6 +83,7 @@ export type ProbeRuntimeCustomModelProviderResult =
       readonly message: string;
       readonly thinkingFormat: RuntimeCustomModelThinkingFormat;
       readonly models: readonly RuntimeCustomModelRecord[];
+      readonly recommendedModelId: string;
     }
   | {
       readonly ok: false;
@@ -155,6 +156,8 @@ export interface ModelSettingsSnapshot {
   readonly defaultThinkingLevel?: "off" | "minimal" | "low" | "medium" | "high" | "xhigh";
   readonly enabledModelPatterns: readonly string[];
 }
+
+export const NO_ENABLED_MODELS_PATTERN = "__pi_gui_no_enabled_models__";
 
 export interface RuntimeSnapshot {
   readonly workspace: WorkspaceRef;

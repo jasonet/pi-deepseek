@@ -6,7 +6,13 @@ import type {
 } from "@pi-gui/session-driver/runtime-types";
 
 const PROBE_TIMEOUT_MS = 15_000;
-const COMPLETION_PROBE_TIMEOUT_MS = 60_000;
+const COMPLETION_PROBE_TIMEOUT_MS = 15_000;
+const COMPLETION_PROBE_TIMEOUT_SECONDS = COMPLETION_PROBE_TIMEOUT_MS / 1_000;
+
+interface CompletionProbeFailure {
+  readonly message: string;
+  readonly timedOut: boolean;
+}
 
 export async function probeCustomModelProvider(
   input: ProbeRuntimeCustomModelProviderInput,
@@ -46,21 +52,25 @@ export async function probeCustomModelProvider(
     }
 
     const thinkingFormat = await detectThinkingFormat(baseUrl, headers, fetcher);
-    const completionError = await probeStreamingCompletion({
+    const recommendedModelId = selectRecommendedModelId(models);
+    const completionFailure = await probeStreamingCompletion({
       baseUrl,
-      modelId: models[0]!.id,
+      modelId: recommendedModelId,
       headers,
       thinkingFormat,
       fetcher,
     });
-    if (completionError) {
-      return { ok: false, message: completionError };
+    if (completionFailure && !completionFailure.timedOut) {
+      return { ok: false, message: completionFailure.message };
     }
     return {
       ok: true,
-      message: `Connected. Found ${models.length} model${models.length === 1 ? "" : "s"} and verified streaming.`,
+      message: completionFailure
+        ? `Connected. Found ${models.length} model${models.length === 1 ? "" : "s"}. Model generation did not start within ${COMPLETION_PROBE_TIMEOUT_SECONDS} seconds; you can still save this provider.`
+        : `Connected. Found ${models.length} model${models.length === 1 ? "" : "s"} and verified streaming.`,
       thinkingFormat,
       models,
+      recommendedModelId,
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -77,7 +87,7 @@ async function probeStreamingCompletion(input: {
   readonly headers: Readonly<Record<string, string>>;
   readonly thinkingFormat: RuntimeCustomModelThinkingFormat;
   readonly fetcher: typeof fetch;
-}): Promise<string | undefined> {
+}): Promise<CompletionProbeFailure | undefined> {
   try {
     const response = await input.fetcher(new URL(`${input.baseUrl}/chat/completions`), {
       method: "POST",
@@ -98,10 +108,13 @@ async function probeStreamingCompletion(input: {
     });
     if (!response.ok) {
       const detail = (await response.text()).trim().slice(0, 300);
-      return `Chat completion returned HTTP ${response.status}${detail ? `: ${detail}` : "."}`;
+      return {
+        message: `Chat completion returned HTTP ${response.status}${detail ? `: ${detail}` : "."}`,
+        timedOut: false,
+      };
     }
     if (!response.body) {
-      return "Chat completion returned no response stream.";
+      return { message: "Chat completion returned no response stream.", timedOut: false };
     }
 
     const reader = response.body.getReader();
@@ -126,16 +139,33 @@ async function probeStreamingCompletion(input: {
         }
         if (chunk.done) break;
       }
-      return "Chat completion did not return an OpenAI-compatible SSE event.";
+      return {
+        message: "Chat completion did not return an OpenAI-compatible SSE event.",
+        timedOut: false,
+      };
     } finally {
       await reader.cancel().catch(() => undefined);
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    return /timeout|aborted/i.test(message)
-      ? "Chat completion timed out after 60 seconds. Model discovery works, but generation did not start."
-      : `Chat completion failed: ${message}`;
+    const timedOut = /timeout|timed out|aborted/i.test(message);
+    return {
+      message: timedOut
+        ? `Chat completion timed out after ${COMPLETION_PROBE_TIMEOUT_SECONDS} seconds. Model discovery works, but generation did not start.`
+        : `Chat completion failed: ${message}`,
+      timedOut,
+    };
   }
+}
+
+function selectRecommendedModelId(models: readonly RuntimeCustomModelRecord[]): string {
+  const preferred = models.find((model) => {
+    const searchable = `${model.id} ${model.name}`.toLowerCase();
+    return /gemma[\s/_.-]*4/.test(searchable)
+      && /(?:^|[^a-z0-9])26b(?:[^a-z0-9]|$)/.test(searchable)
+      && /(?:^|[^a-z0-9])a4b(?:[^a-z0-9]|$)/.test(searchable);
+  });
+  return (preferred ?? models[0]!).id;
 }
 
 async function detectThinkingFormat(

@@ -121,7 +121,7 @@ export function SettingsCustomProviders({ workspaceId }: SettingsCustomProviders
     updateDraft({
       models: discoveredModels,
       thinkingFormat: result.thinkingFormat,
-      selectedModelIds: new Set(discoveredModels.map((model) => model.id)),
+      selectedModelIds: new Set([result.recommendedModelId]),
     });
     setStatus(result.message);
   };

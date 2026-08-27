@@ -8,8 +8,10 @@ import {
   nativeImage,
   net,
   shell,
+  type Event,
   type MenuItemConstructorOptions,
   type MessageBoxOptions,
+  type RenderProcessGoneDetails,
 } from "electron";
 import { randomUUID } from "node:crypto";
 import { execSync, spawn, spawnSync } from "node:child_process";
@@ -35,12 +37,12 @@ import {
   startFeishuInstallQrcode,
   startWeixinInstallQrcode,
 } from "./connect-phone-install";
-import { configureLogger } from "./logger";
+import { configureLogger, logError, logInfo } from "./logger";
 import { ensurePathForGuiLaunch } from "./ensure-path";
 import { seedBundledExtensions } from "./seed-extensions";
 import { DshWebService } from "./dsh-web-service";
 import { TregService } from "./treg-service";
-import type { DesktopAppState, ThemeMode } from "../src/desktop-state";
+import type { DesktopAppState, SelectedTranscriptRecord, ThemeMode } from "../src/desktop-state";
 import { desktopIpc, getDesktopCommandFromShortcut, type OpenDesignStatus } from "../src/ipc";
 import { SUPPORTED_COMPOSER_IMAGE_TYPES } from "../src/composer-attachments";
 import type {
@@ -755,6 +757,8 @@ function createWindow(): BrowserWindow {
 
 function attachStatePublisher(window: BrowserWindow): void {
   const webContentsId = window.webContents.id;
+  let rendererRecoveryTimer: ReturnType<typeof setTimeout> | undefined;
+  let windowClosing = false;
   stopPublishingState?.();
   stopPublishingSelectedTranscript?.();
   stopPublishingState = store.subscribe((state) => {
@@ -763,21 +767,53 @@ function attachStatePublisher(window: BrowserWindow): void {
     }
   });
   stopPublishingSelectedTranscript = store.subscribeToSelectedTranscript((payload) => {
-    if (canPublishToWindow(window) && payload) {
-      const len = payload.transcript?.length ?? 0;
-      if (len > 150) {
-        payload = { ...payload, transcript: payload.transcript.slice(-150) };
-      }
-      window.webContents.send(desktopIpc.selectedTranscriptChanged, payload);
-    }
+    publishSelectedTranscript(window, payload);
   });
-  window.webContents.once("render-process-gone", () => {
-    stopPublishingState?.();
-    stopPublishingState = undefined;
-    stopPublishingSelectedTranscript?.();
-    stopPublishingSelectedTranscript = undefined;
+  const handleRendererGone = (_event: Event, details: RenderProcessGoneDetails) => {
+    logError("renderer", "Renderer process exited", {
+      reason: details.reason,
+      exitCode: details.exitCode,
+    });
+    const shouldRecover = details.reason === "crashed"
+      || details.reason === "oom"
+      || details.reason === "abnormal-exit"
+      || details.reason === "integrity-failure"
+      || details.reason === "killed";
+    if (!shouldRecover || windowClosing || quittingAfterStoreFlush || window.isDestroyed()) {
+      return;
+    }
+
+    if (rendererRecoveryTimer) {
+      clearTimeout(rendererRecoveryTimer);
+    }
+    rendererRecoveryTimer = setTimeout(() => {
+      rendererRecoveryTimer = undefined;
+      if (quittingAfterStoreFlush || window.isDestroyed() || window.webContents.isDestroyed()) {
+        return;
+      }
+      logInfo("renderer", "Reloading the renderer after an unexpected exit");
+      const handleRecoveryLoaded = () => {
+        void publishCurrentWindowState(window);
+      };
+      window.webContents.once("did-finish-load", handleRecoveryLoaded);
+      try {
+        window.webContents.reload();
+      } catch (error) {
+        window.webContents.removeListener("did-finish-load", handleRecoveryLoaded);
+        logError("renderer", "Could not reload the renderer", error);
+      }
+    }, 150);
+  };
+  window.webContents.on("render-process-gone", handleRendererGone);
+  window.once("close", () => {
+    windowClosing = true;
   });
   window.once("closed", () => {
+    if (rendererRecoveryTimer) {
+      clearTimeout(rendererRecoveryTimer);
+      rendererRecoveryTimer = undefined;
+    }
+    window.webContents.removeListener("render-process-gone", handleRendererGone);
     stopPublishingState?.();
     stopPublishingState = undefined;
     stopPublishingSelectedTranscript?.();
@@ -788,6 +824,33 @@ function attachStatePublisher(window: BrowserWindow): void {
     terminalFocusedWebContentsIds.delete(webContentsId);
     terminalService?.dispose();
   });
+}
+
+async function publishCurrentWindowState(window: BrowserWindow): Promise<void> {
+  const [state, selectedTranscript] = await Promise.all([
+    store.getState(),
+    store.getSelectedTranscript(),
+  ]);
+  if (!canPublishToWindow(window)) {
+    return;
+  }
+  window.webContents.send(desktopIpc.stateChanged, state);
+  publishSelectedTranscript(window, selectedTranscript);
+}
+
+function publishSelectedTranscript(
+  window: BrowserWindow,
+  payload: SelectedTranscriptRecord | null,
+): void {
+  if (!payload || !canPublishToWindow(window)) {
+    return;
+  }
+  window.webContents.send(
+    desktopIpc.selectedTranscriptChanged,
+    payload.transcript.length > 150
+      ? { ...payload, transcript: payload.transcript.slice(-150) }
+      : payload,
+  );
 }
 
 function attachViewedSessionTracking(window: BrowserWindow): void {

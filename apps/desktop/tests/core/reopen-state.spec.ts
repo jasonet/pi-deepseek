@@ -147,6 +147,9 @@ test("reopens persisted folders and thread state while a saved running session k
         status: "running",
       });
 
+    const rendererProcessId = await secondRun.electronApp.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows()[0]?.webContents.getOSProcessId() ?? 0,
+    );
     await secondRun.electronApp.evaluate(({ BrowserWindow }) => {
       const contents = BrowserWindow.getAllWindows()[0]?.webContents as {
         forcefullyCrashRenderer?: () => void;
@@ -161,6 +164,31 @@ test("reopens persisted folders and thread state while a saved running session k
       text: "post-crash chunk ".repeat(6),
     });
 
+    await expect.poll(() => secondRun.electronApp.evaluate(({ BrowserWindow }) => {
+      const contents = BrowserWindow.getAllWindows()[0]?.webContents;
+      return contents && !contents.isCrashed() && !contents.isLoading()
+        ? contents.getOSProcessId()
+        : 0;
+    }), {
+      timeout: 20_000,
+    }).not.toBe(rendererProcessId);
+    await expect.poll(() => secondRun.electronApp.evaluate(async ({ BrowserWindow }) => {
+      const contents = BrowserWindow.getAllWindows()[0]?.webContents;
+      if (!contents || contents.isCrashed() || contents.isLoading()) {
+        return null;
+      }
+      return contents.executeJavaScript(`({
+        hasBridge: Boolean(window.piApp),
+        sessionTitle: document.querySelector('.topbar__session')?.textContent ?? '',
+        transcript: document.querySelector('[data-testid="transcript"]')?.textContent ?? ''
+      })`);
+    }), {
+      timeout: 20_000,
+    }).toMatchObject({
+      hasBridge: true,
+      sessionTitle: "Reopen reliability session",
+      transcript: expect.stringContaining("post-crash chunk"),
+    });
     const processType = await secondRun.electronApp.evaluate(() => process.type);
     expect(processType).toBe("browser");
   } finally {

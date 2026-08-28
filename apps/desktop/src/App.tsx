@@ -33,7 +33,6 @@ import { deriveModelOnboardingState } from "./model-onboarding";
 import { NewThreadView } from "./new-thread-view";
 import { buildThreadGroups } from "./thread-groups";
 import { Sidebar } from "./sidebar";
-import { SidebarToggleButton } from "./sidebar-toggle-button";
 import { Topbar } from "./topbar";
 import { LocaleProvider, useT } from "./i18n";
 import { ConversationTimeline, VIRTUALIZATION_THRESHOLD } from "./conversation-timeline";
@@ -2830,13 +2829,6 @@ export default function App() {
           onLater={() => setDismissedUpdateKey(updateStatusKey)}
         />
       ) : null}
-      {primarySidebarToggleVisible ? (
-        <SidebarToggleButton
-          collapsed={snapshot.sidebarCollapsed}
-          shortcutLabel={sidebarToggleShortcutLabel}
-          onToggle={handleTogglePrimarySidebar}
-        />
-      ) : null}
       {!snapshot.sidebarCollapsed ? (
         <Sidebar
           activeView={snapshot.activeView}
@@ -2881,6 +2873,10 @@ export default function App() {
           onToggleTerminal={toggleTerminal}
           showDiffPanel={diffVisibleInCurrentView}
           onToggleDiffPanel={toggleDiffPanel}
+          sidebarToggleVisible={primarySidebarToggleVisible}
+          sidebarCollapsed={snapshot.sidebarCollapsed}
+          sidebarToggleShortcutLabel={sidebarToggleShortcutLabel}
+          onToggleSidebar={handleTogglePrimarySidebar}
         />
 
         {showTerminalTakeover ? (

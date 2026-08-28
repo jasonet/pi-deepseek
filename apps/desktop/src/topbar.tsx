@@ -1,6 +1,6 @@
 import type { MouseEvent as ReactMouseEvent, Dispatch, SetStateAction } from "react";
 import type { AppView, DesktopAppState, SessionRecord, WorkspaceRecord, WorktreeRecord } from "./desktop-state";
-import { DiffIcon, FolderIcon, TerminalIcon } from "./icons";
+import { DiffIcon, FolderIcon, SidebarToggleIcon, TerminalIcon } from "./icons";
 import { getDesktopShortcutLabel, type PiDesktopApi } from "./ipc";
 import type { WorkspaceMenuState } from "./hooks/use-workspace-menu";
 
@@ -26,6 +26,10 @@ interface TopbarProps {
   readonly onToggleTerminal: () => void;
   readonly showDiffPanel: boolean;
   readonly onToggleDiffPanel: () => void;
+  readonly sidebarToggleVisible: boolean;
+  readonly sidebarCollapsed: boolean;
+  readonly sidebarToggleShortcutLabel: string;
+  readonly onToggleSidebar: () => void;
 }
 
 export function Topbar(props: TopbarProps) {
@@ -47,6 +51,10 @@ export function Topbar(props: TopbarProps) {
     onToggleTerminal,
     showDiffPanel,
     onToggleDiffPanel,
+    sidebarToggleVisible,
+    sidebarCollapsed,
+    sidebarToggleShortcutLabel,
+    onToggleSidebar,
   } = props;
   const terminalShortcut = getDesktopShortcutLabel(api.platform, "J");
   const diffShortcut = getDesktopShortcutLabel(api.platform, "D");
@@ -66,6 +74,24 @@ export function Topbar(props: TopbarProps) {
 
   return (
     <header className="topbar" data-testid="topbar" onDoubleClick={handleDoubleClick}>
+      {sidebarToggleVisible ? (
+        <div className="shortcut-tooltip-wrap sidebar-toggle">
+          <button
+            aria-label="Toggle sidebar"
+            aria-pressed={!sidebarCollapsed}
+            className="icon-button sidebar-toggle__button"
+            data-testid="sidebar-toggle"
+            type="button"
+            onClick={onToggleSidebar}
+          >
+            <SidebarToggleIcon />
+          </button>
+          <span className="shortcut-tooltip sidebar-toggle__tooltip" role="tooltip">
+            <span>Toggle sidebar</span>
+            <kbd>{sidebarToggleShortcutLabel}</kbd>
+          </span>
+        </div>
+      ) : null}
       <div className="topbar__title">
         <span className="topbar__workspace">
           {rootWorkspace ? rootWorkspace.name : "Open a folder to begin"}

@@ -7,6 +7,7 @@ import {
   Menu,
   nativeImage,
   net,
+  Notification,
   shell,
   type Event,
   type MenuItemConstructorOptions,
@@ -27,8 +28,6 @@ import { NotificationManager } from "./notification-manager";
 import {
   NotificationPermissionService,
 } from "./notification-permission";
-import { checkForUpdate, initUpdateChecker } from "./update-checker";
-import { isUpdateVersionNewer } from "./update-version";
 import { ThemeManager } from "./theme-manager";
 import { TerminalService } from "./terminal-service";
 import {
@@ -43,7 +42,14 @@ import { seedBundledExtensions } from "./seed-extensions";
 import { DshWebService } from "./dsh-web-service";
 import { TregService } from "./treg-service";
 import type { DesktopAppState, SelectedTranscriptRecord, ThemeMode } from "../src/desktop-state";
-import { desktopIpc, getDesktopCommandFromShortcut, type OpenDesignStatus } from "../src/ipc";
+import {
+  desktopCommands,
+  desktopIpc,
+  getDesktopCommandFromShortcut,
+  type DesktopUpdateStatus,
+  type OpenDesignStatus,
+} from "../src/ipc";
+import { isFxAuthProvider } from "../src/fx-auth";
 import { SUPPORTED_COMPOSER_IMAGE_TYPES } from "../src/composer-attachments";
 import type {
   ComposerAttachment,
@@ -85,6 +91,14 @@ if (process.env.PI_GUI_REMOTE_DEBUG) {
 const PI_WEIXIN_CHANNEL_ID = "pi-deepseek-weixin";
 let autoUpdateEnabled = true;
 let autoUpdateInterval: ReturnType<typeof setInterval> | undefined;
+let autoUpdateInitialTimeout: ReturnType<typeof setTimeout> | undefined;
+let updateListenersConfigured = false;
+let updateInstallRequestCount = 0;
+let updateNotificationKey = "";
+let desktopUpdateStatus: DesktopUpdateStatus = {
+  phase: "idle",
+  currentVersion: app.getVersion(),
+};
 let skipAutoTitle = false;
 let composerWorkMode: string = "pi-agent";
 let imWebhookServer: ImWebhookServer | null = null;
@@ -105,7 +119,6 @@ let stopPublishingState: (() => void) | undefined;
 let stopPublishingSelectedTranscript: (() => void) | undefined;
 let stopTrackingWindowActivation: (() => void) | undefined;
 let stopNotifications: (() => void) | undefined;
-let stopUpdateChecker: (() => void) | undefined;
 let stopPruningTerminals: (() => void) | undefined;
 let retainedTerminalWorkspacePathSignature = "";
 const terminalFocusedWebContentsIds = new Set<number>();
@@ -646,24 +659,183 @@ async function registerBuiltInPlugins(): Promise<void> {
   } catch { /* silently skip */ }
 }
 
-async function downloadAvailableUpdate(): Promise<void> {
-  try {
-    const updater = safeAutoUpdater();
-    const result = await updater?.checkForUpdates();
-    const latest = result?.updateInfo?.version;
-    if (latest && isUpdateVersionNewer(latest, app.getVersion())) {
-      await updater.downloadUpdate();
+/** Convert internal updater errors into concise user-facing text. */
+function humanizeUpdateError(message: string): string {
+  if (/ENOENT/i.test(message)) return "Could not access the application package. Try reinstalling or check disk permissions.";
+  if (/EACCES|EPERM/i.test(message)) return "Permission denied. Try running as administrator or check folder permissions.";
+  if (/ETIMEDOUT|ECONNREFUSED|ENOTFOUND|EAI_AGAIN|socket hang up/i.test(message)) return "Network error. Check your connection and try again.";
+  if (/net::ERR_/i.test(message)) return "Download failed due to a network issue. Check your connection and try again.";
+  return message;
+}
+
+function setDesktopUpdateStatus(status: DesktopUpdateStatus): DesktopUpdateStatus {
+  desktopUpdateStatus = status;
+  for (const window of BrowserWindow.getAllWindows()) {
+    if (canPublishToWindow(window)) {
+      window.webContents.send(desktopIpc.updateStatusChanged, status);
     }
-  } catch {}
+  }
+  return status;
+}
+
+function focusMainWindow(): void {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
+}
+
+function showDesktopUpdateNotification(phase: "available" | "ready", latestVersion: string): void {
+  if (!Notification.isSupported() || process.env.PI_APP_TEST_MODE) return;
+  const key = `${phase}:${latestVersion}`;
+  if (updateNotificationKey === key) return;
+  updateNotificationKey = key;
+
+  const notification = new Notification({
+    title: phase === "ready" ? "Pi-Deepseek update ready" : "Pi-Deepseek update available",
+    body:
+      phase === "ready"
+        ? `Version ${latestVersion} is ready. Restart Pi-Deepseek to finish updating.`
+        : `Version ${latestVersion} is available. Open Pi-Deepseek to download the update.`,
+  });
+  notification.on("click", focusMainWindow);
+  notification.show();
+}
+
+function configureDesktopUpdater(): void {
+  const updater = safeAutoUpdater();
+  if (!updater || updateListenersConfigured) return;
+  updateListenersConfigured = true;
+  updater.autoDownload = false;
+  updater.autoInstallOnAppQuit = true;
+  // electron-updater's NSIS updater uses the old and new blockmaps when they
+  // are available, and falls back to a full setup executable if it cannot.
+  updater.disableDifferentialDownload = false;
+
+  updater.on("checking-for-update", () => {
+    setDesktopUpdateStatus({ phase: "checking", currentVersion: app.getVersion() });
+  });
+  updater.on("update-available", (info: { version?: string }) => {
+    const latestVersion = info.version || desktopUpdateStatus.latestVersion;
+    const next = setDesktopUpdateStatus({
+      phase: "available",
+      currentVersion: app.getVersion(),
+      latestVersion,
+    });
+    if (next.latestVersion) showDesktopUpdateNotification("available", next.latestVersion);
+  });
+  updater.on("update-not-available", (info: { version?: string }) => {
+    setDesktopUpdateStatus({
+      phase: "up-to-date",
+      currentVersion: app.getVersion(),
+      latestVersion: info.version,
+    });
+  });
+  updater.on("download-progress", (progress: {
+    percent?: number;
+    transferred?: number;
+    total?: number;
+    bytesPerSecond?: number;
+  }) => {
+    setDesktopUpdateStatus({
+      phase: "downloading",
+      currentVersion: app.getVersion(),
+      latestVersion: desktopUpdateStatus.latestVersion,
+      percent: Math.max(0, Math.min(100, progress.percent ?? 0)),
+      transferred: progress.transferred,
+      total: progress.total,
+      bytesPerSecond: progress.bytesPerSecond,
+    });
+  });
+  updater.on("update-downloaded", (info: { version?: string }) => {
+    const latestVersion = info.version || desktopUpdateStatus.latestVersion;
+    const next = setDesktopUpdateStatus({
+      phase: "ready",
+      currentVersion: app.getVersion(),
+      latestVersion,
+      percent: 100,
+      transferred: desktopUpdateStatus.total,
+      total: desktopUpdateStatus.total,
+    });
+    if (next.latestVersion) showDesktopUpdateNotification("ready", next.latestVersion);
+  });
+  updater.on("error", (error: Error) => {
+    setDesktopUpdateStatus({
+      phase: "error",
+      currentVersion: app.getVersion(),
+      latestVersion: desktopUpdateStatus.latestVersion,
+      message: humanizeUpdateError(error.message),
+    });
+  });
+}
+
+async function checkForDesktopUpdate(): Promise<DesktopUpdateStatus> {
+  if (isDev && !process.env.PI_APP_TEST_MODE) {
+    return setDesktopUpdateStatus({ phase: "unsupported", currentVersion: app.getVersion() });
+  }
+  const updater = safeAutoUpdater();
+  if (!updater) {
+    return setDesktopUpdateStatus({
+      phase: "unsupported",
+      currentVersion: app.getVersion(),
+      message: "The updater is unavailable in this build.",
+    });
+  }
+  if (process.env.PI_APP_TEST_MODE) return desktopUpdateStatus;
+  try {
+    await updater.checkForUpdates();
+  } catch (error) {
+    setDesktopUpdateStatus({
+      phase: "error",
+      currentVersion: app.getVersion(),
+      latestVersion: desktopUpdateStatus.latestVersion,
+      message: humanizeUpdateError(error instanceof Error ? error.message : String(error)),
+    });
+  }
+  return desktopUpdateStatus;
+}
+
+async function downloadDesktopUpdate(): Promise<DesktopUpdateStatus> {
+  if (desktopUpdateStatus.phase !== "available") {
+    return desktopUpdateStatus;
+  }
+  setDesktopUpdateStatus({
+    phase: "downloading",
+    currentVersion: app.getVersion(),
+    latestVersion: desktopUpdateStatus.latestVersion,
+    percent: 0,
+  });
+  if (process.env.PI_APP_TEST_MODE) return desktopUpdateStatus;
+  try {
+    await safeAutoUpdater()?.downloadUpdate();
+  } catch (error) {
+    setDesktopUpdateStatus({
+      phase: "error",
+      currentVersion: app.getVersion(),
+      latestVersion: desktopUpdateStatus.latestVersion,
+      message: humanizeUpdateError(error instanceof Error ? error.message : String(error)),
+    });
+  }
+  return desktopUpdateStatus;
+}
+
+async function installDesktopUpdate(): Promise<void> {
+  if (desktopUpdateStatus.phase !== "ready") return;
+  updateInstallRequestCount += 1;
+  if (process.env.PI_APP_TEST_MODE) return;
+  await store.flushPersistence().catch(() => undefined);
+  quittingAfterStoreFlush = true;
+  safeAutoUpdater()?.quitAndInstall(false, true);
 }
 
 function startAutoUpdateChecker(): void {
   if (isDev || autoUpdateInterval) return;
   autoUpdateInterval = setInterval(() => {
-    void downloadAvailableUpdate();
+    void checkForDesktopUpdate();
   }, 4 * 60 * 60 * 1000); // Check every 4 hours
-  setTimeout(() => {
-    void downloadAvailableUpdate();
+  autoUpdateInitialTimeout = setTimeout(() => {
+    autoUpdateInitialTimeout = undefined;
+    void checkForDesktopUpdate();
   }, 30000); // Wait 30s after startup
 }
 
@@ -671,6 +843,10 @@ function stopAutoUpdateChecker(): void {
   if (autoUpdateInterval) {
     clearInterval(autoUpdateInterval);
     autoUpdateInterval = undefined;
+  }
+  if (autoUpdateInitialTimeout) {
+    clearTimeout(autoUpdateInitialTimeout);
+    autoUpdateInitialTimeout = undefined;
   }
 }
 
@@ -713,6 +889,10 @@ function createWindow(): BrowserWindow {
     const platformModifier = process.platform === "darwin" ? input.meta : input.control;
     const terminalFocused = terminalFocusedWebContentsIds.has(window.webContents.id);
     if (terminalFocused) {
+      if (platformModifier && !input.shift && (lowerKey === "w" || input.code === "KeyW")) {
+        event.preventDefault();
+        window.webContents.send(desktopIpc.appCommand, desktopCommands.closeActiveSession);
+      }
       return;
     }
     if (platformModifier && !input.shift && lowerKey === "o") {
@@ -913,13 +1093,14 @@ async function pickWorkspaceViaDialog(): Promise<DesktopAppState> {
 
 async function runManualUpdateCheck(): Promise<void> {
   const window = mainWindow && canPublishToWindow(mainWindow) ? mainWindow : undefined;
-  const result = await checkForUpdate();
+  const result = await checkForDesktopUpdate();
 
-  if (result.status === "update-available") {
+  if (result.phase === "available" || result.phase === "downloading" || result.phase === "ready") {
+    focusMainWindow();
     return;
   }
 
-  if (result.status === "up-to-date") {
+  if (result.phase === "up-to-date") {
     const options: MessageBoxOptions = {
       type: "info",
       title: "Pi-Deepseek",
@@ -938,7 +1119,7 @@ async function runManualUpdateCheck(): Promise<void> {
     type: "warning",
     title: "Pi-Deepseek",
     message: "Could not check for updates right now.",
-    detail: result.message,
+    detail: result.message || "The updater is unavailable in this build.",
     buttons: ["OK"],
   };
   if (window) {
@@ -1143,6 +1324,7 @@ app.whenReady().then(async () => {
     }
   });
   installApplicationMenu();
+  configureDesktopUpdater();
   startAutoUpdateChecker();
   startPeriodicGcHint();
 
@@ -1187,6 +1369,8 @@ app.whenReady().then(async () => {
           deferredThreadTitle = undefined;
           pending.reject(new Error("Deferred thread-title rejected by test"));
         },
+        emitUpdateStatus: (status: DesktopUpdateStatus) => setDesktopUpdateStatus(status),
+        getUpdateInstallRequestCount: () => updateInstallRequestCount,
       },
     });
   }
@@ -1198,10 +1382,6 @@ app.whenReady().then(async () => {
   });
   notificationManager = new NotificationManager(store, () => mainWindow, notificationPermissionService);
   stopNotifications = notificationManager.start();
-  if (!isDev) {
-    stopUpdateChecker = initUpdateChecker();
-  }
-
   ipcMain.handle(desktopIpc.ping, () =>
     devReloadMarkersEnabled ? `pi desktop ready:${MAIN_DEV_RELOAD_MARKER}` : "pi desktop ready",
   );
@@ -1270,8 +1450,8 @@ app.whenReady().then(async () => {
   ipcMain.handle(desktopIpc.selectSession, (_event, target: WorkspaceSessionTarget) =>
     store.selectSession(target),
   );
-  ipcMain.handle(desktopIpc.archiveSession, (_event, target: WorkspaceSessionTarget) =>
-    store.archiveSession(target),
+  ipcMain.handle(desktopIpc.archiveSession, (_event, target: WorkspaceSessionTarget, options?: { readonly includePaired?: boolean }) =>
+    store.archiveSession(target, options),
   );
   ipcMain.handle(desktopIpc.unarchiveSession, (_event, target: WorkspaceSessionTarget) =>
     store.unarchiveSession(target),
@@ -1306,6 +1486,17 @@ app.whenReady().then(async () => {
   ipcMain.handle(desktopIpc.loginProvider, (_event, workspaceId: string, providerId: string) =>
     store.loginProvider(workspaceId, providerId, createRuntimeLoginCallbacks()),
   );
+  ipcMain.handle(desktopIpc.getFxAuthStatus, (_event, workspaceId: string) =>
+    store.getFxAuthStatus(workspaceId),
+  );
+  ipcMain.handle(desktopIpc.loginFxProvider, (_event, workspaceId: string, provider: unknown) => {
+    if (!isFxAuthProvider(provider)) throw new Error("Unsupported fx provider.");
+    return store.loginFxProvider(workspaceId, provider);
+  });
+  ipcMain.handle(desktopIpc.selectFxProvider, (_event, workspaceId: string, provider: unknown) => {
+    if (!isFxAuthProvider(provider)) throw new Error("Unsupported fx provider.");
+    return store.selectFxProvider(workspaceId, provider);
+  });
   ipcMain.handle(desktopIpc.logoutProvider, (_event, workspaceId: string, providerId: string) =>
     store.logoutProvider(workspaceId, providerId),
   );
@@ -1438,34 +1629,15 @@ app.whenReady().then(async () => {
     }
   });
   ipcMain.handle(desktopIpc.checkForUpdate, async () => {
-    if (isDev) return { status: "dev" };
-    try {
-      const result = await safeAutoUpdater()?.checkForUpdates();
-      if (result?.updateInfo?.version) {
-        const latest = result.updateInfo.version;
-        const current = app.getVersion();
-        if (isUpdateVersionNewer(latest, current)) {
-          return { status: "available", current, latest };
-        }
-        return { status: "up-to-date", current };
-      }
-      return { status: "error", message: "No update info" };
-    } catch (e: any) {
-      return { status: "error", message: e.message };
-    }
+    return checkForDesktopUpdate();
   });
   ipcMain.handle(desktopIpc.downloadUpdate, async () => {
-    if (isDev) return { status: "dev" };
-    try {
-      await safeAutoUpdater()?.downloadUpdate();
-      return { status: "downloaded" };
-    } catch (e: any) {
-      return { status: "error", message: e.message };
-    }
+    return downloadDesktopUpdate();
   });
   ipcMain.handle(desktopIpc.installUpdate, async () => {
-    safeAutoUpdater()?.quitAndInstall();
+    await installDesktopUpdate();
   });
+  ipcMain.handle(desktopIpc.getUpdateStatus, async () => desktopUpdateStatus);
   ipcMain.handle(desktopIpc.setAutoUpdateEnabled, async (_event, enabled: boolean) => {
     autoUpdateEnabled = enabled;
     if (enabled) {
@@ -1672,8 +1844,7 @@ app.on("window-all-closed", () => {
     notificationManager = undefined;
     notificationPermissionService?.dispose();
     notificationPermissionService = undefined;
-    stopUpdateChecker?.();
-    stopUpdateChecker = undefined;
+    stopAutoUpdateChecker();
     stopPruningTerminals?.();
     stopPruningTerminals = undefined;
     terminalService?.dispose();
@@ -1691,8 +1862,7 @@ app.on("before-quit", (event) => {
   notificationManager = undefined;
   notificationPermissionService?.dispose();
   notificationPermissionService = undefined;
-  stopUpdateChecker?.();
-  stopUpdateChecker = undefined;
+  stopAutoUpdateChecker();
   stopPruningTerminals?.();
   stopPruningTerminals = undefined;
   terminalService?.dispose();

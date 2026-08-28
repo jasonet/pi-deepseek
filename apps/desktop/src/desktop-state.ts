@@ -8,6 +8,7 @@ export type AppView = "threads" | "new-thread" | "skills" | "extensions" | "sett
 export type WorkspaceKind = "primary" | "worktree";
 export type WorktreeStatus = "ready" | "missing" | "error";
 export type NewThreadEnvironment = "local" | "worktree";
+export const DEFAULT_NEW_THREAD_BACKEND: AgentBackendId = "pi";
 export type ThemeMode = "system" | "light" | "dark";
 export type ModelSettingsScopeMode = "app-global" | "per-repo";
 export type Locale = "en" | "zh-CN" | "zh-TW" | "ja";
@@ -271,6 +272,7 @@ export interface DesktopAppState {
   readonly collapsedWorkspaces: Readonly<Record<string, boolean>>;
   readonly expandedArchivedByWorkspace: Readonly<Record<string, boolean>>;
   readonly fxAvailable: boolean;
+  readonly fxDefaultModel?: { readonly provider: string; readonly modelId: string };
   readonly revision: number;
   readonly lastError?: string;
 }

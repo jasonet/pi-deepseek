@@ -1,5 +1,5 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
-import { access } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import { delimiter, join } from "node:path";
 import { homedir } from "node:os";
 import { constants } from "node:fs";
@@ -26,12 +26,23 @@ import type {
   Unsubscribe,
   WorkspaceRef,
 } from "@pi-gui/session-driver";
+import {
+  isFxRuntimeProvider,
+  parseFxAuthStatus,
+  toFxRuntimeProvider,
+  withFxModels,
+  type FxAuthProvider,
+  type FxAuthStatus,
+} from "../src/fx-auth";
 
 const FX_SESSION_PREFIX = "fx:";
 const FX_CONTROL_REQUEST_TIMEOUT_MS = 20_000;
 const FX_IDLE_CLIENT_TIMEOUT_MS = 5 * 60_000;
 const FX_TRANSCRIPT_MESSAGE_LIMIT = 500;
 const FX_ASSISTANT_DELTA_BATCH_MS = 24;
+const FX_STATUS_TIMEOUT_MS = 15_000;
+const FX_LOGIN_TIMEOUT_MS = 10 * 60_000;
+const FX_CLI_OUTPUT_LIMIT = 128 * 1024;
 
 type JsonObject = Record<string, unknown>;
 
@@ -80,6 +91,66 @@ export class FxAcpDriver implements SessionDriver {
         binaryPath: this.binaryPath,
       }),
     );
+  }
+
+  async getDefaultModelSelection(): Promise<SessionModelSelection | undefined> {
+    return readFxDefaultModelSelection();
+  }
+
+  async getAuthStatus(workspacePath: string): Promise<FxAuthStatus> {
+    const inspected = await this.inspectCli(workspacePath);
+    return inspected?.status ?? {
+      state: "unavailable",
+      connectedProviders: [],
+      models: [],
+      message: "fx runtime is unavailable.",
+    };
+  }
+
+  async loginProvider(workspacePath: string, provider: FxAuthProvider): Promise<FxAuthStatus> {
+    const inspected = await this.inspectCli(workspacePath);
+    if (!inspected) {
+      throw new Error("fx runtime is unavailable. Reinstall the app to restore the bundled runtime.");
+    }
+
+    const loginArgs = provider === "vercel" ? ["login"] : ["login", provider];
+    await runFxCli(inspected.binary, loginArgs, workspacePath, FX_LOGIN_TIMEOUT_MS);
+
+    // `fx login <provider>` also activates that provider. Account connection in
+    // the desktop settings is intentionally non-destructive: restore the user's
+    // prior active provider after the new credential has been saved.
+    const previousProvider = inspected.status.activeProvider;
+    if (previousProvider && previousProvider !== provider) {
+      await runFxCli(
+        inspected.binary,
+        ["provider", toFxRuntimeProvider(previousProvider)],
+        workspacePath,
+        FX_STATUS_TIMEOUT_MS,
+      );
+    }
+
+    const refreshed = await inspectFxCliBinary(inspected.binary, workspacePath);
+    if (!refreshed) {
+      throw new Error("fx login completed, but its updated account status could not be read.");
+    }
+    return refreshed;
+  }
+
+  async selectProvider(workspacePath: string, provider: FxAuthProvider): Promise<FxAuthStatus> {
+    const inspected = await this.inspectCli(workspacePath);
+    if (!inspected) throw new Error("fx runtime is unavailable.");
+    if (!inspected.status.connectedProviders.includes(provider)) {
+      throw new Error("Connect this fx provider before selecting it.");
+    }
+    await runFxCli(
+      inspected.binary,
+      ["provider", toFxRuntimeProvider(provider)],
+      workspacePath,
+      FX_STATUS_TIMEOUT_MS,
+    );
+    const refreshed = await inspectFxCliBinary(inspected.binary, workspacePath);
+    if (!refreshed) throw new Error("fx provider changed, but its model catalog could not be read.");
+    return refreshed;
   }
 
   async createSession(
@@ -365,17 +436,18 @@ export class FxAcpDriver implements SessionDriver {
   ): Promise<void> {
     const record = await this.record(ref);
     await this.ensureConnected(record);
-    if (["gateway", "codex", "grok"].includes(selection.provider)) {
-      await record.client!.request(
-        "session/set_config_option",
-        {
-          sessionId: fromFxSessionId(ref.sessionId),
-          configId: "provider",
-          value: selection.provider,
-        },
-        FX_CONTROL_REQUEST_TIMEOUT_MS,
-      );
+    if (!isFxRuntimeProvider(selection.provider)) {
+      throw new Error(`fx does not support the ${selection.provider} provider. Use Pi for local models.`);
     }
+    await record.client!.request(
+      "session/set_config_option",
+      {
+        sessionId: fromFxSessionId(ref.sessionId),
+        configId: "provider",
+        value: selection.provider,
+      },
+      FX_CONTROL_REQUEST_TIMEOUT_MS,
+    );
     await record.client!.request(
       "session/set_config_option",
       {
@@ -567,6 +639,20 @@ export class FxAcpDriver implements SessionDriver {
     throw new Error(
       `No compatible fx ACP runtime could complete ${method}: ${errorMessage(lastError)}`,
     );
+  }
+
+  private async inspectCli(
+    workspacePath: string,
+  ): Promise<{ readonly binary: string; readonly status: FxAuthStatus } | undefined> {
+    const binaries = await resolveFxBinaryCandidates({
+      bundledRoot: this.bundledRoot,
+      binaryPath: this.binaryPath,
+    });
+    for (const binary of binaries) {
+      const status = await inspectFxCliBinary(binary, workspacePath);
+      if (status) return { binary, status };
+    }
+    return undefined;
   }
 
   private bindClient(record: ManagedFxSession): void {
@@ -916,11 +1002,15 @@ class FxAcpClient {
   onExit?: (error: string) => void;
 
   constructor(binary: string, cwd: string) {
-    this.child = spawn(binary, ["acp"], {
-      cwd,
-      env: { ...process.env, FX_AUTO_UPGRADE: "0", FX_SOUND: "0" },
-      stdio: ["pipe", "pipe", "pipe"],
-    });
+    this.child = spawn(
+      binary,
+      ["--context-limit", "skill_description_bytes=4096", "acp"],
+      {
+        cwd,
+        env: { ...process.env, FX_AUTO_UPGRADE: "0", FX_SOUND: "0" },
+        stdio: ["pipe", "pipe", "pipe"],
+      },
+    );
     this.child.stdout.setEncoding("utf8");
     this.child.stderr.setEncoding("utf8");
     this.child.stdout.on("data", (chunk: string) => this.consume(chunk));
@@ -1099,6 +1189,101 @@ function extractAcpContent(value: unknown): string | undefined {
       .join("\n") || undefined
   );
 }
+
+async function inspectFxCliBinary(
+  binary: string,
+  workspacePath: string,
+): Promise<FxAuthStatus | undefined> {
+  try {
+    const result = await runFxCli(binary, ["status", "--json"], workspacePath, FX_STATUS_TIMEOUT_MS);
+    const status = parseFxAuthStatus(result.stdout);
+    try {
+      const models = await runFxCli(binary, ["models", "--json"], workspacePath, FX_STATUS_TIMEOUT_MS);
+      return withFxModels(status, models.stdout);
+    } catch {
+      return { ...status, message: "fx is connected, but its model catalog is currently unavailable." };
+    }
+  } catch {
+    return undefined;
+  }
+}
+
+function runFxCli(
+  binary: string,
+  args: readonly string[],
+  workspacePath: string,
+  timeoutMs: number,
+): Promise<{ readonly stdout: string; readonly stderr: string }> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(binary, [...args], {
+      cwd: workspacePath,
+      env: { ...process.env, FX_AUTO_UPGRADE: "0", FX_SOUND: "0" },
+    });
+    const stdout: Buffer[] = [];
+    const stderr: Buffer[] = [];
+    let outputBytes = 0;
+    let settled = false;
+
+    const finish = (callback: () => void) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      callback();
+    };
+    const capture = (target: Buffer[], chunk: Buffer) => {
+      outputBytes += chunk.byteLength;
+      if (outputBytes > FX_CLI_OUTPUT_LIMIT) {
+        child.kill();
+        finish(() => reject(new Error("fx command produced too much output.")));
+        return;
+      }
+      target.push(chunk);
+    };
+    const timeout = setTimeout(() => {
+      child.kill();
+      finish(() => reject(new Error(`fx ${args[0] ?? "command"} timed out.`)));
+    }, timeoutMs);
+
+    child.stdout.on("data", (chunk: Buffer) => capture(stdout, chunk));
+    child.stderr.on("data", (chunk: Buffer) => capture(stderr, chunk));
+    child.on("error", (error) => finish(() => reject(error)));
+    child.on("exit", (code, signal) => {
+      finish(() => {
+        if (code === 0) {
+          resolve({
+            stdout: Buffer.concat(stdout).toString("utf8"),
+            stderr: Buffer.concat(stderr).toString("utf8"),
+          });
+          return;
+        }
+        reject(new Error(
+          signal
+            ? `fx ${args[0] ?? "command"} was interrupted (${signal}).`
+            : `fx ${args[0] ?? "command"} failed with exit code ${code ?? "unknown"}.`,
+        ));
+      });
+    });
+    child.stdin.end();
+  });
+}
+
+export async function readFxDefaultModelSelection(
+  settingsPath = process.env.PI_FX_SETTINGS_PATH ?? join(homedir(), ".fx", "settings.json"),
+): Promise<SessionModelSelection | undefined> {
+  try {
+    const settings = JSON.parse(await readFile(settingsPath, "utf8")) as JsonObject;
+    const provider = stringField(settings, "provider");
+    if (!provider) return undefined;
+    const models = asObject(settings.models);
+    const modelId = stringField(models, provider)
+      ?? stringField(settings, `${provider}_model`)
+      ?? stringField(settings, "model");
+    return modelId ? { provider, modelId } : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function configFromAcpResult(result: JsonObject): SessionSnapshot["config"] {
   if (!Array.isArray(result.configOptions)) return undefined;
   const values = new Map(

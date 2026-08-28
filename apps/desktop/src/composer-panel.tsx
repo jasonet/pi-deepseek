@@ -124,12 +124,13 @@ export function ComposerPanel({
   const activeAttachments = canAttach ? attachments : [];
   const hasComposerInput = composerDraft.trim().length > 0 || activeAttachments.length > 0;
   const primaryActionIsStop = selectedSession.status === "running" && (isFx || !hasComposerInput);
+  const showErrorBanner = Boolean(lastError) && selectedSession.status !== "failed";
 
   return (
     <footer className="composer">
       <div className="conversation conversation--composer">
         <ComposerSurface
-          lastError={lastError}
+          lastError={showErrorBanner ? lastError : undefined}
           activeSlashCommand={activeSlashCommand}
           activeSlashCommandMeta={activeSlashCommandMeta}
           topNotice={isFx ? undefined : (
@@ -174,11 +175,13 @@ export function ComposerPanel({
             <div className="composer__footer">
               <div className="composer__footer-row">
                 {lastError ? (
-                  <div className="composer__error" style={{ color: "#f85149", fontSize: 12, marginBottom: 4 }}>
-                    {lastError}
-                    <button className="button button--secondary" style={{ marginLeft: 8, fontSize: 11, padding: "2px 8px" }}
-                      onClick={onRetryLast} type="button">重试</button>
-                  </div>
+                  <button
+                    className="button button--secondary composer__retry-button"
+                    onClick={onRetryLast}
+                    type="button"
+                  >
+                    重试
+                  </button>
                 ) : null}
                 <div className="composer__hint">
                   {selectedSession.status === "running"

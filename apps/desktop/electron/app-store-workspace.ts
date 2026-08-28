@@ -124,12 +124,13 @@ export async function selectSession(store: AppStoreInternals, target: WorkspaceS
 export async function archiveSession(
   store: AppStoreInternals,
   target: WorkspaceSessionTarget,
+  options: { readonly includePaired?: boolean } = {},
 ): Promise<DesktopAppState> {
   await store.initialize();
   console.log("[Archive Main] Start:", target.workspaceId, target.sessionId);
 
   return store.withErrorHandling(async () => {
-    const pairedTarget = pairedSessionTarget(store.state, target);
+    const pairedTarget = options.includePaired === false ? undefined : pairedSessionTarget(store.state, target);
     const targets = pairedTarget ? [target, pairedTarget] : [target];
     for (const sessionTarget of targets) {
       const sessionRef = toSessionRef(sessionTarget);

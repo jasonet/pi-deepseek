@@ -1,4 +1,4 @@
-import { writeFile } from "node:fs/promises";
+import { chmod, writeFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
 import { join } from "node:path";
 import {
@@ -33,7 +33,7 @@ test("new thread reuses composer behaviors for slash commands, image previews, a
     await expect(window.getByTestId("new-thread-logo")).toBeVisible();
     await expect(window.getByRole("heading", { name: "Let's build" })).toBeVisible();
     await expect(composer).toBeFocused();
-    await expect(composer).toHaveAttribute("placeholder", "Ask pi anything, use / for commands and skills");
+    await expect(composer).toHaveAttribute("placeholder", "Send a message…");
 
     const modelBadge = window.locator(".new-thread__hint .model-selector__badge").first();
     await expect(modelBadge).toBeVisible();
@@ -75,6 +75,117 @@ test("new thread reuses composer behaviors for slash commands, image previews, a
       .toBe("image");
     await expect(window.locator(".timeline-item__attachment")).toBeVisible({ timeout: 15_000 });
     await expect(window.locator(".composer-attachment")).toHaveCount(0);
+  } finally {
+    await harness.close();
+  }
+});
+
+test("new thread shows the default model from fx configuration when switching harness", async () => {
+  test.setTimeout(60_000);
+  const userDataDir = await makeUserDataDir();
+  const agentDir = join(userDataDir, "agent");
+  const workspacePath = await makeWorkspace("new-thread-fx-default-model");
+  const fxSettingsPath = join(userDataDir, "fx-settings.json");
+  const fxBinaryPath = join(userDataDir, "fake-fx.mjs");
+  const localProvider = "custom-lm-studio";
+  const localModel = "gemma-4-26b-local";
+  await seedAgentDir(agentDir, {
+    enabledModels: ["openai/gpt-5", `${localProvider}/${localModel}`],
+  });
+  await writeFile(
+    join(agentDir, "auth.json"),
+    `${JSON.stringify({
+      openai: { type: "api_key", key: "test-openai-key" },
+      [localProvider]: { type: "api_key", key: "lm-studio" },
+    })}\n`,
+    "utf8",
+  );
+  await writeFile(
+    join(agentDir, "models.json"),
+    `${JSON.stringify({
+      providers: {
+        [localProvider]: {
+          name: "LM Studio",
+          baseUrl: "http://127.0.0.1:1234/v1",
+          api: "openai-completions",
+          apiKey: "lm-studio",
+          authHeader: true,
+          compat: {
+            supportsDeveloperRole: false,
+            supportsReasoningEffort: false,
+            supportsUsageInStreaming: false,
+            maxTokensField: "max_tokens",
+          },
+          models: [{
+            id: localModel,
+            name: "LM Studio Running Model",
+            reasoning: false,
+            input: ["text"],
+            contextWindow: 32_768,
+            maxTokens: 4_096,
+            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+          }],
+        },
+      },
+    })}\n`,
+    "utf8",
+  );
+  await writeFile(
+    fxSettingsPath,
+    `${JSON.stringify({ provider: "codex", models: { codex: "gpt-5.6-sol" } })}\n`,
+    "utf8",
+  );
+  await writeFile(
+    fxBinaryPath,
+    `#!/usr/bin/env node
+const args = process.argv.slice(2);
+if (args[0] === "status") {
+  console.log(JSON.stringify({ kind: "status", model: "gpt-5.6-sol", model_source: "Codex subscription", auth: "Codex subscription", connected_providers: ["codex"] }));
+} else if (args[0] === "models") {
+  console.log(JSON.stringify({ kind: "models", ids: ["gpt-5.6-sol", "gpt-5.6-terra"] }));
+}
+`,
+    "utf8",
+  );
+  await chmod(fxBinaryPath, 0o755);
+  const harness = await launchDesktop(userDataDir, {
+    agentDir,
+    initialWorkspaces: [workspacePath],
+    testMode: "background",
+    envOverrides: {
+      PI_FX_BINARY: fxBinaryPath,
+      PI_FX_ENABLED: "1",
+      PI_FX_SETTINGS_PATH: fxSettingsPath,
+    },
+  });
+
+  try {
+    const window = await harness.firstWindow();
+    await openNewThread(window);
+
+    const modelBadge = window.locator(".new-thread__hint .model-selector__badge").first();
+    const harnessPicker = window.getByRole("group", { name: "New thread harness engine" });
+    const piHarness = window.getByRole("button", { name: "Use Pi harness for new thread" });
+    await expect(harnessPicker).toBeVisible();
+    await expect(piHarness).toHaveAttribute("aria-pressed", "true");
+    const workspaceBox = await window.locator(".new-thread__workspace").boundingBox();
+    const harnessBox = await harnessPicker.boundingBox();
+    expect(workspaceBox).not.toBeNull();
+    expect(harnessBox).not.toBeNull();
+    expect(harnessBox!.x).toBeGreaterThan(workspaceBox!.x + workspaceBox!.width);
+    await expect(modelBadge).toHaveText(`${localProvider}:${localModel}`);
+    await window.getByRole("button", { name: "Use fx harness for new thread" }).click();
+    await expect(modelBadge).toHaveText("codex:gpt-5.6-sol");
+    await expect(modelBadge).toBeEnabled();
+    await modelBadge.click();
+    await expect(window.locator(".model-selector__item-label", { hasText: "gpt-5.6-terra" })).toBeVisible();
+    await window.locator(".model-selector__item-label", { hasText: "LM Studio Running Model" }).click();
+    await expect(piHarness).toHaveAttribute("aria-pressed", "true");
+    await expect(modelBadge).toHaveText(`${localProvider}:${localModel}`);
+    await window.getByRole("button", { name: "Use fx harness for new thread" }).click();
+    await expect(window.getByRole("button", { name: "Attach files" })).toHaveCount(0);
+    await piHarness.click();
+    await expect(window.getByRole("button", { name: "Attach files" })).toBeVisible();
   } finally {
     await harness.close();
   }

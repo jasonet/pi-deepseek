@@ -20,27 +20,34 @@
 
 | 平台 | 架构 | 引擎 | 版本 | 格式 | 大小 | 下载 |
 |------|------|------|------|------|------|------|
-| **macOS** | Apple Silicon (M1–M5) | Electron | v2.9.1 | DMG | 145 MB | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.9.1/Pi-Deepseek-2.9.1-mac-arm64.dmg) |
-| **macOS** | Intel (x64) | Electron | v2.9.1 | DMG | 157 MB | [![Download](https://img.shields.io/badge/Download-x64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.9.1/Pi-Deepseek-2.9.1-mac-x64.dmg) |
-| **macOS** | Apple Silicon (M1–M5) | Tauri | v2.9.1 | DMG | 147 MB | [![Download](https://img.shields.io/badge/Download-arm64-%237C6BF5?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.9.1/Pi-Deepseek-2.9.1-tauri-mac-arm64.dmg) |
-| **Windows** | x64 | Electron | v2.9.1 | 安装版 | 125 MB | [![Download](https://img.shields.io/badge/Download-Setup-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v2.9.1/Pi-Deepseek-2.9.1-win-x64-setup.exe) |
-| **Windows** | x64 | Electron | v2.9.1 | 便携版 | 125 MB | [![Download](https://img.shields.io/badge/Download-Portable-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v2.9.1/Pi-Deepseek-2.9.1-win-x64-portable.exe) |
-| **Linux** | x64 | Electron | v2.9.1 | deb | 157 MB | [![Download](https://img.shields.io/badge/Download-.deb-%234D6BFE?logo=ubuntu)](https://github.com/jasonet/pi-deepseek/releases/download/v2.9.1/Pi-Deepseek-2.9.1-linux-amd64.deb) |
-| **Linux** | x64 | Electron | v2.9.1 | AppImage | 161 MB | [![Download](https://img.shields.io/badge/Download-AppImage-%234D6BFE?logo=linux)](https://github.com/jasonet/pi-deepseek/releases/download/v2.9.1/Pi-Deepseek-2.9.1-linux-x86_64.AppImage) |
+| **macOS** | Apple Silicon (M1–M5) | Electron | v2.9.3 | DMG | 145 MB | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.9.3/Pi-Deepseek-2.9.3-mac-arm64.dmg) |
+| **macOS** | Intel (x64) | Electron | v2.9.3 | DMG | 157 MB | [![Download](https://img.shields.io/badge/Download-x64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.9.3/Pi-Deepseek-2.9.3-mac-x64.dmg) |
+| **macOS** | Apple Silicon (M1–M5) | Tauri | v2.9.3 | DMG | 147 MB | [![Download](https://img.shields.io/badge/Download-arm64-%237C6BF5?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.9.3/Pi-Deepseek-2.9.3-tauri-mac-arm64.dmg) |
+| **Windows** | x64 | Electron | v2.9.3 | 安装版 | 125 MB | [![Download](https://img.shields.io/badge/Download-Setup-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v2.9.3/Pi-Deepseek-2.9.3-win-x64-setup.exe) |
+| **Windows** | x64 | Electron | v2.9.3 | 便携版 | 125 MB | [![Download](https://img.shields.io/badge/Download-Portable-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v2.9.3/Pi-Deepseek-2.9.3-win-x64-portable.exe) |
+| **Linux** | x64 | Electron | v2.9.3 | deb | 157 MB | [![Download](https://img.shields.io/badge/Download-.deb-%234D6BFE?logo=ubuntu)](https://github.com/jasonet/pi-deepseek/releases/download/v2.9.3/Pi-Deepseek-2.9.3-linux-amd64.deb) |
+| **Linux** | x64 | Electron | v2.9.3 | AppImage | 161 MB | [![Download](https://img.shields.io/badge/Download-AppImage-%234D6BFE?logo=linux)](https://github.com/jasonet/pi-deepseek/releases/download/v2.9.3/Pi-Deepseek-2.9.3-linux-x86_64.AppImage) |
 
 > 🧭 **双引擎版本矩阵 / Dual-engine version matrix:**
-> **Electron `v2.9.1`**（macOS / Windows / Linux）与 **Tauri `v2.9.1`**（macOS arm64）。macOS / Linux Electron 为完整双 harness 体验的推荐版本；Windows 因上游暂未提供 fx binary，当前为 Pi harness。
-> **Electron `v2.9.1`** (macOS / Windows / Linux) and **Tauri `v2.9.1`** (macOS arm64). Electron is recommended for the complete dual-harness experience; About identifies the Electron / Tauri build.
+> **Electron `v2.9.3`**（macOS / Windows / Linux）与 **Tauri `v2.9.3`**（macOS arm64）。macOS / Linux Electron 为完整双 harness 体验的推荐版本；Windows 因上游暂未提供 fx binary，当前为 Pi harness。
+> **Electron `v2.9.3`** (macOS / Windows / Linux) and **Tauri `v2.9.3`** (macOS arm64). Electron is recommended for the complete dual-harness experience; About identifies the Electron / Tauri build.
+
+> **v2.9.3 更新 / What's new:**
+> **Windows 应用内升级与差分下载**：安装版自动检测新版本，应用内实时展示下载进度与安装重启提示；发布流水线严格校验 `latest.yml`、NSIS 安装包及 `.blockmap`。
+> **OpenRouter 批量选模**：「编辑已启用模型」新增全不选、全选与智能选择，智能选择按模型系列自动保留最新最高阶版本。
+> **fx 原生渠道与模型发现**：Harness 设置原生连接 Vercel AI Gateway、OpenAI Codex 与 xAI Grok；新建 fx 会话读取当前渠道目录，本地模型选择后自动切回 Pi 运行。
+> **稳定性与错误处理**：优化渲染进程崩溃恢复、错误提示去重、慢速本地 LLM 端点超时兼容与更新提示人文化处理。
+> *Windows setup builds now support in-app update notifications, differential download progress, and restart prompts. OpenRouter bulk selection adds Select none, Select all, and Smart select. Harness settings support native fx login for Vercel, Codex, and Grok while preserving active channels. Includes renderer crash recovery, error deduplication, and slow local LLM endpoint compatibility.*
 
 > **v2.9.1 更新 / What's new:**
 > **新建会话引擎选择**：新线程默认 Pi harness，可在项目下拉框右侧一键切换 fx（fx 可用时显示）；两枚引擎图标（Pi / ƒx）并排展示，选中即高亮。
 > *New-session harness picker: new threads default to Pi, with a Pi/ƒx toggle right of the workspace dropdown (fx shown when available).*
 
 > **v2.9.0 更新 / What's new:**
-> **Pi/fx 双 harness 引擎**：检测到兼容 fx runtime 时，新任务默认左 Pi、右 fx；每栏左上角显示引擎图标与名称，并可直接交换两套独立 runtime 的左右位置。
+> **Pi/fx 双 harness 引擎**：支持在双栏中并排运行 Pi 与 fx；每栏左上角显示引擎图标与名称，并可直接交换两套独立 runtime 的左右位置。
 > **内置 fx**：优先复用系统 fx 及其现有登录，找不到或不兼容时自动回退到应用内置、校验过的 fx runtime。
 > **三平台 Electron 构建**：macOS、Windows、Linux 统一为 2.9.0；上游尚无 Windows fx binary，因此 Windows 保留 Pi harness 并明确提示 fx 不可用。
-> *Where a compatible fx runtime is available, Pi/fx dual harnesses default to Pi on the left and fx on the right, with visible per-pane engine controls that swap the independent runtimes. The app reuses a compatible system fx login first and falls back to the verified bundled runtime on supported platforms.*
+> *Pi and fx can run side by side in dual-pane mode, with visible per-pane engine controls that swap the independent runtimes. The app reuses a compatible system fx login first and falls back to the verified bundled runtime on supported platforms.*
 
 > **v2.8.0 更新 / What's new:**
 > **DeepSeek Harness**：新增内置 Harness Web 页签；本机服务未启动时，明确提示运行 `npx @deepseek-ai/dsh web`。
@@ -78,9 +85,13 @@
 | 会话 | Pi 原生会话格式，由桌面端薄封装管理 | fx 原生 session，由 fx 自己保存和恢复 |
 | 适合 | 主工程实现、深度仓库操作、需要 Pi 扩展生态的任务 | 第二意见、独立方案、并行分析与 fx 工作流 |
 
-2.9 新增 **Pi/fx 双 harness 引擎**。在兼容 fx runtime 的 macOS / Linux Electron 构建中，每个新任务建立一对相互关联但运行时隔离的会话：默认左侧 Pi、右侧 fx；两栏左上角的图标化控件会说明当前 harness，并可一键交换左右位置。两者共享同一项目目录和桌面会话目录，但不合并上下文、认证或 runtime，因此既能发挥各自完整能力，也要避免同时修改同一个文件。
+2.9 新增 **Pi/fx 双 harness 引擎**。新建会话默认使用 Pi，也可在项目选择框右侧切换为 fx；每次只启动所选 harness。已有 Pi/fx 会话仍可在双栏中并排使用，栏首图标会说明当前 harness，并可交换左右位置。两者共享项目目录和桌面会话目录，但不合并上下文、认证或 runtime。
 
-Version 2.9 adds the **Pi/fx dual-harness engine**. On macOS/Linux Electron builds with a compatible fx runtime, every new task creates an isolated companion pair: Pi on the left and fx on the right by default. The icon controls in the upper-left of each pane identify the active harness and can swap their positions. Both harnesses share the project directory and desktop catalog, but keep runtime, authentication, context, and native session storage independent.
+在 2.9.2 中，设置 → Harnesses 可视化显示 fx 的 Vercel AI Gateway、OpenAI Codex 与 xAI Grok 连接状态，并通过 fx 原生登录流程打开浏览器。仅“使用此渠道”会切换 fx 活跃渠道；连接账号后应用会恢复原渠道。新建 fx 会话从当前 fx 渠道读取模型；Pi 已配置的本地 OpenAI 兼容模型也会出现在模型菜单中，选择后界面会切回 Pi，因为上游 fx 当前只支持 Gateway、Codex 和 Grok，不能直接运行本地模型。
+
+Version 2.9 adds the **Pi/fx dual-harness engine**. New threads default to Pi and can switch to fx beside the workspace picker; only the selected harness starts. Existing Pi/fx sessions can still run side by side, with pane-header icons identifying each harness and allowing position swaps. Both harnesses share the project directory and desktop catalog, but keep runtime, authentication, context, and native session storage independent.
+
+In 2.9.2, Settings → Harnesses shows fx connection state for Vercel AI Gateway, OpenAI Codex, and xAI Grok and launches fx's native browser login. Connecting an account restores the previously active provider; only “Use” changes it. New fx threads load the active fx model catalog. Pi-configured local OpenAI-compatible models also appear in the picker and visibly switch back to Pi, because upstream fx currently supports Gateway, Codex, and Grok rather than direct local-model endpoints.
 
 本项目在 [`pi-gui`](https://github.com/minghinmatthewlam/pi-gui) 的基础上持续开发，并通过 `@earendil-works/pi-coding-agent` 接入上游 `pi` 运行时。
 
@@ -104,8 +115,8 @@ Version 2.9 adds the **Pi/fx dual-harness engine**. On macOS/Linux Electron buil
 - **40+ 提供商品牌图标**，余额显示，紧凑布局
 - **Open Design MCP 集成**（扩展 → Open Design → 查看 daemon 状态）
 - **Cmd/Ctrl+Tab** 快速切换会话
-- **自动更新**（Settings → Notifications → Auto Update）
-- **Pi/fx 双 harness 双列布局**：默认左 Pi、右 fx；图标化引擎控件可交换左右位置，`Cmd+D` 分列 / `Cmd+W` 关列 / `Cmd+[` `Cmd+]` 切换 / 拖拽调整比例
+- **自动更新**（Settings → Notifications → Auto Update）：Windows 安装版支持应用内通知、下载进度和完成后重启；有可用 blockmap 与本地旧安装包缓存时使用差分下载，否则安全回退为完整更新包
+- **Pi/fx 双 harness**：新会话默认 Pi、可切换 fx；已有会话可用双列布局并交换左右位置，`Cmd+D` 分列 / `Cmd+W` 关列 / `Cmd+[` `Cmd+]` 切换 / 拖拽调整比例
 - **包管理（Packages）** 🆕：在「扩展」面板为工作区安装 / 更新 / 移除 npm / git / 本地包
 - **系统提示词补充** 🆕：在「扩展」面板编辑项目级 `.pi/APPEND_SYSTEM.md` 与全局 `APPEND_SYSTEM.md`，将自定义内容追加到 agent 系统提示词（项目文件优先于全局，对新建 / 重新加载的会话生效）
 - **Dual-engine 统一版本**：Electron + Tauri 同步发版，版本号对齐

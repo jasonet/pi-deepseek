@@ -31,6 +31,7 @@ import type {
   StartThreadInput,
   WorkspaceSessionTarget,
 } from "./desktop-state";
+import type { FxAuthProvider, FxAuthStatus } from "./fx-auth";
 
 export type DesktopNotificationPermissionStatus =
   | "granted"
@@ -38,6 +39,27 @@ export type DesktopNotificationPermissionStatus =
   | "default"
   | "unsupported"
   | "unknown";
+
+export type DesktopUpdatePhase =
+  | "idle"
+  | "checking"
+  | "available"
+  | "downloading"
+  | "ready"
+  | "up-to-date"
+  | "error"
+  | "unsupported";
+
+export interface DesktopUpdateStatus {
+  readonly phase: DesktopUpdatePhase;
+  readonly currentVersion: string;
+  readonly latestVersion?: string;
+  readonly percent?: number;
+  readonly transferred?: number;
+  readonly total?: number;
+  readonly bytesPerSecond?: number;
+  readonly message?: string;
+}
 
 export const desktopIpc = {
   stateRequest: "pi-gui:state-request",
@@ -79,6 +101,9 @@ export const desktopIpc = {
   setSessionModel: "pi-gui:set-session-model",
   setSessionThinkingLevel: "pi-gui:set-session-thinking-level",
   loginProvider: "pi-gui:login-provider",
+  getFxAuthStatus: "pi-gui:get-fx-auth-status",
+  loginFxProvider: "pi-gui:login-fx-provider",
+  selectFxProvider: "pi-gui:select-fx-provider",
   logoutProvider: "pi-gui:logout-provider",
   setProviderApiKey: "pi-gui:set-provider-api-key",
   listCustomModelProviders: "pi-gui:list-custom-model-providers",
@@ -111,6 +136,8 @@ export const desktopIpc = {
   checkForUpdate: "pi-gui:check-for-update",
   downloadUpdate: "pi-gui:download-update",
   installUpdate: "pi-gui:install-update",
+  getUpdateStatus: "pi-gui:get-update-status",
+  updateStatusChanged: "pi-gui:update-status-changed",
   setAutoUpdateEnabled: "pi-gui:set-auto-update-enabled",
   getAutoUpdateEnabled: "pi-gui:get-auto-update-enabled",
   setSkipAutoTitle: "pi-gui:set-skip-auto-title",
@@ -169,6 +196,7 @@ export const desktopCommands = {
   openSettings: "open-settings",
   openNewThread: "open-new-thread",
   openConnectPhone: "open-connect-phone",
+  closeActiveSession: "close-active-session",
   toggleTerminal: "toggle-terminal",
   toggleSidebar: "toggle-sidebar",
   toggleDualPane: "toggle-dual-pane",
@@ -277,6 +305,10 @@ export interface DesktopShortcutInput {
   readonly code?: string;
 }
 
+export interface ArchiveSessionOptions {
+  readonly includePaired?: boolean;
+}
+
 export function getDesktopCommandFromShortcut(input: DesktopShortcutInput): PiDesktopCommand | undefined {
   if (!input.modifier) {
     return undefined;
@@ -289,6 +321,7 @@ export function getDesktopCommandFromShortcut(input: DesktopShortcutInput): PiDe
   const isN = lowerKey === "n" || input.code === "KeyN";
   const isM = lowerKey === "m" || input.code === "KeyM";
   const isD = lowerKey === "d" || input.code === "KeyD";
+  const isW = lowerKey === "w" || input.code === "KeyW";
   const isShiftO = input.shift && (lowerKey === "o" || input.code === "KeyO");
 
   if (!input.shift && isComma) {
@@ -311,6 +344,11 @@ export function getDesktopCommandFromShortcut(input: DesktopShortcutInput): PiDe
   // Cmd/Ctrl+M opens the Connect Phone view.
   if (!input.shift && isM) {
     return desktopCommands.openConnectPhone;
+  }
+
+  // Cmd/Ctrl+W closes the active conversation instead of the app window.
+  if (!input.shift && isW) {
+    return desktopCommands.closeActiveSession;
   }
 
   // Cmd/Ctrl+D toggles the dual-pane (split) view. Routed through the main
@@ -350,7 +388,7 @@ export interface PiDesktopApi {
   openExtensionInFinder(workspaceId: string, filePath: string): Promise<void>;
   syncCurrentWorkspace(): Promise<DesktopAppState>;
   selectSession(target: WorkspaceSessionTarget): Promise<DesktopAppState>;
-  archiveSession(target: WorkspaceSessionTarget): Promise<DesktopAppState>;
+  archiveSession(target: WorkspaceSessionTarget, options?: ArchiveSessionOptions): Promise<DesktopAppState>;
   unarchiveSession(target: WorkspaceSessionTarget): Promise<DesktopAppState>;
   createSession(input: CreateSessionInput): Promise<DesktopAppState>;
   startThread(input: StartThreadInput): Promise<DesktopAppState>;
@@ -379,6 +417,9 @@ export interface PiDesktopApi {
     thinkingLevel: NonNullable<RuntimeSettingsSnapshot["defaultThinkingLevel"]>,
   ): Promise<DesktopAppState>;
   loginProvider(workspaceId: string, providerId: string): Promise<DesktopAppState>;
+  getFxAuthStatus(workspaceId: string): Promise<FxAuthStatus>;
+  loginFxProvider(workspaceId: string, provider: FxAuthProvider): Promise<FxAuthStatus>;
+  selectFxProvider(workspaceId: string, provider: FxAuthProvider): Promise<FxAuthStatus>;
   logoutProvider(workspaceId: string, providerId: string): Promise<DesktopAppState>;
   setProviderApiKey(workspaceId: string, providerId: string, apiKey: string): Promise<DesktopAppState>;
   listCustomModelProviders(): Promise<readonly RuntimeCustomModelProviderRecord[]>;
@@ -424,9 +465,11 @@ export interface PiDesktopApi {
   setLocale(locale: string): Promise<DesktopAppState>;
   getLocale(): Promise<string>;
   getProviderBalance(providerId: string): Promise<{ balance: string } | { error: string }>;
-  checkForUpdate(): Promise<{ status: string; current?: string; latest?: string; message?: string }>;
-  downloadUpdate(): Promise<{ status: string; message?: string }>;
+  checkForUpdate(): Promise<DesktopUpdateStatus>;
+  downloadUpdate(): Promise<DesktopUpdateStatus>;
   installUpdate(): Promise<void>;
+  getUpdateStatus(): Promise<DesktopUpdateStatus>;
+  onUpdateStatusChanged(callback: (status: DesktopUpdateStatus) => void): () => void;
   setAutoUpdateEnabled(enabled: boolean): Promise<boolean>;
   getAutoUpdateEnabled(): Promise<boolean>;
   setSkipAutoTitle(enabled: boolean): Promise<DesktopAppState>;

@@ -448,6 +448,8 @@ declare module "@pi-gui/session-driver/runtime-types" {
     readonly enabledModelPatterns: readonly string[];
   }
 
+  export const NO_ENABLED_MODELS_PATTERN: "__pi_gui_no_enabled_models__";
+
   export interface RuntimeLoginAuthInfo {
     readonly url: string;
     readonly instructions?: string;

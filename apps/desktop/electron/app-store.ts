@@ -61,6 +61,7 @@ import {
   type TranscriptMessage,
   type WorkspaceSessionTarget,
 } from "../src/desktop-state";
+import type { FxAuthProvider, FxAuthStatus } from "../src/fx-auth";
 import {
   applyTimelineEvent,
   appendAssistantDelta,
@@ -405,8 +406,11 @@ export class DesktopAppStore implements AppStoreInternals {
     });
   }
 
-  async archiveSession(target: WorkspaceSessionTarget): Promise<DesktopAppState> {
-    return workspace.archiveSession(this, target);
+  async archiveSession(
+    target: WorkspaceSessionTarget,
+    options?: { readonly includePaired?: boolean },
+  ): Promise<DesktopAppState> {
+    return workspace.archiveSession(this, target, options);
   }
 
   async unarchiveSession(target: WorkspaceSessionTarget): Promise<DesktopAppState> {
@@ -863,6 +867,50 @@ export class DesktopAppStore implements AppStoreInternals {
     return composer.setSessionThinkingLevel(this, sessionRef, thinkingLevel);
   }
 
+  async getFxAuthStatus(workspaceId: string): Promise<FxAuthStatus> {
+    await this.initialize();
+    const workspace = this.workspaceRefFromState(workspaceId);
+    if (!workspace) {
+      return {
+        state: "error",
+        connectedProviders: [],
+        models: [],
+        message: `Unknown workspace: ${workspaceId}`,
+      };
+    }
+    return this.driver.getFxAuthStatus(workspace.path);
+  }
+
+  async loginFxProvider(workspaceId: string, provider: FxAuthProvider): Promise<FxAuthStatus> {
+    await this.initialize();
+    const workspace = this.workspaceRefFromState(workspaceId);
+    if (!workspace) throw new Error(`Unknown workspace: ${workspaceId}`);
+
+    const status = await this.driver.loginFxProvider(workspace.path, provider);
+    return this.applyFxAuthStatus(status);
+  }
+
+  async selectFxProvider(workspaceId: string, provider: FxAuthProvider): Promise<FxAuthStatus> {
+    await this.initialize();
+    const workspace = this.workspaceRefFromState(workspaceId);
+    if (!workspace) throw new Error(`Unknown workspace: ${workspaceId}`);
+    const status = await this.driver.selectFxProvider(workspace.path, provider);
+    return this.applyFxAuthStatus(status);
+  }
+
+  private async applyFxAuthStatus(status: FxAuthStatus): Promise<FxAuthStatus> {
+    const fxDefaultModel = await this.driver.getFxDefaultModelSelection();
+    const { fxDefaultModel: _previousFxDefaultModel, ...stateWithoutFxDefaultModel } = this.state;
+    this.state = {
+      ...stateWithoutFxDefaultModel,
+      revision: this.state.revision + 1,
+      fxAvailable: true,
+      ...(fxDefaultModel ? { fxDefaultModel } : {}),
+    };
+    this.emit();
+    return status;
+  }
+
   async loginProvider(
     workspaceId: string, providerId: string, callbacks: RuntimeLoginCallbacks,
   ): Promise<DesktopAppState> {
@@ -1128,10 +1176,15 @@ export class DesktopAppStore implements AppStoreInternals {
   private async initializeInternal(): Promise<void> {
     const persisted = await this.readUiState();
     try {
+      const [fxAvailable, fxDefaultModel] = await Promise.all([
+        this.driver.isFxAvailable(),
+        this.driver.getFxDefaultModelSelection(),
+      ]);
       this.state = {
         ...this.state,
         activeView: "threads",
-        fxAvailable: await this.driver.isFxAvailable(),
+        fxAvailable,
+        ...(fxDefaultModel ? { fxDefaultModel } : {}),
         modelSettingsScopeMode: persisted.modelSettingsScopeMode ?? this.state.modelSettingsScopeMode,
         globalModelSettings: persisted.appGlobalModelSettings ?? this.state.globalModelSettings,
         notificationPreferences: {

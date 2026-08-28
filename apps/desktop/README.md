@@ -35,9 +35,9 @@ pnpm --filter @pi-gui/desktop preview
 
 ## Pi + fx Runtime
 
-On macOS and Linux, new tasks open as a paired workspace when a compatible fx runtime is available: Pi is the primary left pane and fx is the secondary right pane. The runtimes stay independent and share only the workspace and desktop session catalog.
+New threads default to Pi. When a compatible fx runtime is available, the Pi/ƒx control to the right of the workspace picker can switch the new thread to fx; only the selected harness is started.
 
-The engine control in the upper-left of each pane identifies the active harness. Selecting the other engine swaps the paired sessions between panes while preserving their independent runtime, transcript, model, and draft. A paired task defaults to Pi on the left and fx on the right.
+Existing Pi and fx sessions can still be placed side by side. The engine control in the upper-left of each pane identifies the active harness, and selecting the other engine swaps the sessions between panes while preserving their independent runtime, transcript, model, and draft.
 
 | Capability | Pi harness | fx harness |
 | --- | --- | --- |
@@ -46,19 +46,31 @@ The engine control in the upper-left of each pane identifies the active harness.
 | State | Pi session format managed through the thin desktop driver | fx-owned sessions loaded and resumed by fx |
 | Authentication | Pi provider configuration | Reuses the user's system fx login when compatible |
 
+Settings → Harnesses shows the native fx connection state for Vercel AI Gateway, OpenAI Codex, and xAI Grok. Connecting a provider runs fx's own browser login command, then restores the previously active provider; the account is activated only when the user selects **Use**. New fx threads initialize their model picker from `fx status --json` and `fx models --json`.
+
+Local OpenAI-compatible providers remain a Pi runtime capability. Available local models are shown alongside fx models for discoverability, but choosing one visibly changes the new-thread harness to Pi. This prevents a local model ID or filesystem path from being submitted through an fx Codex subscription, which Codex rejects.
+
 The app resolves fx in this order so an existing login is reused:
 
 1. `PI_FX_BINARY` (development and tests)
 2. `fx` on `PATH`, `~/.fx/bin/fx`, or `~/.local/bin/fx`
 3. the architecture-specific fx binary bundled in the app
 
-`pnpm --filter @pi-gui/desktop build` stages the host fx runtime on macOS and Linux. macOS release packaging stages both Apple Silicon and Intel binaries, verifies downloaded release checksums, and includes fx license notices. Upstream fx does not currently publish a Windows runtime, so the paired fx pane is unavailable there. Set `PI_FX_ENABLED=1` only for tests that intentionally exercise the real fx runtime; normal deterministic tests leave it disabled.
+`pnpm --filter @pi-gui/desktop build` stages the host fx runtime on macOS and Linux. macOS release packaging stages both Apple Silicon and Intel binaries, verifies downloaded release checksums, and includes fx license notices. Upstream fx does not currently publish a Windows runtime, so fx selection is unavailable there. Set `PI_FX_ENABLED=1` only for tests that intentionally exercise the real fx runtime; normal deterministic tests leave it disabled.
 
 Package a Linux AppImage locally:
 
 ```bash
 pnpm --filter @pi-gui/desktop run package:linux
 ```
+
+## Windows Updates
+
+The installed NSIS build checks the published GitHub Release feed every four hours. An available version is shown inside the running app; the user starts the download, sees byte and percentage progress, and chooses whether to restart immediately after the update is ready. Session persistence is flushed before `quitAndInstall` runs.
+
+`electron-updater` uses the setup `.blockmap` for differential download when its previous-installer cache and both blockmaps are available. It safely falls back to the complete setup executable when differential prerequisites are missing. The portable executable is a standalone artifact and cannot provide the same reliable in-place replacement contract, so the installed Setup build is recommended for automatic updates.
+
+The release workflow refuses to publish Windows assets unless `latest.yml`, the versioned NSIS setup executable, and its `.blockmap` all exist and match. After every selected platform matrix job succeeds, the draft GitHub Release is published and marked latest.
 
 Live agent tests use your existing `pi` runtime and provider auth. If local `pi` runs do not work, the `live` lane will not be meaningful either.
 

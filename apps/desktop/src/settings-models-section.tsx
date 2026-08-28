@@ -9,6 +9,15 @@ import {
   THINKING_LEVELS,
 } from "./settings-utils";
 import { useT } from "./i18n";
+import {
+  buildProviderBulkSelection,
+  NO_ENABLED_MODELS_PATTERN,
+  normalizeEnabledModelPatterns,
+  runtimeModelPattern,
+  type ModelBulkSelectionMode,
+} from "./model-bulk-selection";
+
+const MAX_ENABLED_MODEL_PILLS = 12;
 
 interface SettingsModelsSectionProps {
   readonly runtime?: RuntimeSnapshot;
@@ -26,6 +35,8 @@ export function SettingsModelsSection({
   const t = useT();
   const [modelQuery, setModelQuery] = useState("");
   const [scopedQuery, setScopedQuery] = useState("");
+  const [scopedEditorOpen, setScopedEditorOpen] = useState(false);
+  const [allModelsOpen, setAllModelsOpen] = useState(false);
 
   const models = runtime?.models ?? [];
   const availableModels = models.filter((m) => m.available);
@@ -34,15 +45,17 @@ export function SettingsModelsSection({
   const allImplicitlyEnabled = enabledPatterns.length === 0;
 
   const activeScopedPatterns = allImplicitlyEnabled
-    ? availableModels.map((model) => `${model.providerId}/${model.modelId}`)
+    ? availableModels.map(runtimeModelPattern)
     : enabledPatterns;
   const activeScopedSet = new Set(activeScopedPatterns);
 
   const enabledAvailableModels = availableModels.filter((model) => {
     if (allImplicitlyEnabled) return true;
-    return activeScopedSet.has(`${model.providerId}/${model.modelId}`);
+    return activeScopedSet.has(runtimeModelPattern(model));
   });
-  const enabledAvailablePatterns = enabledAvailableModels.map((model) => `${model.providerId}/${model.modelId}`);
+  const enabledAvailablePatterns = enabledAvailableModels.map(runtimeModelPattern);
+  const displayedEnabledPatterns = enabledAvailablePatterns.slice(0, MAX_ENABLED_MODEL_PILLS);
+  const hiddenEnabledPatternCount = enabledAvailablePatterns.length - displayedEnabledPatterns.length;
 
   const defaultProvider = runtime?.settings.defaultProvider;
   const defaultModelId = runtime?.settings.defaultModelId;
@@ -53,13 +66,23 @@ export function SettingsModelsSection({
 
   const filteredModels = filterModels(models, modelQuery);
   const filteredScopedModels = filterModels(availableModels, scopedQuery);
+  const hasOpenRouterModels = availableModels.some((model) => model.providerId === "openrouter");
 
   const togglePattern = (pattern: string, checked: boolean) => {
+    const currentPatterns = activeScopedPatterns.filter((entry) => entry !== NO_ENABLED_MODELS_PATTERN);
     const newPatterns = checked
-      ? [...activeScopedPatterns, pattern]
-      : activeScopedPatterns.filter((entry) => entry !== pattern);
-    if (newPatterns.length === 0) return;
-    onSetScopedModelPatterns(newPatterns);
+      ? [...currentPatterns, pattern]
+      : currentPatterns.filter((entry) => entry !== pattern);
+    onSetScopedModelPatterns(normalizeEnabledModelPatterns(newPatterns));
+  };
+
+  const applyOpenRouterSelection = (mode: ModelBulkSelectionMode) => {
+    onSetScopedModelPatterns(buildProviderBulkSelection(
+      availableModels,
+      activeScopedPatterns,
+      "openrouter",
+      mode,
+    ));
   };
 
   return (
@@ -109,9 +132,14 @@ export function SettingsModelsSection({
         <div className="settings-row">
           {enabledAvailablePatterns.length > 0 ? (
             <div className="settings-pill-row">
-              {enabledAvailablePatterns.map((pattern) => (
+              {displayedEnabledPatterns.map((pattern) => (
                 <span className={settingsPill(true)} key={pattern}>{pattern}</span>
               ))}
+              {hiddenEnabledPatternCount > 0 ? (
+                <span className="settings-hint">
+                  {t("settings.models.moreEnabled", { count: String(hiddenEnabledPatternCount) })}
+                </span>
+              ) : null}
             </div>
           ) : (
             <span className="settings-hint">
@@ -133,12 +161,16 @@ export function SettingsModelsSection({
             </span>
           </div>
         ) : null}
-        <details className="settings-disclosure">
+        <details
+          className="settings-disclosure"
+          open={scopedEditorOpen}
+          onToggle={(event) => setScopedEditorOpen(event.currentTarget.open)}
+        >
           <summary className="settings-disclosure__summary">
             <span>{t("settings.models.editEnabled")}</span>
             <span>{filteredScopedModels.length}</span>
           </summary>
-          <div className="settings-disclosure__body">
+          {scopedEditorOpen ? <div className="settings-disclosure__body">
             <input
               aria-label={t("settings.models.searchEnabled")}
               className="settings-search"
@@ -146,17 +178,28 @@ export function SettingsModelsSection({
               value={scopedQuery}
               onChange={(event) => setScopedQuery(event.target.value)}
             />
+            {hasOpenRouterModels ? (
+              <div className="settings-model-bulk-actions" role="group" aria-label={t("settings.models.openRouterActions")}>
+                <span className="settings-model-bulk-actions__label">OpenRouter</span>
+                <button type="button" onClick={() => applyOpenRouterSelection("none")}>
+                  {t("settings.models.selectNone")}
+                </button>
+                <button type="button" onClick={() => applyOpenRouterSelection("all")}>
+                  {t("settings.models.selectAll")}
+                </button>
+                <button type="button" onClick={() => applyOpenRouterSelection("smart")}>
+                  {t("settings.models.smartSelect")}
+                </button>
+              </div>
+            ) : null}
             <div className="settings-list">
               {filteredScopedModels.map((model) => {
-                const pattern = `${model.providerId}/${model.modelId}`;
+                const pattern = runtimeModelPattern(model);
                 const enabled = activeScopedSet.has(pattern);
-                const isLast = enabled && activeScopedPatterns.length <= 1;
                 return (
                   <label className="settings-toggle settings-toggle--row" key={pattern}>
                     <input
                       checked={enabled}
-                      disabled={isLast}
-                      title={isLast ? t("settings.models.atLeastOne") : undefined}
                       type="checkbox"
                       onChange={(event) => togglePattern(pattern, event.target.checked)}
                     />
@@ -168,17 +211,21 @@ export function SettingsModelsSection({
                 );
               })}
             </div>
-          </div>
+          </div> : null}
         </details>
       </SettingsGroup>
 
       <SettingsGroup title={t("settings.models.allModels")} description={t("settings.models.allModelsDesc")}>
-        <details className="settings-disclosure">
+        <details
+          className="settings-disclosure"
+          open={allModelsOpen}
+          onToggle={(event) => setAllModelsOpen(event.currentTarget.open)}
+        >
           <summary className="settings-disclosure__summary">
             <span>{t("settings.models.browseAll")}</span>
             <span>{filteredModels.length}</span>
           </summary>
-          <div className="settings-disclosure__body">
+          {allModelsOpen ? <div className="settings-disclosure__body">
             <input
               aria-label={t("settings.models.searchModels")}
               className="settings-search"
@@ -188,9 +235,8 @@ export function SettingsModelsSection({
             />
             <div className="settings-list">
               {filteredModels.map((model) => {
-                const pattern = `${model.providerId}/${model.modelId}`;
+                const pattern = runtimeModelPattern(model);
                 const enabled = activeScopedSet.has(pattern);
-                const isLast = enabled && activeScopedPatterns.length <= 1;
                 return (
                   <div className="settings-option" key={`${model.providerId}:${model.modelId}`}>
                     <span className="settings-option__title">{model.providerName} · {model.label}</span>
@@ -204,8 +250,6 @@ export function SettingsModelsSection({
                       <label className="settings-toggle settings-toggle--inline">
                         <input
                           checked={enabled}
-                          disabled={isLast}
-                          title={isLast ? t("settings.models.atLeastOne") : undefined}
                           type="checkbox"
                           onChange={(event) => togglePattern(pattern, event.target.checked)}
                         />
@@ -216,7 +260,7 @@ export function SettingsModelsSection({
                 );
               })}
             </div>
-          </div>
+          </div> : null}
         </details>
       </SettingsGroup>
     </>

@@ -6,8 +6,68 @@ import {
   launchDesktop,
   makeUserDataDir,
   makeWorkspace,
+  seedTranscriptMessages,
   selectSession,
 } from "../helpers/electron-app";
+
+test("keeps the primary transcript stable while opening dual pane", async () => {
+  test.setTimeout(90_000);
+  const userDataDir = await makeUserDataDir();
+  const workspacePath = await makeWorkspace("dual-pane-layout-stability");
+  const harness = await launchDesktop(userDataDir, {
+    initialWorkspaces: [workspacePath],
+    testMode: "background",
+  });
+
+  try {
+    const window = await harness.firstWindow();
+    await createSessionViaIpc(window, workspacePath, "Long primary session");
+    await selectSession(window, "Long primary session");
+    await expect(window.locator(".dual-pane")).toHaveCount(0);
+
+    await seedTranscriptMessages(harness, window, {
+      count: 90,
+      textFactory: (index) =>
+        `Primary transcript row ${index}: ${"This text wraps when the conversation column becomes narrower. ".repeat(3)}`,
+    });
+    await expect(window.getByTestId("transcript").locator(":scope > *")).not.toHaveCount(0);
+
+    const layoutSamples = window.evaluate(async () => {
+      const deadline = performance.now() + 10_000;
+      while (!document.querySelector(".dual-pane") && performance.now() < deadline) {
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      }
+
+      const samples: Array<{ rowBottom: number; bottomGap: number; contentWidth: number; scrollbarGutter: string }> = [];
+      for (let index = 0; index < 24; index += 1) {
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+        const pane = document.querySelector<HTMLElement>(".dual-pane__col .timeline-pane");
+        const lastRow = pane?.querySelector<HTMLElement>(".timeline > :last-child");
+        if (!pane || !lastRow) throw new Error("Primary dual-pane transcript is incomplete");
+        samples.push({
+          rowBottom: lastRow.getBoundingClientRect().bottom,
+          bottomGap: pane.scrollHeight - pane.scrollTop - pane.clientHeight,
+          contentWidth: pane.clientWidth,
+          scrollbarGutter: getComputedStyle(pane).scrollbarGutter,
+        });
+      }
+      return samples;
+    });
+
+    await createSessionViaIpc(window, workspacePath, "Secondary session");
+    await expect(window.locator(".dual-pane")).toBeVisible({ timeout: 15_000 });
+
+    const samples = await layoutSamples;
+    const rowBottoms = samples.map((sample) => sample.rowBottom);
+    const contentWidths = samples.map((sample) => sample.contentWidth);
+    expect(Math.max(...rowBottoms) - Math.min(...rowBottoms)).toBeLessThan(1);
+    expect(Math.max(...contentWidths) - Math.min(...contentWidths)).toBeLessThan(1);
+    expect(samples.every((sample) => sample.scrollbarGutter === "stable")).toBe(true);
+    expect(samples.every((sample) => Math.abs(sample.bottomGap) < 1)).toBe(true);
+  } finally {
+    await harness.close();
+  }
+});
 
 test("submits the right pane composer to the secondary session", async () => {
   test.setTimeout(60_000);

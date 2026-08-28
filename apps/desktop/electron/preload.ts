@@ -4,6 +4,7 @@ import {
   desktopIpc,
   type DshWebStatus,
   type DesktopNotificationPermissionStatus,
+  type DesktopUpdateStatus,
   type OpenDesignStatus,
   type PiDesktopCommand,
   type TerminalDataEvent,
@@ -49,6 +50,7 @@ import type {
   StartThreadInput,
   WorkspaceSessionTarget,
 } from "../src/desktop-state";
+import type { FxAuthProvider, FxAuthStatus } from "../src/fx-auth";
 
 const devReloadMarkersEnabled = process.env.PI_APP_DEV_RELOAD_MARKERS === "1";
 
@@ -156,8 +158,8 @@ contextBridge.exposeInMainWorld("piApp", {
     ipcRenderer.invoke(desktopIpc.syncCurrentWorkspace) as Promise<DesktopAppState>,
   selectSession: (target: WorkspaceSessionTarget) =>
     ipcRenderer.invoke(desktopIpc.selectSession, target) as Promise<DesktopAppState>,
-  archiveSession: (target: WorkspaceSessionTarget) =>
-    ipcRenderer.invoke(desktopIpc.archiveSession, target) as Promise<DesktopAppState>,
+  archiveSession: (target: WorkspaceSessionTarget, options?: { readonly includePaired?: boolean }) =>
+    ipcRenderer.invoke(desktopIpc.archiveSession, target, options) as Promise<DesktopAppState>,
   unarchiveSession: (target: WorkspaceSessionTarget) =>
     ipcRenderer.invoke(desktopIpc.unarchiveSession, target) as Promise<DesktopAppState>,
   createSession: (input: CreateSessionInput) =>
@@ -189,6 +191,12 @@ contextBridge.exposeInMainWorld("piApp", {
     ipcRenderer.invoke(desktopIpc.setSessionThinkingLevel, workspaceId, sessionId, thinkingLevel) as Promise<DesktopAppState>,
   loginProvider: (workspaceId: string, providerId: string) =>
     ipcRenderer.invoke(desktopIpc.loginProvider, workspaceId, providerId) as Promise<DesktopAppState>,
+  getFxAuthStatus: (workspaceId: string) =>
+    ipcRenderer.invoke(desktopIpc.getFxAuthStatus, workspaceId) as Promise<FxAuthStatus>,
+  loginFxProvider: (workspaceId: string, provider: FxAuthProvider) =>
+    ipcRenderer.invoke(desktopIpc.loginFxProvider, workspaceId, provider) as Promise<FxAuthStatus>,
+  selectFxProvider: (workspaceId: string, provider: FxAuthProvider) =>
+    ipcRenderer.invoke(desktopIpc.selectFxProvider, workspaceId, provider) as Promise<FxAuthStatus>,
   logoutProvider: (workspaceId: string, providerId: string) =>
     ipcRenderer.invoke(desktopIpc.logoutProvider, workspaceId, providerId) as Promise<DesktopAppState>,
   setProviderApiKey: (workspaceId: string, providerId: string, apiKey: string) =>
@@ -252,7 +260,11 @@ contextBridge.exposeInMainWorld("piApp", {
   downloadUpdate: () =>
     ipcRenderer.invoke(desktopIpc.downloadUpdate),
   installUpdate: () =>
-    ipcRenderer.invoke(desktopIpc.installUpdate),
+    ipcRenderer.invoke(desktopIpc.installUpdate) as Promise<void>,
+  getUpdateStatus: () =>
+    ipcRenderer.invoke(desktopIpc.getUpdateStatus) as Promise<DesktopUpdateStatus>,
+  onUpdateStatusChanged: (listener: (status: DesktopUpdateStatus) => void) =>
+    subscribeIpc(desktopIpc.updateStatusChanged, listener),
   setAutoUpdateEnabled: (enabled: boolean) =>
     ipcRenderer.invoke(desktopIpc.setAutoUpdateEnabled, enabled),
   getAutoUpdateEnabled: () =>

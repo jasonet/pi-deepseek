@@ -1,7 +1,7 @@
 {
   "name": "@pi-gui/desktop",
   "private": true,
-  "version": "2.9.1",
+  "version": "2.9.3",
   "author": "Yiding by HKEZ",
   "license": "MIT",
   "description": "Deepseek GUI app for elegant pi coding agent",
@@ -34,6 +34,7 @@
     "verify:packaged-runtime-deps": "pnpm run verify:runtime-model-registry && node scripts/assert-packaged-runtime-deps.mjs",
     "verify:packaged-runtime-deps:linux": "pnpm run verify:runtime-model-registry && cross-env PI_APP_PACKAGE_PLATFORM=linux node scripts/assert-packaged-runtime-deps.mjs",
     "verify:release-no-secrets": "node scripts/assert-release-no-secrets.mjs",
+    "verify:windows-update-assets": "node scripts/assert-windows-update-assets.mjs",
     "verify:first-run:packaged": "node scripts/first-run-smoke.mjs",
     "test": "pnpm run test:e2e",
     "test:dsh-web-service": "pnpm run test:e2e:runner -- tests/unit/dsh-web-service.spec.ts",

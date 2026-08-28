@@ -10,6 +10,7 @@ import {
   type ComposerSlashCommandSection,
   type ComposerSlashOption,
   type ComposerSlashOptionEmptyState,
+  type ComposerModelOption,
 } from "./composer-commands";
 import { ComposerSurface } from "./composer-surface";
 import { ModelOnboardingNoticeBanner } from "./model-onboarding-notice";
@@ -21,6 +22,7 @@ interface NewThreadViewProps {
   readonly workspaces: readonly WorkspaceRecord[];
   readonly selectedWorkspaceId: string;
   readonly runtime?: RuntimeSnapshot;
+  readonly modelOptions?: readonly ComposerModelOption[];
   readonly environment: NewThreadEnvironment;
   readonly backendId: AgentBackendId;
   readonly availableBackends?: readonly AgentBackendId[];
@@ -67,6 +69,7 @@ export function NewThreadView({
   workspaces,
   selectedWorkspaceId,
   runtime,
+  modelOptions,
   environment,
   backendId,
   availableBackends = ["pi", "fx"],
@@ -165,7 +168,7 @@ export function NewThreadView({
           <HarnessEngineSwitch
             activeEngine={backendId}
             availableEngines={availableBackends}
-            paneLabel="Left"
+            context={{ kind: "new-thread" }}
             onSelect={onSelectBackend}
           />
           </div>
@@ -184,7 +187,8 @@ export function NewThreadView({
               composerDraft={prompt}
               setComposerDraft={onChangePrompt}
               composerRef={composerRef}
-              attachments={attachments}
+              attachments={backendId === "pi" ? attachments : []}
+              attachmentsEnabled={backendId === "pi"}
               slashSections={slashSections}
               slashOptions={slashOptions}
               selectedSlashCommand={selectedSlashCommand}
@@ -214,12 +218,14 @@ export function NewThreadView({
               footer={(
                 <NewThreadComposerFooter
                   runtime={runtime}
+                  modelOptions={modelOptions}
+                  backendId={backendId}
                   environment={environment}
                   provider={provider}
                   modelId={modelId}
                   thinkingLevel={thinkingLevel}
                   modelOnboarding={modelOnboarding}
-                  hasContent={Boolean(prompt.trim() || attachments.length > 0)}
+                  hasContent={Boolean(prompt.trim() || (backendId === "pi" && attachments.length > 0))}
                   fileInputRef={fileInputRef}
                   onSelectEnvironment={onSelectEnvironment}
                   onSetModel={onSetModel}
@@ -238,6 +244,8 @@ export function NewThreadView({
 
 interface NewThreadComposerFooterProps {
   readonly runtime?: RuntimeSnapshot;
+  readonly modelOptions?: readonly ComposerModelOption[];
+  readonly backendId: AgentBackendId;
   readonly environment: NewThreadEnvironment;
   readonly provider: string | undefined;
   readonly modelId: string | undefined;
@@ -254,6 +262,8 @@ interface NewThreadComposerFooterProps {
 
 function NewThreadComposerFooter({
   runtime,
+  modelOptions,
+  backendId,
   environment,
   provider,
   modelId,
@@ -290,14 +300,15 @@ function NewThreadComposerFooter({
             </div>
             <span className="new-thread__hint-separator">·</span>
             <ModelSelector
-              runtime={runtime}
+              runtime={backendId === "pi" ? runtime : undefined}
+              modelOptions={modelOptions}
               provider={provider}
               modelId={modelId}
               thinkingLevel={thinkingLevel}
               dropdownPlacement="below"
               showEmptyModelControl
               unselectedModelLabel={modelOnboarding.unselectedModelLabel}
-              emptyModelLabel={MODEL_OPTIONS_EMPTY_TITLE}
+              emptyModelLabel={backendId === "fx" ? modelOnboarding.unselectedModelLabel : MODEL_OPTIONS_EMPTY_TITLE}
               emptyModelTitle={modelOnboarding.emptyModelTitle}
               onSetModel={onSetModel}
               onSetThinking={onSetThinking}
@@ -305,27 +316,31 @@ function NewThreadComposerFooter({
           </div>
 
           <div className="composer__actions">
-            <input
-              ref={fileInputRef}
-              hidden
-              type="file"
-              multiple
-              onChange={(event) => {
-                const files = Array.from(event.target.files ?? []);
-                if (files.length > 0) {
-                  onAddAttachments(files);
-                }
-                event.currentTarget.value = "";
-              }}
-            />
-            <button
-              aria-label="Attach files"
-              className="icon-button composer__attach"
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <PlusIcon />
-            </button>
+            {backendId === "pi" ? (
+              <>
+                <input
+                  ref={fileInputRef}
+                  hidden
+                  type="file"
+                  multiple
+                  onChange={(event) => {
+                    const files = Array.from(event.target.files ?? []);
+                    if (files.length > 0) {
+                      onAddAttachments(files);
+                    }
+                    event.currentTarget.value = "";
+                  }}
+                />
+                <button
+                  aria-label="Attach files"
+                  className="icon-button composer__attach"
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <PlusIcon />
+                </button>
+              </>
+            ) : null}
             <button
               aria-label="Start thread"
               className="button button--primary button--cta-icon"

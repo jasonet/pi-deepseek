@@ -31,6 +31,7 @@ import type {
   RuntimeSnapshot,
   SaveRuntimeCustomModelProviderInput,
 } from "@pi-gui/session-driver/runtime-types";
+import { NO_ENABLED_MODELS_PATTERN } from "@pi-gui/session-driver/runtime-types";
 import type { WorkspaceRef } from "@pi-gui/session-driver";
 import { createRuntimeDependencies } from "./runtime-deps.js";
 import { createSettingsManagerWithoutNpmPackages, isGlobalNpmLookupError } from "./npm-package-fallback.js";
@@ -705,7 +706,7 @@ export class RuntimeSupervisor implements RuntimeResourceDriver {
     providerIds?: readonly string[],
   ): Promise<void> {
     const currentPatterns = context.settingsManager.getEnabledModels() ?? [];
-    if (currentPatterns.length === 0) {
+    if (currentPatterns.length === 0 || currentPatterns.includes(NO_ENABLED_MODELS_PATTERN)) {
       return;
     }
 

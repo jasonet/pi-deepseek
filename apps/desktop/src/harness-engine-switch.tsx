@@ -19,19 +19,22 @@ const ENGINE_DETAILS: Record<
 export interface HarnessEngineSwitchProps {
   readonly activeEngine: AgentBackendId;
   readonly availableEngines?: readonly AgentBackendId[];
-  readonly paneLabel: "Left" | "Right";
+  readonly context:
+    | { readonly kind: "new-thread" }
+    | { readonly kind: "pane"; readonly label: "Left" | "Right" };
   readonly onSelect: (engine: AgentBackendId) => void;
 }
 
 export function HarnessEngineSwitch({
   activeEngine,
   availableEngines = ["pi", "fx"],
-  paneLabel,
+  context,
   onSelect,
 }: HarnessEngineSwitchProps) {
+  const paneLabel = context.kind === "pane" ? context.label : undefined;
   return (
     <div
-      aria-label={`${paneLabel} harness engine`}
+      aria-label={paneLabel ? `${paneLabel} harness engine` : "New thread harness engine"}
       className="harness-engine-switch"
       role="group"
     >
@@ -42,7 +45,9 @@ export function HarnessEngineSwitch({
           const active = engine === activeEngine;
           return (
             <button
-              aria-label={`Use ${details.label} harness in ${paneLabel.toLowerCase()} pane`}
+              aria-label={context.kind === "pane"
+                ? `Use ${details.label} harness in ${context.label.toLowerCase()} pane`
+                : `Use ${details.label} harness for new thread`}
               aria-pressed={active}
               className={`harness-engine-switch__option harness-engine-switch__option--${engine}`}
               data-engine={engine}

@@ -23,6 +23,7 @@ import type {
   WorkspaceRef,
 } from "@pi-gui/session-driver";
 import { FxAcpDriver, isFxSession } from "./fx-acp-driver";
+import type { FxAuthProvider, FxAuthStatus } from "../src/fx-auth";
 
 export interface DesktopAgentDriverOptions extends PiSdkDriverConfig {
   readonly catalogStorage: SessionFileCatalogStorage;
@@ -55,6 +56,18 @@ export class DesktopAgentDriver implements SessionDriver {
     if (process.env.PI_APP_TEST_MODE && process.env.PI_FX_ENABLED !== "1")
       return Promise.resolve(false);
     return this.fx.isAvailable();
+  }
+  getFxDefaultModelSelection(): Promise<SessionModelSelection | undefined> {
+    return this.fx.getDefaultModelSelection();
+  }
+  getFxAuthStatus(workspacePath: string): Promise<FxAuthStatus> {
+    return this.fx.getAuthStatus(workspacePath);
+  }
+  loginFxProvider(workspacePath: string, provider: FxAuthProvider): Promise<FxAuthStatus> {
+    return this.fx.loginProvider(workspacePath, provider);
+  }
+  selectFxProvider(workspacePath: string, provider: FxAuthProvider): Promise<FxAuthStatus> {
+    return this.fx.selectProvider(workspacePath, provider);
   }
   createSession(workspace: WorkspaceRef, options?: CreateSessionOptions) {
     return options?.backendId === "fx"

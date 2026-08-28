@@ -9,6 +9,7 @@ import {
 
 interface ModelSelectorProps {
   readonly runtime: RuntimeSnapshot | undefined;
+  readonly modelOptions?: readonly ComposerModelOption[];
   readonly provider: string | undefined;
   readonly modelId: string | undefined;
   readonly thinkingLevel: string | undefined;
@@ -26,6 +27,7 @@ type OpenDropdown = "none" | "model" | "thinking";
 
 export function ModelSelector({
   runtime,
+  modelOptions: suppliedModelOptions,
   provider,
   modelId,
   thinkingLevel,
@@ -42,7 +44,10 @@ export function ModelSelector({
   const [modelFilter, setModelFilter] = useState("");
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  const modelOptions = useMemo(() => buildModelOptions(runtime), [runtime]);
+  const modelOptions = useMemo(
+    () => suppliedModelOptions ?? buildModelOptions(runtime),
+    [runtime, suppliedModelOptions],
+  );
   const filteredModels = useMemo(() => {
     if (!modelFilter) return modelOptions;
     const q = modelFilter.toLowerCase();

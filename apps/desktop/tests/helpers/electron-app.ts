@@ -7,7 +7,7 @@ import { promisify } from "node:util";
 import { expect, type Page } from "@playwright/test";
 import { _electron as electron, type ElectronApplication } from "playwright";
 import type { SessionDriverEvent, SessionRef } from "@pi-gui/session-driver";
-import type { PiDesktopApi } from "../../src/ipc";
+import type { DesktopUpdateStatus, PiDesktopApi } from "../../src/ipc";
 import type {
   DesktopAppState,
   NewThreadEnvironment,
@@ -199,7 +199,14 @@ function createDesktopHarness(electronApp: ElectronApplication): DesktopHarness 
         .toBe(true);
     },
     close: async () => {
-      await electronApp.close();
+      const childProcess = electronApp.process();
+      const closeResult = await Promise.race([
+        electronApp.close().then(() => "closed" as const),
+        new Promise<"timeout">((resolve) => setTimeout(() => resolve("timeout"), 10_000)),
+      ]);
+      if (closeResult === "timeout" && !childProcess.killed) {
+        childProcess.kill("SIGKILL");
+      }
     },
   };
 }
@@ -1036,6 +1043,33 @@ export async function emitTestSessionEvent(
   }, event);
 }
 
+export async function emitTestUpdateStatus(
+  harness: DesktopHarness,
+  status: DesktopUpdateStatus,
+): Promise<void> {
+  await harness.electronApp.evaluate(async (_, nextStatus) => {
+    const hooks = (globalThis as {
+      __PI_APP_TEST_HOOKS?: { emitUpdateStatus?: (status: DesktopUpdateStatus) => void };
+    }).__PI_APP_TEST_HOOKS;
+    if (!hooks?.emitUpdateStatus) {
+      throw new Error("Test update-status hook is unavailable");
+    }
+    hooks.emitUpdateStatus(nextStatus);
+  }, status);
+}
+
+export async function getUpdateInstallRequestCount(harness: DesktopHarness): Promise<number> {
+  return harness.electronApp.evaluate(async () => {
+    const hooks = (globalThis as {
+      __PI_APP_TEST_HOOKS?: { getUpdateInstallRequestCount?: () => number };
+    }).__PI_APP_TEST_HOOKS;
+    if (!hooks?.getUpdateInstallRequestCount) {
+      throw new Error("Test update-install hook is unavailable");
+    }
+    return hooks.getUpdateInstallRequestCount();
+  });
+}
+
 export async function setDeferredThreadTitleMode(harness: DesktopHarness): Promise<void> {
   await harness.electronApp.evaluate(async () => {
     const hooks = (globalThis as {
@@ -1351,7 +1385,7 @@ export async function openNewThread(window: Page): Promise<void> {
   if (await composer.isVisible().catch(() => false)) {
     return;
   }
-  const button = window.locator(".sidebar").getByRole("button", { name: "New thread", exact: true });
+  const button = window.locator(".sidebar").getByRole("button", { name: /New Thread/i });
   await expect(button).toBeVisible({ timeout: 15_000 });
   await expect(button).toBeEnabled({ timeout: 15_000 });
   await button.click();

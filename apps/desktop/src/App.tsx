@@ -2,6 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRe
 import type { AgentBackendId, SessionTreeSnapshot } from "@pi-gui/session-driver/types";
 import type { RuntimeSnapshot } from "@pi-gui/session-driver/runtime-types";
 import {
+  DEFAULT_NEW_THREAD_BACKEND,
   getSelectedSession,
   getSelectedWorkspace,
   type AppView,
@@ -18,13 +19,14 @@ import {
 } from "./desktop-state";
 import { formatRelativeTime } from "./string-utils";
 import { ComposerPanel } from "./composer-panel";
-import { buildModelOptions } from "./composer-commands";
+import { buildModelOptions, type ComposerModelOption } from "./composer-commands";
 import { parseTreeComposerCommand } from "./composer-commands";
 import {
   desktopCommands,
   getDesktopCommandFromShortcut,
   getDesktopShortcutLabel,
   type DesktopNotificationPermissionStatus,
+  type DesktopUpdateStatus,
   type PiDesktopCommand,
 } from "./ipc";
 import { deriveModelOnboardingState } from "./model-onboarding";
@@ -64,6 +66,12 @@ import { SecondarySurface } from "./secondary-surface";
 import { HarnessEngineSwitch } from "./harness-engine-switch";
 import type { SettingsSection } from "./settings-view";
 import type { DiffPanelFileRequest } from "./diff-panel";
+import { UpdateStatusBanner } from "./update-status-banner";
+import {
+  isFxRuntimeProvider,
+  toFxRuntimeProvider,
+  type FxAuthStatus,
+} from "./fx-auth";
 
 function ViewFallback() {
   return <div className="pi-loading-placeholder" />;
@@ -173,24 +181,32 @@ function formatRunningLabel(startedAt: string | undefined): string {
 export default function App() {
   const [snapshot, setSnapshot, selectedTranscript] = useDesktopAppState();
   const [composerDraft, setComposerDraft] = useState("");
-  const [settingsSection, setSettingsSection] = useState<SettingsSection>("providers");
+  const [settingsSection, setSettingsSection] = useState<SettingsSection>("harnesses");
   const [settingsWorkspaceId, setSettingsWorkspaceId] = useState("");
   const [skillsWorkspaceId, setSkillsWorkspaceId] = useState("");
   const [extensionsWorkspaceId, setExtensionsWorkspaceId] = useState("");
   const [pendingNewThreadWorkspaceId, setPendingNewThreadWorkspaceId] = useState("");
   const [newThreadRootWorkspaceId, setNewThreadRootWorkspaceId] = useState("");
   const [newThreadEnvironment, setNewThreadEnvironment] = useState<NewThreadEnvironment>("local");
-  const [newThreadBackend, setNewThreadBackend] = useState<AgentBackendId>("pi");
+  const [newThreadBackend, setNewThreadBackend] = useState<AgentBackendId>(DEFAULT_NEW_THREAD_BACKEND);
   const [newThreadPrompt, setNewThreadPrompt] = useState("");
   const [newThreadAttachments, setNewThreadAttachments] = useState<readonly ComposerAttachment[]>([]);
   const [newThreadProvider, setNewThreadProvider] = useState<string | undefined>();
   const [newThreadModelId, setNewThreadModelId] = useState<string | undefined>();
+  const [newThreadFxProvider, setNewThreadFxProvider] = useState<string | undefined>();
+  const [newThreadFxModelId, setNewThreadFxModelId] = useState<string | undefined>();
+  const [newThreadFxStatus, setNewThreadFxStatus] = useState<FxAuthStatus>();
   const [newThreadThinkingLevel, setNewThreadThinkingLevel] = useState<string | undefined>();
   const [newThreadComposerError, setNewThreadComposerError] = useState<string | undefined>();
   const [themeMode, setThemeMode] = useState<"system" | "light" | "dark">("system");
   const [notificationPermissionStatus, setNotificationPermissionStatus] =
     useState<DesktopNotificationPermissionStatus>("unknown");
   const [notificationPermissionPending, setNotificationPermissionPending] = useState(false);
+  const [updateStatus, setUpdateStatus] = useState<DesktopUpdateStatus>({
+    phase: "idle",
+    currentVersion: "",
+  });
+  const [dismissedUpdateKey, setDismissedUpdateKey] = useState("");
   const [dockExpandedBySession, setDockExpandedBySession] = useState<Record<string, boolean>>({});
   const [treeModalState, setTreeModalState] = useState<{
     readonly open: boolean;
@@ -266,6 +282,22 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    const piApi = window.piApp;
+    if (!piApi?.getUpdateStatus || !piApi.onUpdateStatusChanged) return undefined;
+    let active = true;
+    void piApi.getUpdateStatus().then((status) => {
+      if (active) setUpdateStatus(status);
+    });
+    const unsubscribe = piApi.onUpdateStatusChanged((status) => {
+      if (active) setUpdateStatus(status);
+    });
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
     if (snapshot) {
       document.documentElement.classList.toggle("enable-transparency", snapshot.enableTransparency);
     }
@@ -327,6 +359,7 @@ export default function App() {
     : undefined;
   // A valid dual-pane is any secondary session distinct from the primary.
   const isInDualPane = Boolean(secondarySession && selectedSession && secondarySession.id !== selectedSession.id);
+  const previousDualPaneLayoutRef = useRef(isInDualPane);
   const selectedSessionKey = selectedWorkspace && selectedSession ? `${selectedWorkspace.id}:${selectedSession.id}` : "";
   const secondarySessionKey = secondaryWorkspace && secondarySession ? `${secondaryWorkspace.id}:${secondarySession.id}` : "";
 
@@ -577,7 +610,9 @@ export default function App() {
   const newThreadWorkspace =
     rootWorkspaceOptions.find((entry) => entry.id === newThreadRootWorkspaceId) ?? rootWorkspaceOptions[0];
   const newThreadRuntime = snapshot ? getEffectiveModelRuntime(snapshot, newThreadWorkspace) : undefined;
-  const newThreadDefaultEnabled = buildModelOptions(newThreadRuntime).some(
+  const newThreadPiModelOptions = useMemo(() => buildModelOptions(newThreadRuntime), [newThreadRuntime]);
+  const localNewThreadModel = newThreadPiModelOptions.find((model) => model.providerId.startsWith("custom-"));
+  const newThreadDefaultEnabled = newThreadPiModelOptions.some(
     (m) => m.providerId === newThreadRuntime?.settings.defaultProvider && m.modelId === newThreadRuntime?.settings.defaultModelId,
   );
   const selectedDefaultEnabled = buildModelOptions(selectedModelRuntime).some(
@@ -610,9 +645,18 @@ export default function App() {
   const resolvedSecondaryThinkingLevel =
     secondaryPaneModelSelection?.thinkingLevel ??
     secondarySession?.config?.thinkingLevel ?? secondaryModelRuntime?.settings.defaultThinkingLevel;
-  const resolvedNewThreadProvider = newThreadProvider ?? (newThreadDefaultEnabled ? newThreadRuntime?.settings.defaultProvider : undefined);
-  const resolvedNewThreadModelId = newThreadModelId ?? (newThreadDefaultEnabled ? newThreadRuntime?.settings.defaultModelId : undefined);
-  const resolvedNewThreadThinkingLevel = newThreadThinkingLevel ?? newThreadRuntime?.settings.defaultThinkingLevel;
+  const activeFxSessionProvider = newThreadFxStatus?.activeProvider
+    ? toFxRuntimeProvider(newThreadFxStatus.activeProvider)
+    : undefined;
+  const resolvedNewThreadProvider = newThreadBackend === "fx"
+    ? newThreadFxProvider ?? activeFxSessionProvider ?? snapshot?.fxDefaultModel?.provider
+    : newThreadProvider ?? localNewThreadModel?.providerId ?? (newThreadDefaultEnabled ? newThreadRuntime?.settings.defaultProvider : undefined);
+  const resolvedNewThreadModelId = newThreadBackend === "fx"
+    ? newThreadFxModelId ?? newThreadFxStatus?.model ?? snapshot?.fxDefaultModel?.modelId
+    : newThreadModelId ?? localNewThreadModel?.modelId ?? (newThreadDefaultEnabled ? newThreadRuntime?.settings.defaultModelId : undefined);
+  const resolvedNewThreadThinkingLevel = newThreadBackend === "fx"
+    ? undefined
+    : newThreadThinkingLevel ?? newThreadRuntime?.settings.defaultThinkingLevel;
   const selectedSessionModelOnboarding = deriveModelOnboardingState(selectedModelRuntime, {
     provider: resolvedSessionProvider,
     modelId: resolvedSessionModelId,
@@ -621,10 +665,53 @@ export default function App() {
     provider: resolvedSecondaryProvider,
     modelId: resolvedSecondaryModelId,
   });
-  const newThreadModelOnboarding = deriveModelOnboardingState(newThreadRuntime, {
-    provider: resolvedNewThreadProvider,
-    modelId: resolvedNewThreadModelId,
-  });
+  const newThreadModelOnboarding = newThreadBackend === "fx"
+    ? {
+        hasSelectableModels: Boolean(resolvedNewThreadModelId),
+        requiresModelSelection: false,
+        unselectedModelLabel: "fx default",
+        emptyModelTitle: "fx default",
+        emptyModelDescription: "fx will use its configured default model.",
+      }
+    : deriveModelOnboardingState(newThreadRuntime, {
+        provider: resolvedNewThreadProvider,
+        modelId: resolvedNewThreadModelId,
+      });
+  const newThreadFxModelOptions = useMemo<readonly ComposerModelOption[]>(() => {
+    if (newThreadBackend !== "fx") return [];
+    const provider = newThreadFxStatus?.activeProvider
+      ? toFxRuntimeProvider(newThreadFxStatus.activeProvider)
+      : snapshot?.fxDefaultModel?.provider;
+    const fxOptions = provider
+      ? (newThreadFxStatus?.models ?? []).map((modelId) => ({
+          value: modelId,
+          label: `fx · ${modelId}`,
+          description: `${provider} · fx native model`,
+          providerId: provider,
+          modelId,
+        }))
+      : [];
+    const localOptions = newThreadPiModelOptions
+      .filter((model) => model.providerId.startsWith("custom-"))
+      .map((model) => ({ ...model, label: `Local · ${model.label}` }));
+    return [...localOptions, ...fxOptions];
+  }, [newThreadBackend, newThreadFxStatus, newThreadPiModelOptions, snapshot?.fxDefaultModel?.provider]);
+  useEffect(() => {
+    if (!api || newThreadBackend !== "fx" || !newThreadWorkspace?.id) return;
+    let active = true;
+    void api.getFxAuthStatus(newThreadWorkspace.id)
+      .then((status) => {
+        if (active) setNewThreadFxStatus(status);
+      })
+      .catch((error) => {
+        if (active) {
+          setNewThreadComposerError(errorMessage(error));
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [api, newThreadBackend, newThreadWorkspace?.id]);
   const [attachmentsClearedOnSubmit, setAttachmentsClearedOnSubmit] = useState(false);
   const composerAttachments = attachmentsClearedOnSubmit ? [] : (snapshot?.composerAttachments ?? []);
   const queuedComposerMessages = snapshot?.queuedComposerMessages ?? [];
@@ -1177,6 +1264,7 @@ export default function App() {
       setPendingNewThreadWorkspaceId("");
       setNewThreadRootWorkspaceId("");
       setNewThreadEnvironment("local");
+      setNewThreadBackend(DEFAULT_NEW_THREAD_BACKEND);
       setNewThreadAttachments([]);
       return;
     }
@@ -1218,10 +1306,14 @@ export default function App() {
       setNewThreadRootWorkspaceId(nextWorkspaceId);
     }
     setNewThreadEnvironment("local");
+    setNewThreadBackend(DEFAULT_NEW_THREAD_BACKEND);
     setNewThreadPrompt("");
     setNewThreadAttachments([]);
     setNewThreadProvider(undefined);
     setNewThreadModelId(undefined);
+    setNewThreadFxProvider(undefined);
+    setNewThreadFxModelId(undefined);
+    setNewThreadFxStatus(undefined);
     setNewThreadThinkingLevel(undefined);
     setNewThreadComposerError(undefined);
   };
@@ -1254,6 +1346,29 @@ export default function App() {
         return true;
       } else if (command === desktopCommands.toggleSidebar) {
         return handleTogglePrimarySidebar();
+      } else if (command === desktopCommands.closeActiveSession) {
+        if (!api || sidebarToggleStateRef.current.activeView !== "threads") {
+          return false;
+        }
+
+        const closeSecondary =
+          isInDualPane && activePaneIndex === 1 && secondaryWorkspaceId && secondarySessionId;
+        const target = closeSecondary
+          ? { workspaceId: secondaryWorkspaceId, sessionId: secondarySessionId }
+          : selectedWorkspace && selectedSession
+            ? { workspaceId: selectedWorkspace.id, sessionId: selectedSession.id }
+            : undefined;
+        if (!target) {
+          return false;
+        }
+
+        if (isInDualPane) {
+          setDualPaneEnabled(false);
+          clearSecondary();
+        }
+        setActivePaneIndex(0);
+        void updateSnapshot(api, setSnapshot, () => api.archiveSession(target, { includePaired: false }));
+        return true;
       } else if (command === desktopCommands.toggleDualPane) {
         // Toggle the auto-paired second column on/off (global preference). The
         // auto-pick effect fills or clears the secondary pane accordingly.
@@ -1286,21 +1401,6 @@ export default function App() {
       }
       // Esc leaves the full-screen Settings / Connect Phone views and returns to
       // the main app surface. Uses the live ref so the captured view is never stale.
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "w" && !event.shiftKey) {
-        if (sidebarToggleStateRef.current.activeView === "threads" && secondarySessionId) {
-          event.preventDefault();
-          // If the user was focused on the secondary pane, promote that session
-          // (in its own workspace) to be the sole selection as we collapse.
-          if (activePaneIndex === 1 && secondaryWorkspaceId && api) {
-            const sid = secondarySessionId;
-            const wid = secondaryWorkspaceId;
-            clearSecondary();
-            void updateSnapshot(api, setSnapshot, () => api.selectSession({ workspaceId: wid, sessionId: sid }));
-          } else { clearSecondary(); }
-          return;
-        }
-        return;
-      }
       // Cmd/Ctrl+D (toggle dual-pane) is handled via the main before-input-event
       // command path (desktopCommands.toggleDualPane), like every other app
       // shortcut, so the physical keystroke is captured reliably.
@@ -1377,6 +1477,9 @@ export default function App() {
     toggleDiffPanel,
     toggleTerminal,
     handleTogglePrimarySidebar,
+    isInDualPane,
+    selectedSession,
+    selectedWorkspace,
     secondarySessionId,
     secondaryWorkspaceId,
     activePaneIndex,
@@ -1394,6 +1497,20 @@ export default function App() {
     // Jump directly to bottom when entering a session — no animation
     pinnedToBottomRef.current = true;
   }, [selectedSessionKey]);
+
+  useLayoutEffect(() => {
+    const previousLayout = previousDualPaneLayoutRef.current;
+    previousDualPaneLayoutRef.current = isInDualPane;
+    if (previousLayout === isInDualPane || !selectedSessionKey || activeTranscript.length <= VIRTUALIZATION_THRESHOLD) {
+      return;
+    }
+
+    // Switching between one and two panes remounts the primary timeline at a new
+    // width. Render every row before that layout reaches the screen so estimated
+    // virtual-row heights cannot visibly reshuffle the left transcript.
+    resetExactBottomRestoreState(selectedSessionKey);
+    setDisableTimelineVirtualization(true);
+  }, [activeTranscript.length, isInDualPane, selectedSessionKey]);
 
   useLayoutEffect(() => {
     if (snapshot?.activeView !== "threads" || !selectedSession || activeTranscript.length === 0) {
@@ -1690,6 +1807,9 @@ export default function App() {
     setNewThreadAttachments([]);
     setNewThreadProvider(undefined);
     setNewThreadModelId(undefined);
+    setNewThreadFxProvider(undefined);
+    setNewThreadFxModelId(undefined);
+    setNewThreadFxStatus(undefined);
     setNewThreadThinkingLevel(undefined);
     setNewThreadComposerError(undefined);
   };
@@ -1750,6 +1870,17 @@ export default function App() {
       setAttachmentsClearedOnSubmit(false);
       setSnapshot((current) => (current ? { ...current, lastError: errorMessage(error) } : current));
     });
+  };
+
+  const retryLastMessage = () => {
+    if (!selectedSession || selectedSession.status === "running") return;
+    const lastUserMessage = [...activeTranscript]
+      .reverse()
+      .find((item) => item.kind === "message" && item.role === "user");
+    if (!lastUserMessage || lastUserMessage.kind !== "message" || lastUserMessage.role !== "user" || !lastUserMessage.text.trim()) {
+      return;
+    }
+    void updateSnapshot(api, setSnapshot, () => api.submitComposer(lastUserMessage.text));
   };
 
   const handleSecondarySubmit = (options: { readonly deliverAs?: "steer" | "followUp" } = {}) => {
@@ -2129,6 +2260,20 @@ export default function App() {
     void api?.setAutoUpdateEnabled(enabled);
   };
 
+  const handleDownloadUpdate = () => {
+    setDismissedUpdateKey("");
+    void api?.downloadUpdate().then(setUpdateStatus);
+  };
+
+  const handleRetryUpdate = () => {
+    setDismissedUpdateKey("");
+    void api?.checkForUpdate().then(setUpdateStatus);
+  };
+
+  const handleRestartForUpdate = () => {
+    void api?.installUpdate();
+  };
+
   const handleSetSkipAutoTitle = (enabled: boolean) => {
     setSnapshot((prev) => (prev ? { ...prev, skipAutoTitle: enabled, revision: prev.revision + 1 } : prev));
     void api?.setSkipAutoTitle(enabled);
@@ -2302,7 +2447,11 @@ export default function App() {
     if (startingThreadRef.current) {
       return;
     }
-    if (!newThreadRootWorkspaceId || (!newThreadPrompt.trim() && newThreadAttachments.length === 0)) {
+    const canSubmitAttachments = newThreadBackend === "pi";
+    if (
+      !newThreadRootWorkspaceId ||
+      (!newThreadPrompt.trim() && (!canSubmitAttachments || newThreadAttachments.length === 0))
+    ) {
       return;
     }
     if (newThreadModelOnboarding.requiresModelSelection) {
@@ -2318,19 +2467,27 @@ export default function App() {
       return;
     }
     const submittedPrompt = newThreadPrompt;
-    const submittedAttachments = newThreadAttachments;
-    const modelConfig = {
-      prompt: submittedPrompt,
-      attachments: submittedAttachments,
-      provider: resolvedNewThreadProvider,
-      modelId: resolvedNewThreadModelId,
-      thinkingLevel: resolvedNewThreadThinkingLevel,
+    const submittedAttachments = canSubmitAttachments ? newThreadAttachments : [];
+    const restoreSubmittedThread = (message?: string) => {
+      setNewThreadPrompt(submittedPrompt);
+      setNewThreadAttachments(newThreadAttachments);
+      if (message) setNewThreadComposerError(message);
     };
+    const submittedProvider = newThreadBackend === "fx" ? newThreadFxProvider : resolvedNewThreadProvider;
+    const submittedModelId = newThreadBackend === "fx" ? newThreadFxModelId : resolvedNewThreadModelId;
     const input: StartThreadInput = {
       rootWorkspaceId: newThreadRootWorkspaceId,
       environment: newThreadEnvironment,
       backendId: newThreadBackend,
-      ...modelConfig,
+      prompt: submittedPrompt,
+      attachments: submittedAttachments,
+      ...(submittedProvider && submittedModelId ? {
+        provider: submittedProvider,
+        modelId: submittedModelId,
+        ...(newThreadBackend === "pi" && resolvedNewThreadThinkingLevel
+          ? { thinkingLevel: resolvedNewThreadThinkingLevel }
+          : {}),
+      } : {}),
     };
     startingThreadRef.current = true;
     // Optimistically clear the composer before the await (mirrors the in-session
@@ -2339,20 +2496,25 @@ export default function App() {
     setNewThreadAttachments([]);
     wsMenu.expandWorkspace(newThreadRootWorkspaceId);
     void updateSnapshot(api, setSnapshot, () => api.startThread(input))
-      .then(() => {
-      setNewThreadProvider(undefined);
-      setNewThreadModelId(undefined);
-      setNewThreadThinkingLevel(undefined);
-      setNewThreadEnvironment("local");
+      .then((state) => {
+        if (state.lastError) {
+          restoreSubmittedThread(state.lastError);
+          return;
+        }
+        setNewThreadProvider(undefined);
+        setNewThreadModelId(undefined);
+        setNewThreadFxProvider(undefined);
+        setNewThreadFxModelId(undefined);
+        setNewThreadThinkingLevel(undefined);
+        setNewThreadEnvironment("local");
       })
-      .catch(() => {
-      // Restore the prompt so a failed start doesn't silently lose user input.
-      setNewThreadPrompt(submittedPrompt);
-      setNewThreadAttachments(submittedAttachments);
+      .catch((error) => {
+        // Restore the prompt so a failed start doesn't silently lose user input.
+        restoreSubmittedThread(errorMessage(error));
       })
       .finally(() => {
-      startingThreadRef.current = false;
-    });
+        startingThreadRef.current = false;
+      });
   };
 
   const handleTimelineScroll = () => {
@@ -2461,6 +2623,7 @@ export default function App() {
   const settingsNav = [
     { id: "appearance", label: nav("Appearance", "外观", "外觀", "外観") },
     { id: "general", label: nav("General", "通用", "一般", "一般") },
+    { id: "harnesses", label: nav("Harnesses", "运行引擎", "運行引擎", "ハーネス") },
     { id: "providers", label: nav("Providers", "提供商", "提供者", "プロバイダー") },
     { id: "models", label: nav("Models", "模型", "模型", "モデル") },
     { id: "tools", label: nav("External tools", "外部工具", "外部工具", "外部ツール") },
@@ -2499,7 +2662,9 @@ export default function App() {
             <SettingsView
           workspace={settingsWorkspace}
           workspaces={rootWorkspaceOptions}
-          runtime={settingsSection === "models" ? settingsModelRuntime : settingsRuntime}
+          runtime={settingsSection === "models" || settingsSection === "harnesses" ? settingsModelRuntime : settingsRuntime}
+          fxAvailable={snapshot.fxAvailable}
+          fxDefaultModel={snapshot.fxDefaultModel}
           section={settingsSection}
           notificationPreferences={snapshot.notificationPreferences}
           imChannels={snapshot.imChannels}
@@ -2651,10 +2816,20 @@ export default function App() {
   }
 
   const shellClassName = `shell${snapshot.sidebarCollapsed ? " shell--sidebar-collapsed" : ""}`;
+  const updateStatusKey = `${updateStatus.phase}:${updateStatus.latestVersion ?? ""}`;
 
   return (
     <LocaleProvider locale={snapshot.locale}>
     <div className={shellClassName}>
+      {dismissedUpdateKey !== updateStatusKey ? (
+        <UpdateStatusBanner
+          status={updateStatus}
+          onDownload={handleDownloadUpdate}
+          onRetry={handleRetryUpdate}
+          onRestart={handleRestartForUpdate}
+          onLater={() => setDismissedUpdateKey(updateStatusKey)}
+        />
+      ) : null}
       {primarySidebarToggleVisible ? (
         <SidebarToggleButton
           collapsed={snapshot.sidebarCollapsed}
@@ -2722,6 +2897,7 @@ export default function App() {
               workspaces={rootWorkspaceOptions}
               selectedWorkspaceId={newThreadRootWorkspaceId || rootWorkspaceOptions[0]?.id || ""}
               runtime={newThreadRuntime}
+              modelOptions={newThreadBackend === "fx" ? newThreadFxModelOptions : undefined}
               environment={newThreadEnvironment}
               backendId={newThreadBackend}
               availableBackends={snapshot.fxAvailable ? ["pi", "fx"] : ["pi"]}
@@ -2749,9 +2925,29 @@ export default function App() {
               selectedMentionIndex={newThreadMentionMenu.selectedIndex}
               onChangePrompt={setNewThreadPrompt}
               onSelectEnvironment={setNewThreadEnvironment}
-              onSelectBackend={setNewThreadBackend}
+              onSelectBackend={(backendId) => {
+                setNewThreadBackend(backendId);
+                setNewThreadComposerError(undefined);
+              }}
               onSelectWorkspace={handleSelectNewThreadWorkspace}
-              onSetModel={(provider, modelId) => { setNewThreadProvider(provider); setNewThreadModelId(modelId); }}
+              onSetModel={(provider, modelId) => {
+                if (newThreadBackend === "fx" && !isFxRuntimeProvider(provider)) {
+                  // Local OpenAI-compatible models are owned by Pi. Selecting
+                  // one visibly switches the harness instead of sending a local
+                  // path through the fx Codex subscription route.
+                  setNewThreadBackend("pi");
+                  setNewThreadProvider(provider);
+                  setNewThreadModelId(modelId);
+                  return;
+                }
+                if (newThreadBackend === "fx") {
+                  setNewThreadFxProvider(provider);
+                  setNewThreadFxModelId(modelId);
+                  return;
+                }
+                setNewThreadProvider(provider);
+                setNewThreadModelId(modelId);
+              }}
               onSetThinking={setNewThreadThinkingLevel}
               onOpenModelSettings={(section) => openSettings(newThreadWorkspace?.id, section)}
               onComposerKeyDown={handleNewThreadComposerKeyDown}
@@ -2798,7 +2994,7 @@ export default function App() {
                     <HarnessEngineSwitch
                       activeEngine={selectedSession.backendId}
                       availableEngines={[selectedSession.backendId, secondarySession.backendId]}
-                      paneLabel={panesSwapped ? "Right" : "Left"}
+                      context={{ kind: "pane", label: panesSwapped ? "Right" : "Left" }}
                       onSelect={(engine) => handleSelectHarness(panesSwapped ? "right" : "left", engine)}
                     />
                     <div className="chat-header__eyebrow">
@@ -2863,6 +3059,7 @@ export default function App() {
                   onOpenModelSettings={(section) => openSettings(selectedWorkspace?.rootWorkspaceId ?? selectedWorkspace?.id, section)
                           }
                   onSubmit={submitComposerDraft}
+                  onRetryLast={retryLastMessage}
                           onStop={() => {
                             void updateSnapshot(api, setSnapshot, () => api.cancelCurrentRun());
                           }}
@@ -2897,7 +3094,7 @@ export default function App() {
                         <HarnessEngineSwitch
                           activeEngine={secondarySession.backendId}
                           availableEngines={[selectedSession.backendId, secondarySession.backendId]}
-                          paneLabel={panesSwapped ? "Left" : "Right"}
+                          context={{ kind: "pane", label: panesSwapped ? "Left" : "Right" }}
                           onSelect={(engine) => handleSelectHarness(panesSwapped ? "left" : "right", engine)}
                         />
                         <div className="chat-header__eyebrow">
@@ -3065,6 +3262,7 @@ export default function App() {
                 openSettings(selectedWorkspace?.rootWorkspaceId ?? selectedWorkspace?.id, section)
               }
               onSubmit={submitComposerDraft}
+              onRetryLast={retryLastMessage}
                     onStop={() => {
                       void updateSnapshot(api, setSnapshot, () => api.cancelCurrentRun());
                     }}

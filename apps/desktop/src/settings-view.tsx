@@ -4,6 +4,7 @@ import type { DesktopNotificationPermissionStatus } from "./ipc";
 import { SettingsAppearanceSection } from "./settings-appearance-section";
 import { SettingsChannelsSection } from "./settings-channels-section";
 import { SettingsGeneralSection } from "./settings-general-section";
+import { SettingsHarnessesSection } from "./settings-harnesses-section";
 import { SettingsModelsSection } from "./settings-models-section";
 import { SettingsNotificationsSection } from "./settings-notifications-section";
 import { SettingsProvidersSection } from "./settings-providers-section";
@@ -17,6 +18,8 @@ interface SettingsViewProps {
   readonly workspace?: WorkspaceRecord;
   readonly workspaces: readonly WorkspaceRecord[];
   readonly runtime?: RuntimeSnapshot;
+  readonly fxAvailable: boolean;
+  readonly fxDefaultModel?: { readonly provider: string; readonly modelId: string };
   readonly section: SettingsSection;
   readonly notificationPreferences: NotificationPreferences;
   readonly imChannels: readonly ImChannel[];
@@ -55,6 +58,8 @@ export function SettingsView({
   workspace,
   workspaces,
   runtime,
+  fxAvailable,
+  fxDefaultModel,
   section,
   notificationPreferences,
   imChannels,
@@ -90,7 +95,7 @@ export function SettingsView({
 }: SettingsViewProps) {
   const t = useT();
 
-  if (!workspace && section !== "general" && section !== "channels" && section !== "tools" && section !== "notifications" && section !== "appearance") {
+  if (!workspace && section !== "general" && section !== "harnesses" && section !== "channels" && section !== "tools" && section !== "notifications" && section !== "appearance") {
     return (
       <section className="canvas canvas--empty">
         <div className="empty-panel">
@@ -137,6 +142,17 @@ export function SettingsView({
               onToggleSkillCommands={onToggleSkillCommands}
               skipAutoTitle={skipAutoTitle}
               onSetSkipAutoTitle={onSetSkipAutoTitle}
+            />
+          ) : null}
+
+          {section === "harnesses" ? (
+            <SettingsHarnessesSection
+              workspaceId={workspace?.id}
+              runtime={runtime}
+              fxAvailable={fxAvailable}
+              fxDefaultModel={fxDefaultModel}
+              onSetDefaultModel={onSetDefaultModel}
+              onSetThinkingLevel={onSetThinkingLevel}
             />
           ) : null}
 

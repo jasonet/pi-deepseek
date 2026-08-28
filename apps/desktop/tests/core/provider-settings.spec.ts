@@ -4,9 +4,11 @@ import { createServer } from "node:http";
 import { expect, test } from "@playwright/test";
 import {
   desktopShortcut,
+  getDesktopState,
   launchDesktop,
   makeUserDataDir,
   makeWorkspace,
+  openNewThread,
   seedAgentDir,
   stubNextOpenDialog,
 } from "../helpers/electron-app";
@@ -71,7 +73,7 @@ test("settings lets the user save an API key for a built-in provider", async () 
 });
 
 test("settings discovers and saves an OpenAI-compatible custom provider", async () => {
-  test.setTimeout(60_000);
+  test.setTimeout(90_000);
   const modelId = "/models/gemma-4-26B-A4B-it-mlx";
   const secondaryModelId = "local-coder.gguf";
   let completionBody: Record<string, unknown> | undefined;
@@ -125,6 +127,7 @@ test("settings discovers and saves an OpenAI-compatible custom provider", async 
   const userDataDir = await makeUserDataDir();
   const agentDir = join(userDataDir, "agent");
   const workspacePath = await makeWorkspace("custom-provider-settings-workspace");
+  const secondaryWorkspacePath = await makeWorkspace("custom-provider-settings-secondary-workspace");
   await seedAgentDir(agentDir, {
     withOpenAiAuth: false,
     withDefaultModel: false,
@@ -145,7 +148,7 @@ test("settings discovers and saves an OpenAI-compatible custom provider", async 
 
   const harness = await launchDesktop(userDataDir, {
     agentDir,
-    initialWorkspaces: [workspacePath],
+    initialWorkspaces: [workspacePath, secondaryWorkspacePath],
     scrubProviderEnv: true,
     testMode: "background",
   });
@@ -198,6 +201,39 @@ test("settings discovers and saves an OpenAI-compatible custom provider", async 
 
     await window.getByRole("button", { name: "Models", exact: true }).click();
     await expect(window.getByText(`custom-lab-llama-cpp/${modelId}`, { exact: true })).toBeVisible();
+
+    await window.getByRole("button", { name: "Providers", exact: true }).click();
+    await providerRow.getByRole("button", { name: "Edit", exact: true }).click();
+    await dialog.getByRole("button", { name: "Test connection" }).click();
+    await expect(dialog).toContainText("Connected. Found 2 models and verified streaming.");
+    await preferredModel.locator("input[type=checkbox]").first().uncheck();
+    await secondaryModel.locator("input[type=checkbox]").first().check();
+    await dialog.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+
+    const workspaceIds = (await getDesktopState(window)).workspaces
+      .filter((workspace) => workspace.path === workspacePath || workspace.path === secondaryWorkspacePath)
+      .map((workspace) => workspace.id);
+    expect(workspaceIds).toHaveLength(2);
+    await expect.poll(async () => {
+      const state = await getDesktopState(window);
+      return workspaceIds.map((workspaceId) => state.runtimeByWorkspace[workspaceId]?.models
+        .filter((model) => model.providerId === "custom-lab-llama-cpp")
+        .map((model) => model.modelId));
+    }).toEqual([[secondaryModelId], [secondaryModelId]]);
+
+    await window.getByRole("button", { name: "Back to app", exact: true }).click();
+    await openNewThread(window);
+    const workspaceSelect = window.locator(".new-thread__workspace");
+    const modelBadge = window.locator(".new-thread__hint .model-selector__badge").first();
+    for (const workspaceId of workspaceIds) {
+      await workspaceSelect.selectOption(workspaceId);
+      await modelBadge.click();
+      const dropdown = window.locator(".new-thread__hint .model-selector__dropdown").first();
+      await expect(dropdown).toContainText(secondaryModelId);
+      await expect(dropdown).not.toContainText(modelId);
+      await window.keyboard.press("Escape");
+    }
   } finally {
     await harness.close();
     await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));

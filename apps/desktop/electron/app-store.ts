@@ -903,12 +903,14 @@ export class DesktopAppStore implements AppStoreInternals {
   ): Promise<DesktopAppState> {
     return this.withRuntimeUpdate(workspaceId, (ws) =>
       this.driver.runtimeSupervisor.saveCustomModelProvider(ws, input),
+      { refreshAllWorkspaceRuntimes: true },
     );
   }
 
   async removeCustomModelProvider(workspaceId: string, providerId: string): Promise<DesktopAppState> {
     return this.withRuntimeUpdate(workspaceId, (ws) =>
       this.driver.runtimeSupervisor.removeCustomModelProvider(ws, providerId),
+      { refreshAllWorkspaceRuntimes: true },
     );
   }
 
@@ -1073,6 +1075,7 @@ export class DesktopAppStore implements AppStoreInternals {
     action: (ws: WorkspaceRef) => Promise<RuntimeSnapshot>,
     options?: {
       readonly reloadSessions?: boolean;
+      readonly refreshAllWorkspaceRuntimes?: boolean;
     },
   ): Promise<DesktopAppState> {
     await this.initialize();
@@ -1084,6 +1087,27 @@ export class DesktopAppStore implements AppStoreInternals {
     return this.withErrorHandling(async () => {
       const snapshot = await action(ws);
       this.runtimeByWorkspace.set(workspaceId, snapshot);
+      if (options?.refreshAllWorkspaceRuntimes) {
+        const refreshedRuntimes = await Promise.all(
+          [...this.runtimeByWorkspace.keys()]
+            .filter((otherWorkspaceId) => otherWorkspaceId !== workspaceId)
+            .map(async (otherWorkspaceId) => {
+              const otherWorkspace = this.workspaceRefFromState(otherWorkspaceId);
+              if (!otherWorkspace) {
+                return undefined;
+              }
+              return [
+                otherWorkspaceId,
+                await this.driver.runtimeSupervisor.getRuntimeSnapshot(otherWorkspace),
+              ] as const;
+            }),
+        );
+        for (const entry of refreshedRuntimes) {
+          if (entry) {
+            this.runtimeByWorkspace.set(...entry);
+          }
+        }
+      }
       if (options?.reloadSessions) {
         this.clearExtensionUiForWorkspace(workspaceId);
         await this.reloadSessionsForWorkspace(workspaceId);

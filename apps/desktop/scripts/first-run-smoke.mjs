@@ -66,9 +66,14 @@ try {
   }, null, 2));
 } finally {
   if (exitCode === undefined) {
-    child.kill("SIGTERM");
+    try {
+      child.kill("SIGKILL");
+    } catch {
+      // ignore
+    }
   }
 }
+process.exit(0);
 
 function resolvePackagedExecutable(releaseDir) {
   if (process.platform === "darwin") {

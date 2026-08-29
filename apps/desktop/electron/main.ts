@@ -936,7 +936,8 @@ function createWindow(): BrowserWindow {
 }
 
 function attachStatePublisher(window: BrowserWindow): void {
-  const webContentsId = window.webContents.id;
+  const windowWebContents = window.webContents;
+  const webContentsId = windowWebContents.id;
   let rendererRecoveryTimer: ReturnType<typeof setTimeout> | undefined;
   let windowClosing = false;
   stopPublishingState?.();
@@ -968,23 +969,23 @@ function attachStatePublisher(window: BrowserWindow): void {
     }
     rendererRecoveryTimer = setTimeout(() => {
       rendererRecoveryTimer = undefined;
-      if (quittingAfterStoreFlush || window.isDestroyed() || window.webContents.isDestroyed()) {
+      if (quittingAfterStoreFlush || window.isDestroyed() || windowWebContents.isDestroyed()) {
         return;
       }
       logInfo("renderer", "Reloading the renderer after an unexpected exit");
       const handleRecoveryLoaded = () => {
         void publishCurrentWindowState(window);
       };
-      window.webContents.once("did-finish-load", handleRecoveryLoaded);
+      windowWebContents.once("did-finish-load", handleRecoveryLoaded);
       try {
-        window.webContents.reload();
+        windowWebContents.reload();
       } catch (error) {
-        window.webContents.removeListener("did-finish-load", handleRecoveryLoaded);
+        windowWebContents.removeListener("did-finish-load", handleRecoveryLoaded);
         logError("renderer", "Could not reload the renderer", error);
       }
     }, 150);
   };
-  window.webContents.on("render-process-gone", handleRendererGone);
+  windowWebContents.on("render-process-gone", handleRendererGone);
   window.once("close", () => {
     windowClosing = true;
   });
@@ -993,7 +994,7 @@ function attachStatePublisher(window: BrowserWindow): void {
       clearTimeout(rendererRecoveryTimer);
       rendererRecoveryTimer = undefined;
     }
-    window.webContents.removeListener("render-process-gone", handleRendererGone);
+    windowWebContents.removeListener("render-process-gone", handleRendererGone);
     stopPublishingState?.();
     stopPublishingState = undefined;
     stopPublishingSelectedTranscript?.();

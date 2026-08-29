@@ -105,3 +105,30 @@ test("aligns workspace names with session titles in the sidebar gutter", async (
     await harness.close();
   }
 });
+
+test("quits without a main-process exception after the window closes", async () => {
+  const userDataDir = await makeUserDataDir();
+  const harness = await launchDesktop(userDataDir, { testMode: "background" });
+  let quitRequested = false;
+
+  try {
+    await harness.firstWindow();
+    const childProcess = harness.electronApp.process();
+    const exitPromise = new Promise<number | null>((resolve) => {
+      childProcess.once("exit", (code) => resolve(code));
+    });
+    quitRequested = true;
+    await harness.electronApp.evaluate(({ app }) => app.quit());
+    const exitCode = await Promise.race([
+      exitPromise,
+      new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error("Electron app did not exit after app.quit()")), 15_000);
+      }),
+    ]);
+    expect(exitCode).toBe(0);
+  } finally {
+    if (!quitRequested) {
+      await harness.close();
+    }
+  }
+});

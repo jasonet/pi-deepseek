@@ -395,7 +395,9 @@ export default function App() {
       return;
     }
     const candidates = [...selectedWorkspace.sessions]
-      .filter((s) => !s.archivedAt && s.id !== selectedSession.id)
+      .filter((session) => !session.archivedAt
+        && session.id !== selectedSession.id
+        && (snapshot?.fxAvailable || session.backendId !== "fx"))
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
     const pairedCandidate =
       selectedSession.backendId === "pi"
@@ -416,7 +418,7 @@ export default function App() {
       setSecondaryWorkspaceId(selectedWorkspace.id);
       setSecondarySessionId(partner.id);
     }
-  }, [dualPaneEnabled, selectedWorkspace, selectedSession, secondarySessionId, secondaryWorkspaceId, clearSecondary]);
+  }, [dualPaneEnabled, selectedWorkspace, selectedSession, secondarySessionId, secondaryWorkspaceId, snapshot?.fxAvailable, clearSecondary]);
 
   // Every selected pair starts in its canonical order: Pi left and fx right.
   // Switching the controls only changes visual placement, never session state.
@@ -3062,6 +3064,7 @@ export default function App() {
                   runningLabel={runningLabel}
                   selectedSession={selectedSession}
                   lastError={snapshot?.lastError}
+                  hideErrorBanner={api?.platform === "win32" && activeTranscript.some((item) => item.kind === "activity" && item.tone === "error" && item.label === snapshot?.lastError)}
                   selectedSlashCommand={slashMenu.activeSlashOptionCommand ?? slashMenu.selectedSlashCommand}
                   selectedSlashOption={slashMenu.selectedSlashOption}
                   slashOptionEmptyState={slashMenu.slashOptionEmptyState}
@@ -3168,6 +3171,7 @@ export default function App() {
                   selectedMentionIndex={0}
                   onSelectMention={() => {}}
                           lastError={secondarySession.backendId === "fx" ? undefined : snapshot?.lastError}
+                  hideErrorBanner={api?.platform === "win32" && secondaryTranscriptMessages.some((item) => item.kind === "activity" && item.tone === "error" && item.label === snapshot?.lastError)}
                   extensionDockExpanded={false}
                   onToggleExtensionDock={() => {}}
                   runtime={secondaryModelRuntime}
@@ -3265,6 +3269,7 @@ export default function App() {
               runningLabel={runningLabel}
               selectedSession={selectedSession}
               lastError={snapshot.lastError}
+              hideErrorBanner={api.platform === "win32" && activeTranscript.some((item) => item.kind === "activity" && item.tone === "error" && item.label === snapshot.lastError)}
               selectedSlashCommand={slashMenu.activeSlashOptionCommand ?? slashMenu.selectedSlashCommand}
               selectedSlashOption={slashMenu.selectedSlashOption}
               slashOptionEmptyState={slashMenu.slashOptionEmptyState}

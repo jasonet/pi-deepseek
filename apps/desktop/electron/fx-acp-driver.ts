@@ -1,6 +1,6 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { access, readFile } from "node:fs/promises";
-import { delimiter, join } from "node:path";
+import { join } from "node:path";
 import { homedir } from "node:os";
 import { constants } from "node:fs";
 import { randomUUID } from "node:crypto";
@@ -34,6 +34,11 @@ import {
   type FxAuthProvider,
   type FxAuthStatus,
 } from "../src/fx-auth";
+import {
+  buildFxBinaryCandidatePaths,
+  fxExecutableName,
+  isFxHelpOutputCompatible,
+} from "./fx-binary-resolution";
 
 const FX_SESSION_PREFIX = "fx:";
 const FX_CONTROL_REQUEST_TIMEOUT_MS = 20_000;
@@ -41,6 +46,7 @@ const FX_IDLE_CLIENT_TIMEOUT_MS = 5 * 60_000;
 const FX_TRANSCRIPT_MESSAGE_LIMIT = 500;
 const FX_ASSISTANT_DELTA_BATCH_MS = 24;
 const FX_STATUS_TIMEOUT_MS = 15_000;
+const FX_BINARY_PROBE_TIMEOUT_MS = 5_000;
 const FX_LOGIN_TIMEOUT_MS = 10 * 60_000;
 const FX_CLI_OUTPUT_LIMIT = 128 * 1024;
 
@@ -77,6 +83,7 @@ export class FxAcpDriver implements SessionDriver {
   private readonly bundledRoot: string | undefined;
   private readonly binaryPath: string | undefined;
   private readonly records = new Map<string, ManagedFxSession>();
+  private usableBinariesPromise: Promise<string[]> | undefined;
 
   constructor(options: FxAcpDriverOptions) {
     this.catalogs = options.catalogs;
@@ -85,12 +92,7 @@ export class FxAcpDriver implements SessionDriver {
   }
 
   async isAvailable(): Promise<boolean> {
-    return Boolean(
-      await resolveFxBinary({
-        bundledRoot: this.bundledRoot,
-        binaryPath: this.binaryPath,
-      }),
-    );
+    return (await this.getUsableBinaries()).length > 0;
   }
 
   async getDefaultModelSelection(): Promise<SessionModelSelection | undefined> {
@@ -611,10 +613,7 @@ export class FxAcpDriver implements SessionDriver {
     params: JsonObject,
     onInitialized?: (client: FxAcpClient) => void,
   ): Promise<{ client: FxAcpClient; result: JsonObject }> {
-    const binaries = await resolveFxBinaryCandidates({
-      bundledRoot: this.bundledRoot,
-      binaryPath: this.binaryPath,
-    });
+    const binaries = await this.getUsableBinaries();
     if (!binaries.length)
       throw new Error(
         "fx runtime is unavailable. Reinstall the app to restore the bundled runtime.",
@@ -644,15 +643,20 @@ export class FxAcpDriver implements SessionDriver {
   private async inspectCli(
     workspacePath: string,
   ): Promise<{ readonly binary: string; readonly status: FxAuthStatus } | undefined> {
-    const binaries = await resolveFxBinaryCandidates({
-      bundledRoot: this.bundledRoot,
-      binaryPath: this.binaryPath,
-    });
+    const binaries = await this.getUsableBinaries();
     for (const binary of binaries) {
       const status = await inspectFxCliBinary(binary, workspacePath);
       if (status) return { binary, status };
     }
     return undefined;
+  }
+
+  private getUsableBinaries(): Promise<string[]> {
+    this.usableBinariesPromise ??= resolveUsableFxBinaryCandidates({
+      bundledRoot: this.bundledRoot,
+      binaryPath: this.binaryPath,
+    });
+    return this.usableBinariesPromise;
   }
 
   private bindClient(record: ManagedFxSession): void {
@@ -946,38 +950,9 @@ export async function resolveFxBinary(
 async function resolveFxBinaryCandidates(
   options: ResolveFxBinaryOptions = {},
 ): Promise<string[]> {
-  const explicit = options.binaryPath ?? process.env.PI_FX_BINARY;
-  const pathCandidates = (process.env.PATH ?? "")
-    .split(delimiter)
-    .filter(Boolean)
-    .map((dir) => join(dir, executableName()));
-  const homeCandidates = [
-    join(homedir(), ".fx", "bin", executableName()),
-    join(homedir(), ".local", "bin", executableName()),
-  ];
-  const systemCandidates =
-    process.platform === "win32"
-      ? pathCandidates
-      : [
-          ...pathCandidates,
-          ...homeCandidates,
-          `/opt/homebrew/bin/${executableName()}`,
-          `/usr/local/bin/${executableName()}`,
-        ];
-  const bundledCandidates = options.bundledRoot
-    ? [
-        join(
-          options.bundledRoot,
-          `${process.platform}-${process.arch}`,
-          executableName(),
-        ),
-      ]
-    : [];
+  const candidates = buildFxBinaryCandidatePaths(options);
   const resolved: string[] = [];
-  for (const candidate of [
-    ...new Set([explicit, ...systemCandidates, ...bundledCandidates]),
-  ]) {
-    if (!candidate) continue;
+  for (const candidate of candidates) {
     try {
       await access(candidate, constants.X_OK);
       resolved.push(candidate);
@@ -986,6 +961,36 @@ async function resolveFxBinaryCandidates(
     }
   }
   return resolved;
+}
+
+async function resolveUsableFxBinaryCandidates(
+  options: ResolveFxBinaryOptions,
+): Promise<string[]> {
+  const binaries = await resolveFxBinaryCandidates(options);
+  const trusted = new Set(
+    buildTrustedFxBinaryPaths(options).filter((candidate): candidate is string => Boolean(candidate)),
+  );
+  const compatibility = await Promise.all(
+    binaries.map((binary) => trusted.has(binary) || isCompatibleSystemFxBinary(binary)),
+  );
+  return binaries.filter((_, index) => compatibility[index]);
+}
+
+function buildTrustedFxBinaryPaths(options: ResolveFxBinaryOptions): Array<string | undefined> {
+  const explicit = options.binaryPath ?? process.env.PI_FX_BINARY;
+  const bundled = options.bundledRoot
+    ? join(options.bundledRoot, `${process.platform}-${process.arch}`, fxExecutableName())
+    : undefined;
+  return [explicit, bundled];
+}
+
+async function isCompatibleSystemFxBinary(binary: string): Promise<boolean> {
+  try {
+    const result = await runFxCli(binary, ["--help"], process.cwd(), FX_BINARY_PROBE_TIMEOUT_MS);
+    return isFxHelpOutputCompatible(result.stdout);
+  } catch {
+    return false;
+  }
 }
 
 class FxAcpClient {
@@ -1143,9 +1148,6 @@ function fromFxSessionId(id: string): string {
 }
 export function isFxSession(ref: SessionRef): boolean {
   return ref.sessionId.startsWith(FX_SESSION_PREFIX);
-}
-function executableName(): string {
-  return process.platform === "win32" ? "fx.exe" : "fx";
 }
 function asObject(value: unknown): JsonObject | undefined {
   return typeof value === "object" && value !== null && !Array.isArray(value)

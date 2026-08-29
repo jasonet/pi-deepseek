@@ -18,6 +18,7 @@ import type { ExtensionDockModel } from "./extension-session-ui";
 interface ComposerPanelProps {
   readonly selectedSession: SessionRecord;
   readonly lastError?: string;
+  readonly hideErrorBanner?: boolean;
   readonly runtime?: RuntimeSnapshot;
   readonly activeSlashCommand?: ComposerSlashCommand;
   readonly activeSlashCommandMeta?: string;
@@ -70,6 +71,7 @@ interface ComposerPanelProps {
 export function ComposerPanel({
   selectedSession,
   lastError,
+  hideErrorBanner = false,
   runtime,
   activeSlashCommand,
   activeSlashCommandMeta,
@@ -124,7 +126,7 @@ export function ComposerPanel({
   const activeAttachments = canAttach ? attachments : [];
   const hasComposerInput = composerDraft.trim().length > 0 || activeAttachments.length > 0;
   const primaryActionIsStop = selectedSession.status === "running" && (isFx || !hasComposerInput);
-  const showErrorBanner = Boolean(lastError) && selectedSession.status !== "failed";
+  const showErrorBanner = Boolean(lastError) && !hideErrorBanner && selectedSession.status !== "failed";
 
   return (
     <footer className="composer">

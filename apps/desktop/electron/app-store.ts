@@ -1332,6 +1332,7 @@ export class DesktopAppStore implements AppStoreInternals {
         selectedWorkspaceId,
         resolvedSelectedSessionId,
         sessionsSnapshot.sessions,
+        this.state.fxAvailable,
       );
 
       if (selectedWorkspaceId && selectedSessionId && options.hydrateSelectedSession !== false) {
@@ -2419,13 +2420,18 @@ export class DesktopAppStore implements AppStoreInternals {
   private primarySessionRefFor(sessionRef: SessionRef): SessionRef {
     const workspace = this.state.workspaces.find((entry) => entry.id === sessionRef.workspaceId);
     const requested = workspace?.sessions.find((entry) => entry.id === sessionRef.sessionId);
-    if (requested?.backendId !== "fx" || !requested.companionSessionId) {
+    if (requested?.backendId !== "fx") {
       return sessionRef;
     }
-    const companion = workspace?.sessions.find(
-      (entry) => entry.id === requested.companionSessionId && entry.backendId === "pi" && !entry.archivedAt,
-    );
-    return companion ? { workspaceId: sessionRef.workspaceId, sessionId: companion.id } : sessionRef;
+    if (requested.companionSessionId) {
+      const companion = workspace?.sessions.find(
+        (entry) => entry.id === requested.companionSessionId && entry.backendId === "pi" && !entry.archivedAt,
+      );
+      if (companion) return { workspaceId: sessionRef.workspaceId, sessionId: companion.id };
+    }
+    if (this.state.fxAvailable) return sessionRef;
+    const fallback = workspace?.sessions.find((entry) => entry.backendId === "pi" && !entry.archivedAt);
+    return fallback ? { workspaceId: sessionRef.workspaceId, sessionId: fallback.id } : sessionRef;
   }
 
   private async hydrateSelectedSessionAfterSelection(
@@ -3059,20 +3065,27 @@ function resolvePrimarySessionIdFromCatalog(
   workspaceId: string,
   selectedSessionId: string,
   sessions: readonly SessionCatalogEntry[],
+  fxAvailable = true,
 ): string {
   const selected = sessions.find(
     (session) =>
       session.workspaceId === workspaceId && session.sessionRef.sessionId === selectedSessionId && !session.archivedAt,
   );
-  if (selected?.backendId !== "fx" || !selected.companionSessionId) {
+  if (selected?.backendId !== "fx") {
     return selectedSessionId;
   }
-  const piCompanion = sessions.find(
-    (session) =>
-      session.workspaceId === workspaceId &&
-      session.sessionRef.sessionId === selected.companionSessionId &&
-      session.backendId === "pi" &&
-      !session.archivedAt,
-  );
-  return piCompanion?.sessionRef.sessionId ?? selectedSessionId;
+  const piCompanion = selected.companionSessionId
+    ? sessions.find(
+        (session) =>
+          session.workspaceId === workspaceId &&
+          session.sessionRef.sessionId === selected.companionSessionId &&
+          session.backendId === "pi" &&
+          !session.archivedAt,
+      )
+    : undefined;
+  if (piCompanion) return piCompanion.sessionRef.sessionId;
+  if (fxAvailable) return selectedSessionId;
+  return sessions.find(
+    (session) => session.workspaceId === workspaceId && session.backendId === "pi" && !session.archivedAt,
+  )?.sessionRef.sessionId ?? "";
 }

@@ -163,6 +163,8 @@ const translations: Record<Locale, Record<string, string>> = {
     "settings.harnesses.connectBrowser": "Connect in browser",
     "settings.harnesses.connectionUnknown": "Status hidden by fx",
     "settings.harnesses.fxLoginHelp": "Connections use fx's native login commands. Connecting another account preserves the currently active provider; switching happens only when you choose Use.",
+    "settings.harnesses.fxUnavailableWindows": "fx does not currently publish an official Windows binary. Pi remains available; if a compatible system fx.exe is present, Pi-Deepseek will reuse it automatically.",
+    "settings.harnesses.fxUnavailableRuntime": "No compatible system or bundled fx runtime was found. Pi remains available.",
 
     // Settings → Appearance
     "settings.appearance": "Appearance",
@@ -621,6 +623,8 @@ const translations: Record<Locale, Record<string, string>> = {
     "settings.harnesses.connectBrowser": "浏览器登录",
     "settings.harnesses.connectionUnknown": "fx 未提供状态",
     "settings.harnesses.fxLoginHelp": "连接操作调用 fx 原生登录命令。新增账户不会切换当前提供商；只有点击“切换使用”才会更改 fx 默认渠道。",
+    "settings.harnesses.fxUnavailableWindows": "fx 目前尚未发布官方 Windows 二进制文件。Pi 可正常使用；如系统中存在兼容的 fx.exe，Pi-Deepseek 会自动复用。",
+    "settings.harnesses.fxUnavailableRuntime": "未找到兼容的系统或内置 fx 运行时，Pi 仍可正常使用。",
 
     // Settings → Appearance
     "settings.appearance": "外观",
@@ -1068,6 +1072,8 @@ const translations: Record<Locale, Record<string, string>> = {
     "settings.harnesses.connectBrowser": "瀏覽器登入",
     "settings.harnesses.connectionUnknown": "fx 未提供狀態",
     "settings.harnesses.fxLoginHelp": "連線操作會呼叫 fx 原生登入指令。新增帳戶不會切換目前提供者；只有按下「切換使用」才會更改 fx 預設渠道。",
+    "settings.harnesses.fxUnavailableWindows": "fx 目前尚未發佈官方 Windows 二進位檔。Pi 可正常使用；如系統中存在相容的 fx.exe，Pi-Deepseek 會自動重用。",
+    "settings.harnesses.fxUnavailableRuntime": "未找到相容的系統或內置 fx runtime，Pi 仍可正常使用。",
 
     // Settings → Appearance
     "settings.appearance": "外觀",
@@ -1430,6 +1436,8 @@ const translations: Record<Locale, Record<string, string>> = {
     "settings.harnesses.connectBrowser": "ブラウザで接続",
     "settings.harnesses.connectionUnknown": "fx が状態を非表示",
     "settings.harnesses.fxLoginHelp": "接続には fx のネイティブログインコマンドを使用します。新しいアカウントを接続しても現在のプロバイダーは維持され、「使用する」を選んだ場合のみ切り替わります。",
+    "settings.harnesses.fxUnavailableWindows": "fx は現在、公式 Windows バイナリを公開していません。Pi は引き続き使用でき、互換性のあるシステム fx.exe があれば Pi-Deepseek が自動的に再利用します。",
+    "settings.harnesses.fxUnavailableRuntime": "互換性のあるシステムまたは同梱 fx ランタイムが見つかりません。Pi は引き続き使用できます。",
 
     // Settings → Appearance
     "settings.appearance": "外観",

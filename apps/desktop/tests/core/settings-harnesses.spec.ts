@@ -6,7 +6,34 @@ import {
   launchDesktop,
   makeUserDataDir,
   makeWorkspace,
+  openNewThread,
 } from "../helpers/electron-app";
+
+test("keeps Pi available and hides the fx thread option when fx is unavailable", async () => {
+  test.setTimeout(60_000);
+  const userDataDir = await makeUserDataDir();
+  const workspacePath = await makeWorkspace("settings-unavailable-fx-workspace");
+  const harness = await launchDesktop(userDataDir, {
+    initialWorkspaces: [workspacePath],
+    testMode: "background",
+  });
+
+  try {
+    const window = await harness.firstWindow();
+    await openNewThread(window);
+    await expect(window.getByRole("button", { name: "Use Pi harness for new thread" })).toBeVisible();
+    await expect(window.getByRole("button", { name: "Use fx harness for new thread" })).toHaveCount(0);
+
+    await window.keyboard.press(desktopShortcut(","));
+    const settings = window.getByTestId("harness-settings");
+    await expect(settings).toBeVisible();
+    await expect(settings.getByText("Unavailable", { exact: true })).toBeVisible();
+    await expect(settings.getByText(/Pi remains available|Pi 可正常使用|Pi 仍可正常使用/)).toBeVisible();
+    await expect(settings.getByRole("button", { name: "Connect in browser" }).first()).toBeDisabled();
+  } finally {
+    await harness.close();
+  }
+});
 
 test("shows Pi, fx, and DeepSeek Harness configuration on one settings page", async () => {
   test.setTimeout(60_000);
@@ -81,7 +108,7 @@ if (args[0] === "status") {
     const grokCard = settings.locator(".fx-provider-card").filter({ hasText: "xAI Grok" });
     await expect(codexCard).toContainText("Active");
     await grokCard.getByRole("button", { name: "Connect in browser" }).click();
-    await expect(grokCard).toContainText("Connected");
+    await expect(grokCard).toContainText("Connected", { timeout: 15_000 });
     await expect(codexCard).toContainText("Active");
     await expect.poll(async () => readFile(fxLogPath, "utf8")).toContain("login grok\nprovider codex");
   } finally {

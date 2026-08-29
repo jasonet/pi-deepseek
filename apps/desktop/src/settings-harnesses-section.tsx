@@ -153,6 +153,13 @@ export function SettingsHarnessesSection({
 
       <SettingsGroup title="fx" description={t("settings.harnesses.fxDesc")}>
         <SettingsInfoRow label={t("settings.harnesses.runtime")} value={fxAvailable ? t("settings.harnesses.available") : t("settings.harnesses.unavailable")} />
+        {!fxAvailable ? (
+          <p className="settings-help fx-provider-help">
+            {t(api?.platform === "win32"
+              ? "settings.harnesses.fxUnavailableWindows"
+              : "settings.harnesses.fxUnavailableRuntime")}
+          </p>
+        ) : null}
         <SettingsInfoRow label={t("settings.harnesses.provider")} value={fxDefaultModel?.provider ?? t("settings.harnesses.useFxDefault")} />
         <SettingsInfoRow label={t("settings.models.defaultModel")} value={fxDefaultModel?.modelId ?? t("settings.harnesses.notConfigured")} />
         <div className="fx-provider-grid" aria-label={t("settings.harnesses.fxAccounts")}>
@@ -201,9 +208,11 @@ export function SettingsHarnessesSection({
             );
           })}
         </div>
-        <p className="settings-help fx-provider-help">
-          {t("settings.harnesses.fxLoginHelp")}
-        </p>
+        {fxAvailable ? (
+          <p className="settings-help fx-provider-help">
+            {t("settings.harnesses.fxLoginHelp")}
+          </p>
+        ) : null}
         {fxStatus?.message ? <p className="settings-warning">{fxStatus.message}</p> : null}
         {fxError ? <p className="settings-inline-error" role="alert">{fxError}</p> : null}
       </SettingsGroup>

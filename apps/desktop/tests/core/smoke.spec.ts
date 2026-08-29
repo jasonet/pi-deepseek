@@ -35,6 +35,16 @@ test("boots an existing workspace and starts a new thread through the real UI", 
 
     await expect(window.locator(".topbar__session")).toHaveText(/\S+/);
     await expect(window.getByTestId("composer")).toBeFocused();
+    const activeSessionRow = window.locator(".session-row--active");
+    const engineMark = activeSessionRow.locator('.session-row__engine-mark[data-engine="pi"]');
+    await expect(engineMark).toBeVisible();
+    await expect(activeSessionRow.locator(".agent-backend-badge")).toHaveText("pi");
+    await expect(activeSessionRow.locator(".session-row__leading > :first-child")).toHaveAttribute("data-engine", "pi");
+    await expect
+      .poll(() => engineMark.locator("img").evaluate(
+        (image: HTMLImageElement) => image.complete && image.naturalWidth > 0,
+      ))
+      .toBe(true);
     await expect
       .poll(async () => {
         const transcript = await getSelectedTranscript(window);
@@ -68,14 +78,22 @@ test("aligns workspace names with session titles in the sidebar gutter", async (
     const workspaceGroup = window.locator(".workspace-group").first();
     const workspaceName = workspaceGroup.locator(".workspace-row__name");
     const sessionTitle = workspaceGroup.locator(".session-row__title", { hasText: "Aligned session" });
+    const engineMark = workspaceGroup.locator('.session-row__engine-mark[data-engine="pi"]');
 
     await expect(workspaceName).toBeVisible();
     await expect(sessionTitle).toBeVisible();
+    await expect(engineMark).toBeVisible();
 
-    const [workspaceBox, sessionBox] = await Promise.all([workspaceName.boundingBox(), sessionTitle.boundingBox()]);
+    const [workspaceBox, sessionBox, engineBox] = await Promise.all([
+      workspaceName.boundingBox(),
+      sessionTitle.boundingBox(),
+      engineMark.boundingBox(),
+    ]);
     expect(workspaceBox).not.toBeNull();
     expect(sessionBox).not.toBeNull();
+    expect(engineBox).not.toBeNull();
     expect(Math.abs((workspaceBox?.x ?? 0) - (sessionBox?.x ?? 0))).toBeLessThanOrEqual(1);
+    expect((engineBox?.x ?? 0) + (engineBox?.width ?? 0)).toBeLessThanOrEqual(sessionBox?.x ?? 0);
   } finally {
     await harness.close();
   }

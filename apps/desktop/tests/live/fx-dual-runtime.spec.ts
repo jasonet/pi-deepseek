@@ -50,6 +50,16 @@ test("starts a standalone fx thread from the new-thread harness selector", async
       const workspace = state.workspaces.find((entry) => entry.id === state.selectedWorkspaceId);
       return workspace?.sessions.find((entry) => entry.id === state.selectedSessionId)?.backendId;
     }).toBe("fx");
+    const fxSessionRow = window.locator(".session-row--active");
+    const fxEngineMark = fxSessionRow.locator('.session-row__engine-mark[data-engine="fx"]');
+    await expect(fxEngineMark).toBeVisible();
+    await expect(fxSessionRow.locator(".agent-backend-badge")).toHaveText("fx");
+    await expect(fxSessionRow.locator(".session-row__leading > :first-child")).toHaveAttribute("data-engine", "fx");
+    await expect
+      .poll(() => fxEngineMark.locator("img").evaluate(
+        (image: HTMLImageElement) => image.complete && image.naturalWidth > 0,
+      ))
+      .toBe(true);
 
     await expect.poll(async () => {
       const state = await getDesktopState(window);

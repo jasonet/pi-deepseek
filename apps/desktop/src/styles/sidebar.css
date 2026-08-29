@@ -491,19 +491,47 @@
 }
 
 .session-row__leading {
-  width: 12px;
-  height: 12px;
-  display: grid;
-  place-items: center;
+  width: 29px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
   position: absolute;
-  left: 0;
+  left: -14px;
   top: 50%;
   transform: translateY(-50%);
   pointer-events: none;
 }
 
+.session-row__engine-mark {
+  width: 16px;
+  height: 16px;
+  display: grid;
+  flex: 0 0 16px;
+  place-items: center;
+}
+
+.session-row__engine-icon {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  user-select: none;
+}
+
+.session-row__engine-icon--pi {
+  width: 15px;
+  height: 15px;
+}
+
+.session-row__engine-icon--fx {
+  width: 16px;
+  height: 11px;
+}
+
 .session-row__status {
   display: block;
+  flex: 0 0 auto;
 }
 
 .session-row__status--running {
@@ -806,6 +834,11 @@
   border-color: rgba(255, 255, 255, 0.12);
   border-top-color: var(--accent);
   border-right-color: var(--accent);
+}
+
+:root.dark .session-row__engine-icon--fx {
+  filter: invert(1);
+  opacity: 0.88;
 }
 
 :root.dark .session-row__im-badge--claw {

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { AgentBackendId } from "@pi-gui/session-driver";
 import {
   DndContext,
   DragOverlay,
@@ -23,7 +24,14 @@ import type { ThreadGroup, ThreadListEntry } from "./thread-groups";
 import type { Dispatch, SetStateAction } from "react";
 import type { DesktopAppState } from "./desktop-state";
 import { useT } from "./i18n";
+import fxEngineIcon from "../resources/engines/fx.png";
+import piEngineIcon from "../resources/engines/pi.png";
 import deepseekLogo from "../resources/providers/deepseek.png";
+
+const SESSION_ENGINE_DETAILS = {
+  fx: { icon: fxEngineIcon, label: "fx" },
+  pi: { icon: piEngineIcon, label: "Pi" },
+} satisfies Record<AgentBackendId, { readonly icon: string; readonly label: string }>;
 
 interface SidebarProps {
   readonly activeView: AppView;
@@ -595,6 +603,7 @@ function ThreadSessionRow({
   readonly onSelect: () => void;
 }) {
   const indicatorVariant = sessionIndicatorVariant(thread);
+  const engine = SESSION_ENGINE_DETAILS[thread.session.backendId];
   return (
     <div
       className={`session-row ${active ? "session-row--active" : ""}`}
@@ -603,9 +612,21 @@ function ThreadSessionRow({
     >
       <button className="session-row__select" onClick={onSelect} type="button">
         <span className="session-row__leading" aria-hidden="true">
+          <span
+            className="session-row__engine-mark"
+            data-engine={thread.session.backendId}
+          >
+            <img
+              alt=""
+              className={`session-row__engine-icon session-row__engine-icon--${thread.session.backendId}`}
+              draggable={false}
+              src={engine.icon}
+            />
+          </span>
           {indicatorVariant === "running" ? <span className="session-row__status session-row__status--running" /> : null}
           {indicatorVariant === "unseen" ? <span className="session-row__status session-row__status--unseen" /> : null}
         </span>
+        <span className="sr-only">{engine.label} engine</span>
         <span className="session-row__body">
           <span className="session-row__title-line">
             <span className="session-row__title">{thread.session.title}</span>

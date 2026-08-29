@@ -94,6 +94,13 @@ test("aligns workspace names with session titles in the sidebar gutter", async (
     expect(engineBox).not.toBeNull();
     expect(Math.abs((workspaceBox?.x ?? 0) - (sessionBox?.x ?? 0))).toBeLessThanOrEqual(1);
     expect((engineBox?.x ?? 0) + (engineBox?.width ?? 0)).toBeLessThanOrEqual(sessionBox?.x ?? 0);
+    const sessionRow = workspaceGroup.locator('.session-row', { hasText: "Aligned session" });
+    const sessionRowBox = await sessionRow.boundingBox();
+    expect(sessionRowBox).not.toBeNull();
+    expect(engineBox?.x ?? 0).toBeGreaterThanOrEqual(sessionRowBox?.x ?? 0);
+    expect((engineBox?.x ?? 0) + (engineBox?.width ?? 0)).toBeLessThanOrEqual(
+      (sessionRowBox?.x ?? 0) + (sessionRowBox?.width ?? 0),
+    );
   } finally {
     await harness.close();
   }

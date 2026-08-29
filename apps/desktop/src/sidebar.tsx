@@ -623,8 +623,6 @@ function ThreadSessionRow({
               src={engine.icon}
             />
           </span>
-          {indicatorVariant === "running" ? <span className="session-row__status session-row__status--running" /> : null}
-          {indicatorVariant === "unseen" ? <span className="session-row__status session-row__status--unseen" /> : null}
         </span>
         <span className="sr-only">{engine.label} engine</span>
         <span className="session-row__body">
@@ -642,6 +640,8 @@ function ThreadSessionRow({
           </span>
         ) : null}
         <span className="session-row__time">{formatRelativeTime(thread.session.updatedAt)}</span>
+        {indicatorVariant === "running" ? <span className="session-row__status session-row__status--running" /> : null}
+        {indicatorVariant === "unseen" ? <span className="session-row__status session-row__status--unseen" /> : null}
         <button
           aria-label={`${archived ? "Restore" : "Archive"} ${thread.session.title}`}
           className="icon-button session-row__action"

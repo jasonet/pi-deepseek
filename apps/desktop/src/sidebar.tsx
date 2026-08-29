@@ -630,7 +630,6 @@ function ThreadSessionRow({
         <span className="session-row__body">
           <span className="session-row__title-line">
             <span className="session-row__title">{thread.session.title}</span>
-            <span aria-hidden="true" className={`agent-backend-badge agent-backend-badge--${thread.session.backendId}`}>{thread.session.backendId}</span>
             {imBinding ? <SessionImBadges binding={imBinding} /> : null}
           </span>
           {thread.session.preview ? <span className="session-row__preview">{thread.session.preview}</span> : null}

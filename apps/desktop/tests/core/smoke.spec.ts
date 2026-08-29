@@ -38,7 +38,7 @@ test("boots an existing workspace and starts a new thread through the real UI", 
     const activeSessionRow = window.locator(".session-row--active");
     const engineMark = activeSessionRow.locator('.session-row__engine-mark[data-engine="pi"]');
     await expect(engineMark).toBeVisible();
-    await expect(activeSessionRow.locator(".agent-backend-badge")).toHaveText("pi");
+    await expect(activeSessionRow.locator(".agent-backend-badge")).toHaveCount(0);
     await expect(activeSessionRow.locator(".session-row__leading > :first-child")).toHaveAttribute("data-engine", "pi");
     await expect
       .poll(() => engineMark.locator("img").evaluate(

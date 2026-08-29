@@ -53,7 +53,7 @@ test("starts a standalone fx thread from the new-thread harness selector", async
     const fxSessionRow = window.locator(".session-row--active");
     const fxEngineMark = fxSessionRow.locator('.session-row__engine-mark[data-engine="fx"]');
     await expect(fxEngineMark).toBeVisible();
-    await expect(fxSessionRow.locator(".agent-backend-badge")).toHaveText("fx");
+    await expect(fxSessionRow.locator(".agent-backend-badge")).toHaveCount(0);
     await expect(fxSessionRow.locator(".session-row__leading > :first-child")).toHaveAttribute("data-engine", "fx");
     await expect
       .poll(() => fxEngineMark.locator("img").evaluate(

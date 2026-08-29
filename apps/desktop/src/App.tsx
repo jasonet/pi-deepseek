@@ -692,11 +692,8 @@ export default function App() {
           modelId,
         }))
       : [];
-    const localOptions = newThreadPiModelOptions
-      .filter((model) => model.providerId.startsWith("custom-"))
-      .map((model) => ({ ...model, label: `Local · ${model.label}` }));
-    return [...localOptions, ...fxOptions];
-  }, [newThreadBackend, newThreadFxStatus, newThreadPiModelOptions, snapshot?.fxDefaultModel?.provider]);
+    return fxOptions;
+  }, [newThreadBackend, newThreadFxStatus, snapshot?.fxDefaultModel?.provider]);
   useEffect(() => {
     if (!api || newThreadBackend !== "fx" || !newThreadWorkspace?.id) return;
     let active = true;
@@ -2930,12 +2927,9 @@ export default function App() {
               onSelectWorkspace={handleSelectNewThreadWorkspace}
               onSetModel={(provider, modelId) => {
                 if (newThreadBackend === "fx" && !isFxRuntimeProvider(provider)) {
-                  // Local OpenAI-compatible models are owned by Pi. Selecting
-                  // one visibly switches the harness instead of sending a local
-                  // path through the fx Codex subscription route.
-                  setNewThreadBackend("pi");
-                  setNewThreadProvider(provider);
-                  setNewThreadModelId(modelId);
+                  // A new thread's engine is fixed at creation. Do not silently
+                  // turn an Fx thread into Pi when a stale model option arrives.
+                  setNewThreadComposerError("Local models are only available in Pi threads.");
                   return;
                 }
                 if (newThreadBackend === "fx") {

@@ -179,9 +179,10 @@ if (args[0] === "status") {
     await expect(modelBadge).toBeEnabled();
     await modelBadge.click();
     await expect(window.locator(".model-selector__item-label", { hasText: "gpt-5.6-terra" })).toBeVisible();
-    await window.locator(".model-selector__item-label", { hasText: "LM Studio Running Model" }).click();
-    await expect(piHarness).toHaveAttribute("aria-pressed", "true");
-    await expect(modelBadge).toHaveText(`${localProvider}:${localModel}`);
+    await expect(window.locator(".model-selector__item-label", { hasText: "LM Studio Running Model" })).toHaveCount(0);
+    await window.locator(".model-selector__item-label", { hasText: "gpt-5.6-terra" }).click();
+    await expect(window.getByRole("button", { name: "Use fx harness for new thread" })).toHaveAttribute("aria-pressed", "true");
+    await expect(modelBadge).toHaveText("codex:gpt-5.6-terra");
     await window.getByRole("button", { name: "Use fx harness for new thread" }).click();
     await expect(window.getByRole("button", { name: "Attach files" })).toHaveCount(0);
     await piHarness.click();

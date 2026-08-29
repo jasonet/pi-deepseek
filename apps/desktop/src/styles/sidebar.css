@@ -497,7 +497,7 @@
   align-items: center;
   gap: 2px;
   position: absolute;
-  left: 2px;
+  left: 0;
   top: 50%;
   transform: translateY(-50%);
   pointer-events: none;

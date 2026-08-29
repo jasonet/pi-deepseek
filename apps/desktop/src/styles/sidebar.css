@@ -466,6 +466,7 @@
   border-radius: 10px;
   min-height: 28px;
   grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 0;
   position: relative;
   overflow: visible;
 }
@@ -485,6 +486,7 @@
   grid-template-columns: minmax(0, 1fr);
   gap: 0;
   padding-left: 18px;
+  padding-right: 0;
   text-align: left;
   color: inherit;
   position: relative;
@@ -612,7 +614,7 @@
 }
 
 .session-row__trailing {
-  min-width: 60px;
+  min-width: 0;
   height: 28px;
   position: relative;
   display: grid;

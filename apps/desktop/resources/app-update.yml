@@ -1,0 +1,4 @@
+provider: github
+owner: jasonet
+repo: pi-deepseek
+updaterCacheDirName: pi-deepseek-updater

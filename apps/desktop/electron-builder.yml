@@ -19,6 +19,8 @@ files:
   - "!node_modules/**/*.map"
 
 extraResources:
+  - from: resources/app-update.yml
+    to: app-update.yml
   - from: resources/fx
     to: fx
   - from: resources/icon.png

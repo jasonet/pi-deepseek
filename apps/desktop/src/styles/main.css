@@ -2841,8 +2841,8 @@
 }
 
 .settings-row__label {
-  flex: 1;
-  min-width: 0;
+  flex: 1 1 auto;
+  min-width: 140px;
 }
 
 .settings-row__title {
@@ -2853,11 +2853,15 @@
 .settings-row__description {
   font-size: 12px;
   color: var(--muted-soft);
-  line-height: 1.15;
+  line-height: 1.25;
 }
 
 .settings-row__control {
-  flex-shrink: 0;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 65%;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .settings-input {
@@ -2958,14 +2962,17 @@ textarea.settings-input {
 .settings-select,
 .settings-search,
 .settings-text-input {
-  width: min(420px, 100%);
-  min-height: 40px;
-  padding: 10px 12px;
-  border-radius: 12px;
+  width: min(340px, 100%);
+  max-width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  padding: 8px 12px;
+  border-radius: 10px;
   border: 1px solid #d9e0ec;
   background: #fff;
   color: var(--text-strong);
   font: inherit;
+  text-overflow: ellipsis;
 }
 
 .settings-option-list {

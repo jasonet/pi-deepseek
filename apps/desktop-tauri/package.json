@@ -1,7 +1,7 @@
 {
   "name": "pi-deepseek-tauri",
   "private": true,
-  "version": "2.9.4",
+  "version": "2.9.5",
   "scripts": {
     "dev": "vite",
     "test": "node --experimental-strip-types tests/invoke-args.test.mts",

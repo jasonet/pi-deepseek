@@ -1450,6 +1450,24 @@ export default function App() {
         void updateSnapshot(api, setSnapshot, () => api.selectSession({ workspaceId, sessionId: nextSession.id }));
         return;
       }
+      // Cmd+Enter / Ctrl+Enter: retry last message when session is idle and not inside a form input
+      if (
+        (event.metaKey || event.ctrlKey) &&
+        (event.key === "Enter" || event.code === "Enter" || event.code === "NumpadEnter") &&
+        !event.shiftKey &&
+        selectedSession &&
+        selectedSession.status !== "running"
+      ) {
+        const activeEl = document.activeElement;
+        const isOtherInput =
+          activeEl instanceof HTMLInputElement ||
+          (activeEl instanceof HTMLTextAreaElement && activeEl !== composerRef.current);
+        if (!isOtherInput) {
+          event.preventDefault();
+          retryLastMessage();
+          return;
+        }
+      }
       const command = getDesktopCommandFromShortcut({
         modifier: event.metaKey || event.ctrlKey,
         shift: event.shiftKey,
@@ -2568,6 +2586,12 @@ export default function App() {
     }
 
     event.preventDefault();
+
+    if (event.metaKey || event.ctrlKey) {
+      retryLastMessage();
+      return;
+    }
+
     if (!composerDraft.trim() && composerAttachments.length === 0) {
       return;
     }

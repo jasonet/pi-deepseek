@@ -180,6 +180,7 @@ export function ComposerPanel({
                   <button
                     className="button button--secondary composer__retry-button"
                     onClick={onRetryLast}
+                    title="重试 (Cmd+Enter)"
                     type="button"
                   >
                     重试

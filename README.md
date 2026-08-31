@@ -20,17 +20,23 @@
 
 | 平台 | 架构 | 引擎 | 版本 | 格式 | 大小 | 下载 |
 |------|------|------|------|------|------|------|
-| **macOS** | Apple Silicon (M1–M5) | Electron | v2.9.4 | DMG | 145 MB | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.9.4/Pi-Deepseek-2.9.4-mac-arm64.dmg) |
-| **macOS** | Intel (x64) | Electron | v2.9.4 | DMG | 157 MB | [![Download](https://img.shields.io/badge/Download-x64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.9.4/Pi-Deepseek-2.9.4-mac-x64.dmg) |
-| **macOS** | Apple Silicon (M1–M5) | Tauri | v2.9.4 | DMG | 147 MB | [![Download](https://img.shields.io/badge/Download-arm64-%237C6BF5?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.9.4/Pi-Deepseek-2.9.4-tauri-mac-arm64.dmg) |
-| **Windows** | x64 | Electron | v2.9.4 | 安装版 | 125 MB | [![Download](https://img.shields.io/badge/Download-Setup-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v2.9.4/Pi-Deepseek-2.9.4-win-x64-setup.exe) |
-| **Windows** | x64 | Electron | v2.9.4 | 便携版 | 125 MB | [![Download](https://img.shields.io/badge/Download-Portable-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v2.9.4/Pi-Deepseek-2.9.4-win-x64-portable.exe) |
-| **Linux** | x64 | Electron | v2.9.4 | deb | 157 MB | [![Download](https://img.shields.io/badge/Download-.deb-%234D6BFE?logo=ubuntu)](https://github.com/jasonet/pi-deepseek/releases/download/v2.9.4/Pi-Deepseek-2.9.4-linux-amd64.deb) |
-| **Linux** | x64 | Electron | v2.9.4 | AppImage | 161 MB | [![Download](https://img.shields.io/badge/Download-AppImage-%234D6BFE?logo=linux)](https://github.com/jasonet/pi-deepseek/releases/download/v2.9.4/Pi-Deepseek-2.9.4-linux-x86_64.AppImage) |
+| **macOS** | Apple Silicon (M1–M5) | Electron | v2.9.5 | DMG | 145 MB | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.9.5/Pi-Deepseek-2.9.5-mac-arm64.dmg) |
+| **macOS** | Intel (x64) | Electron | v2.9.5 | DMG | 157 MB | [![Download](https://img.shields.io/badge/Download-x64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.9.5/Pi-Deepseek-2.9.5-mac-x64.dmg) |
+| **macOS** | Apple Silicon (M1–M5) | Tauri | v2.9.5 | DMG | 147 MB | [![Download](https://img.shields.io/badge/Download-arm64-%237C6BF5?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.9.5/Pi-Deepseek-2.9.5-tauri-mac-arm64.dmg) |
+| **Windows** | x64 | Electron | v2.9.5 | 安装版 | 125 MB | [![Download](https://img.shields.io/badge/Download-Setup-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v2.9.5/Pi-Deepseek-2.9.5-win-x64-setup.exe) |
+| **Windows** | x64 | Electron | v2.9.5 | 便携版 | 125 MB | [![Download](https://img.shields.io/badge/Download-Portable-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v2.9.5/Pi-Deepseek-2.9.5-win-x64-portable.exe) |
+| **Linux** | x64 | Electron | v2.9.5 | deb | 157 MB | [![Download](https://img.shields.io/badge/Download-.deb-%234D6BFE?logo=ubuntu)](https://github.com/jasonet/pi-deepseek/releases/download/v2.9.5/Pi-Deepseek-2.9.5-linux-amd64.deb) |
+| **Linux** | x64 | Electron | v2.9.5 | AppImage | 161 MB | [![Download](https://img.shields.io/badge/Download-AppImage-%234D6BFE?logo=linux)](https://github.com/jasonet/pi-deepseek/releases/download/v2.9.5/Pi-Deepseek-2.9.5-linux-x86_64.AppImage) |
 
 > 🧭 **双引擎版本矩阵 / Dual-engine version matrix:**
-> **Electron `v2.9.4`**（macOS / Windows / Linux）与 **Tauri `v2.9.4`**（macOS arm64）。macOS / Linux Electron 为完整双 harness 体验的推荐版本；Windows 因上游暂未提供 fx binary，当前为 Pi harness。
-> **Electron `v2.9.4`** (macOS / Windows / Linux) and **Tauri `v2.9.4`** (macOS arm64). Electron is recommended for the complete dual-harness experience; About identifies the Electron / Tauri build.
+> **Electron `v2.9.5`**（macOS / Windows / Linux）与 **Tauri `v2.9.5`**（macOS arm64）。macOS / Linux Electron 为完整双 harness 体验的推荐版本；Windows 因上游暂未提供 fx binary，当前为 Pi harness。
+> **Electron `v2.9.5`** (macOS / Windows / Linux) and **Tauri `v2.9.5`** (macOS arm64). Electron is recommended for the complete dual-harness experience; About identifies the Electron / Tauri build.
+
+> **v2.9.5 更新 / What's new:**
+> **OpenAI 兼容供应商（CLIProxyAPI）**：提供商设置升级支持 EasyCLIProxyAPI（OAuth with Claude, Antigravity, Codex, Kimi, xAI）、llama.cpp、Ollama、LM Studio、vLLM 等兼容网关。
+> **运行引擎布局修复**：彻底修复运行引擎（Harnesses）设置中 Pi「默认模型」与推理等级标签被挤压、换行异常的视觉问题。
+> **Cmd+Enter 重试快捷键**：对话输入框及会话中新增 `Cmd+Enter`（Windows/Linux 为 `Ctrl+Enter`）一键重试上一条失败或历史消息，并在通用快捷键设置中完整展示。
+> *Provider settings upgraded to OpenAI-compatible provider (CLIProxyAPI) supporting EasyCLIProxyAPI (OAuth with Claude, Antigravity, Codex, Kimi, xAI). Fixed cramped layout for Pi default model in Harness settings. Added Cmd+Enter (Ctrl+Enter) shortcut to retry the last message in conversations.*
 
 > **v2.9.4 更新 / What's new:**
 > **会话列表视觉与交互优化**：会话列表中引入引擎图标并置于左侧，精简引擎标识，加宽会话标题显示区域，使长会话名称一目了然。

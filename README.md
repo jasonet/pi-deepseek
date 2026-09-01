@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <strong>Deepseek harness Dual GUI(UnOfficial) for elegant pi/fx coding agent with DeepSeek Harness(Official) pi-opendesign & local LLM</strong>
+  <strong>Taosi 3.0 pi/fx elegant harness GUI with DeepSeek Harness(Official) local LLM and CLIProxyAPI/EasyCLIProxyAPI OAuth</strong>
 </p>
 
 <p align="center">

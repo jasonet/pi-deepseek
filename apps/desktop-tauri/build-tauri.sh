@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build script for Pi-Deepseek Tauri 2
+# Build script for Taosi Tauri 2
 # Usage:
 #   ./build-tauri.sh              # Build "without-pi" variant
 #   ./build-tauri.sh with-pi      # Build "with-pi" variant
@@ -13,7 +13,7 @@ cd "$SCRIPT_DIR/src-tauri"
 VARIANT="${1:-without-pi}"
 
 echo "========================================"
-echo "Pi-Deepseek Tauri 2 Build"
+echo "Taosi Tauri 2 Build"
 echo "Variant: $VARIANT"
 echo "========================================"
 

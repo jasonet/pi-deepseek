@@ -23,6 +23,7 @@ import { pathToFileURL } from "node:url";
 import { DesktopAppStore } from "./app-store";
 import { getChangedFiles, getFileDiff, stageFile } from "./app-store-diff";
 import { listWorkspaceFiles } from "./app-store-files";
+import { previewWorkspaceFile, saveWorkspaceFileAs } from "./app-store-file-preview";
 import { MAIN_DEV_RELOAD_MARKER } from "./dev-reload-main-probe";
 import { NotificationManager } from "./notification-manager";
 import {
@@ -654,7 +655,7 @@ async function registerBuiltInPlugins(): Promise<void> {
       packages.push(pluginPath);
       settings.packages = packages;
       await writeFile(settingsPath, JSON.stringify(settings, null, 2) + "\n");
-      console.log(`[Pi-Deepseek] Auto-registered plugin: ${pluginPath}`);
+      console.log(`[Taosi] Auto-registered plugin: ${pluginPath}`);
     }
   } catch { /* silently skip */ }
 }
@@ -692,11 +693,11 @@ function showDesktopUpdateNotification(phase: "available" | "ready", latestVersi
   updateNotificationKey = key;
 
   const notification = new Notification({
-    title: phase === "ready" ? "Pi-Deepseek update ready" : "Pi-Deepseek update available",
+    title: phase === "ready" ? "Taosi update ready" : "Taosi update available",
     body:
       phase === "ready"
-        ? `Version ${latestVersion} is ready. Restart Pi-Deepseek to finish updating.`
-        : `Version ${latestVersion} is available. Open Pi-Deepseek to download the update.`,
+        ? `Version ${latestVersion} is ready. Restart Taosi to finish updating.`
+        : `Version ${latestVersion} is available. Open Taosi to download the update.`,
   });
   notification.on("click", focusMainWindow);
   notification.show();
@@ -1104,7 +1105,7 @@ async function runManualUpdateCheck(): Promise<void> {
   if (result.phase === "up-to-date") {
     const options: MessageBoxOptions = {
       type: "info",
-      title: "Pi-Deepseek",
+      title: "Taosi",
       message: `You're up to date on version ${result.currentVersion}.`,
       buttons: ["OK"],
     };
@@ -1118,7 +1119,7 @@ async function runManualUpdateCheck(): Promise<void> {
 
   const options: MessageBoxOptions = {
     type: "warning",
-    title: "Pi-Deepseek",
+    title: "Taosi",
     message: "Could not check for updates right now.",
     detail: result.message || "The updater is unavailable in this build.",
     buttons: ["OK"],
@@ -1208,12 +1209,12 @@ function installApplicationMenu(): void {
       label: "Help",
       submenu: [
         {
-          label: "About Pi-Deepseek",
+          label: "About Taosi",
           click: () => {
             dialog.showMessageBox({
               type: "info",
-              title: "About Pi-Deepseek",
-              message: `Pi-Deepseek v${app.getVersion()}`,
+              title: "About Taosi",
+              message: `Taosi v${app.getVersion()}`,
               detail: "Codex-level engineering auto-interaction experience.\n\n© 2026 Yiding by HKEZ",
               buttons: ["OK"],
             });
@@ -1236,7 +1237,7 @@ function installApplicationMenu(): void {
 
 app.setName("pi");
 app.setAboutPanelOptions({
-  applicationName: "Pi-Deepseek",
+  applicationName: "Taosi",
   applicationVersion: `${app.getVersion()} (Electron build)`,
   version: `Electron ${process.versions.electron} · Chromium ${process.versions.chrome} · Node ${process.versions.node}`,
   copyright: "Copyright 2026 Yiding by HKEZ",
@@ -1248,7 +1249,7 @@ app.setPath("userData", configuredUserDataDir);
 const shouldRequestSingleInstanceLock = !process.env.PI_APP_TEST_MODE;
 const hasSingleInstanceLock = shouldRequestSingleInstanceLock ? app.requestSingleInstanceLock() : true;
 if (!hasSingleInstanceLock) {
-  console.error(`[Pi-Deepseek] Single instance lock failed. userData: ${configuredUserDataDir}`);
+  console.error(`[Taosi] Single instance lock failed. userData: ${configuredUserDataDir}`);
   app.quit();
 }
 
@@ -1781,6 +1782,39 @@ app.whenReady().then(async () => {
       return [];
     }
     return listWorkspaceFiles(workspacePath);
+  });
+  ipcMain.handle(desktopIpc.previewWorkspaceFile, async (_event, workspaceId: string, filePath: string) => {
+    const workspacePath = store.getWorkspacePath(workspaceId);
+    if (!workspacePath) {
+      return {
+        ok: false,
+        kind: "unsupported",
+        path: filePath,
+        name: path.basename(filePath),
+        sizeBytes: 0,
+        message: "Unknown workspace",
+      };
+    }
+    return previewWorkspaceFile(workspacePath, filePath);
+  });
+  ipcMain.handle(desktopIpc.saveWorkspaceFileAs, async (_event, workspaceId: string, filePath: string) => {
+    const workspacePath = store.getWorkspacePath(workspaceId);
+    if (!workspacePath) {
+      throw new Error(`Unknown workspace: ${workspaceId}`);
+    }
+    const defaultPath = path.basename(filePath.replace(/^file:\/\//, "")) || "download";
+    const options = {
+      title: "Save file as",
+      defaultPath,
+    };
+    const result = mainWindow
+      ? await dialog.showSaveDialog(mainWindow, options)
+      : await dialog.showSaveDialog(options);
+    if (result.canceled || !result.filePath) {
+      return false;
+    }
+    await saveWorkspaceFileAs(workspacePath, filePath, result.filePath);
+    return true;
   });
   ipcMain.handle(desktopIpc.getChangedFiles, async (_event, workspaceId: string) => {
     const workspacePath = store.getWorkspacePath(workspaceId);

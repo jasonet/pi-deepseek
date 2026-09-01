@@ -1,10 +1,10 @@
-name: Release Desktop (Pi-Deepseek)
+name: Release Desktop (Taosi)
 
 # Fork-specific 3-platform release for jasonet/pi-deepseek.
 # Manual dispatch avoids colliding with the inherited upstream `release.yml`
 # (which is tag-triggered, mac+linux only, and syncs an upstream Homebrew tap).
 #
-# Usage: Actions tab -> "Release Desktop (Pi-Deepseek)" -> Run workflow ->
+# Usage: Actions tab -> "Release Desktop (Taosi)" -> Run workflow ->
 #   version: 2.6.6            (Electron, builds all 3 OSes)
 #   platforms: windows-linux  (or all / one platform)
 #   tauri_version: 2.6.6      (leave blank to skip the macOS Tauri build)
@@ -89,7 +89,7 @@ jobs:
             local version="$1"
             if ! gh release view "v${version}" --repo "$REPOSITORY" >/dev/null 2>&1; then
               gh release create "v${version}" --repo "$REPOSITORY" \
-                --target "$TARGET_SHA" --draft --title "Pi-Deepseek v${version}" \
+                --target "$TARGET_SHA" --draft --title "Taosi v${version}" \
                 --generate-notes
             fi
           }
@@ -151,8 +151,8 @@ jobs:
         working-directory: apps/desktop
         shell: bash
         run: |
-          codesign --verify --deep --strict --verbose=2 release/mac/Pi-Deepseek.app
-          codesign --verify --deep --strict --verbose=2 release/mac-arm64/Pi-Deepseek.app
+          codesign --verify --deep --strict --verbose=2 release/mac/Taosi.app
+          codesign --verify --deep --strict --verbose=2 release/mac-arm64/Taosi.app
 
       - name: First-run smoke (Windows)
         if: ${{ matrix.platform == 'windows' }}
@@ -177,7 +177,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload "v${{ inputs.version }}" \
-            apps/desktop/release/Pi-Deepseek-${{ inputs.version }}-win-* \
+            apps/desktop/release/Taosi-${{ inputs.version }}-win-* \
             apps/desktop/release/latest.yml \
             --repo "${{ github.repository }}" --clobber
 
@@ -188,7 +188,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload "v${{ inputs.version }}" \
-            apps/desktop/release/Pi-Deepseek-${{ inputs.version }}-linux-* \
+            apps/desktop/release/Taosi-${{ inputs.version }}-linux-* \
             apps/desktop/release/latest-linux*.yml \
             --repo "${{ github.repository }}" --clobber
 
@@ -199,7 +199,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload "v${{ inputs.version }}" \
-            apps/desktop/release/Pi-Deepseek-${{ inputs.version }}-mac-* \
+            apps/desktop/release/Taosi-${{ inputs.version }}-mac-* \
             apps/desktop/release/latest-mac.yml \
             --repo "${{ github.repository }}" --clobber
 
@@ -247,6 +247,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          DMG=$(ls apps/desktop-tauri/src-tauri/target/release/bundle/dmg/Pi-Deepseek-*-tauri-mac-*.dmg | head -1)
+          DMG=$(ls apps/desktop-tauri/src-tauri/target/release/bundle/dmg/Taosi-*-tauri-mac-*.dmg | head -1)
           gh release upload "v${{ inputs.tauri_version }}" "$DMG" \
             --repo "${{ github.repository }}" --clobber

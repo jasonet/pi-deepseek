@@ -1,10 +1,10 @@
 {
   "name": "@pi-gui/desktop",
   "private": true,
-  "version": "2.9.5",
+  "version": "3.0.0",
   "author": "Yiding by HKEZ",
   "license": "MIT",
-  "description": "Deepseek GUI app for elegant pi coding agent",
+  "description": "Taosi desktop app for the pi coding agent",
   "homepage": "https://github.com/jasonet/pi-deepseek",
   "main": "out/main/main.js",
   "scripts": {

@@ -20,7 +20,7 @@ if (String(feed?.version) !== expectedVersion) {
   throw new Error(`latest.yml version is ${String(feed?.version)}, expected ${expectedVersion}.`);
 }
 
-const expectedSetupName = `Pi-Deepseek-${expectedVersion}-win-x64-setup.exe`;
+const expectedSetupName = `Taosi-${expectedVersion}-win-x64-setup.exe`;
 if (feed?.path !== expectedSetupName) {
   throw new Error(`latest.yml path must target ${expectedSetupName}, received ${String(feed?.path)}.`);
 }

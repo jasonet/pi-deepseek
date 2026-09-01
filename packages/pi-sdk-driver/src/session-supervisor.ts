@@ -1114,7 +1114,7 @@ export class SessionSupervisor {
           title,
         });
       },
-      // Pi-Deepseek does not render arbitrary TUI custom components. Throwing a
+      // Taosi does not render arbitrary TUI custom components. Throwing a
       // typed unsupported-host error allows extensions to catch and degrade,
       // while uncaught command paths fail fast and are surfaced cleanly by
       // the desktop host.
@@ -1156,7 +1156,7 @@ export class SessionSupervisor {
       },
       getAllThemes: () => [],
       getTheme: () => undefined,
-      setTheme: () => ({ success: false, error: "Theme switching not supported in Pi-Deepseek host UI" }),
+      setTheme: () => ({ success: false, error: "Theme switching not supported in Taosi host UI" }),
       getToolsExpanded: () => false,
       setToolsExpanded: () => {},
     };

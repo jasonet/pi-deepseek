@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/nicepkg/vscode-tauri/main/schemas/tauri.conf.schema.json",
-  "productName": "Pi-Deepseek",
-  "version": "2.9.5",
+  "productName": "Taosi",
+  "version": "3.0.0",
   "identifier": "com.pi-deepseek.desktop",
   "build": {
     "frontendDist": "../dist",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Pi-Deepseek (Tauri build)",
+        "title": "Taosi (Tauri build)",
         "width": 1480,
         "height": 980,
         "minWidth": 1200,
@@ -42,8 +42,8 @@
       "icons/icon.ico"
     ],
     "category": "DeveloperTool",
-    "shortDescription": "Pi-Deepseek Tauri build for elegant pi coding agent",
-    "longDescription": "Pi-Deepseek is a desktop GUI client for the pi coding agent. This package is the Rust + Tauri 2 build.",
+    "shortDescription": "Taosi Tauri build for elegant pi coding agent",
+    "longDescription": "Taosi is a desktop GUI client for the pi coding agent. This package is the Rust + Tauri 2 build.",
     "copyright": "Copyright 2026 Yiding by HKEZ · Tauri build",
     "macOS": {
       "minimumSystemVersion": "12.0"

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Pi-Deepseek Open Design Auto-Installer
+# Taosi Open Design Auto-Installer
 # Called on first launch of Open Design tab.
 # Downloads and builds open-design daemon if not present.
 
@@ -15,11 +15,11 @@ if [ -f "$OD_HOME/.installed" ]; then
   exec "$OD_HOME/bin/od" "$@"
 fi
 
-echo "[Pi-Deepseek] Installing Open Design daemon..."
+echo "[Taosi] Installing Open Design daemon..."
 
 # Clone if needed
 if [ ! -d "$OD_HOME/repo" ]; then
-  echo "[Pi-Deepseek] Cloning open-design..."
+  echo "[Taosi] Cloning open-design..."
   git clone --depth 1 --branch "$OD_VERSION" "$OD_REPO" "$OD_HOME/repo" 2>&1
 fi
 
@@ -27,12 +27,12 @@ cd "$OD_HOME/repo"
 
 # Install deps
 if [ ! -d "node_modules" ]; then
-  echo "[Pi-Deepseek] Installing dependencies (this may take a minute)..."
+  echo "[Taosi] Installing dependencies (this may take a minute)..."
   pnpm install --frozen-lockfile 2>&1 || npm install 2>&1
 fi
 
 # Build daemon
-echo "[Pi-Deepseek] Building daemon..."
+echo "[Taosi] Building daemon..."
 pnpm --filter @open-design/daemon build 2>&1 || true
 
 # Create launcher symlink
@@ -46,6 +46,6 @@ chmod +x "$OD_HOME/bin/od"
 
 # Mark as installed
 date > "$OD_HOME/.installed"
-echo "[Pi-Deepseek] Open Design installed successfully."
+echo "[Taosi] Open Design installed successfully."
 
 exec "$OD_HOME/bin/od" "$@"

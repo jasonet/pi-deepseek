@@ -1,4 +1,4 @@
-// Main entry point for Pi-Deepseek Tauri 2 backend.
+// Main entry point for Taosi Tauri 2 backend.
 //
 // Beyond the original pi-detection helpers, this hosts the bridge to the Node
 // sidecar (apps/desktop-tauri/sidecar) which runs the real Electron
@@ -352,7 +352,7 @@ pub fn main() {
             get_variant,
         ])
         .run(tauri::generate_context!())
-        .expect("error while running Pi-Deepseek");
+        .expect("error while running Taosi");
 }
 
 /// Get pi binary path using various lookup methods.

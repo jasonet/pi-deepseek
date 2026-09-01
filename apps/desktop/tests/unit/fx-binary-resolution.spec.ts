@@ -11,7 +11,7 @@ test("discovers a user-installed fx.exe on Windows before the bundled fallback",
       arch: "x64",
       pathValue: "C:\\Tools\\bin;D:\\Apps\\bin",
       homeDirectory: "C:\\Users\\developer",
-      bundledRoot: "C:\\Program Files\\Pi-Deepseek\\resources\\fx",
+      bundledRoot: "C:\\Program Files\\Taosi\\resources\\fx",
       binaryPath: "",
     }),
   ).toEqual([
@@ -19,7 +19,7 @@ test("discovers a user-installed fx.exe on Windows before the bundled fallback",
     "D:\\Apps\\bin\\fx.exe",
     "C:\\Users\\developer\\.fx\\bin\\fx.exe",
     "C:\\Users\\developer\\.local\\bin\\fx.exe",
-    "C:\\Program Files\\Pi-Deepseek\\resources\\fx\\win32-x64\\fx.exe",
+    "C:\\Program Files\\Taosi\\resources\\fx\\win32-x64\\fx.exe",
   ]);
 });
 

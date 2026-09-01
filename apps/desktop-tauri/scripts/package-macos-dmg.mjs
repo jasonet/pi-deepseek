@@ -6,11 +6,11 @@ import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
 const appRoot = join(here, "..");
 const targetDir = join(appRoot, "src-tauri", "target", "release", "bundle");
-const appPath = join(targetDir, "macos", "Pi-Deepseek.app");
+const appPath = join(targetDir, "macos", "Taosi.app");
 const config = JSON.parse(readFileSync(join(appRoot, "src-tauri", "tauri.conf.json"), "utf8"));
 const dmgDir = join(targetDir, "dmg");
 const arch = process.arch === "arm64" ? "arm64" : process.arch;
-const dmgPath = join(dmgDir, `Pi-Deepseek-${config.version}-tauri-mac-${arch}.dmg`);
+const dmgPath = join(dmgDir, `Taosi-${config.version}-tauri-mac-${arch}.dmg`);
 const stagingDir = join(dmgDir, ".staging");
 
 function run(command, args) {
@@ -22,15 +22,15 @@ try {
   rmSync(stagingDir, { recursive: true, force: true });
   mkdirSync(stagingDir, { recursive: true });
 
-  cpSync(appPath, join(stagingDir, "Pi-Deepseek.app"), { recursive: true });
-  run("codesign", ["--force", "--deep", "--sign", "-", join(stagingDir, "Pi-Deepseek.app")]);
-  run("codesign", ["--verify", "--deep", "--strict", join(stagingDir, "Pi-Deepseek.app")]);
+  cpSync(appPath, join(stagingDir, "Taosi.app"), { recursive: true });
+  run("codesign", ["--force", "--deep", "--sign", "-", join(stagingDir, "Taosi.app")]);
+  run("codesign", ["--verify", "--deep", "--strict", join(stagingDir, "Taosi.app")]);
   symlinkSync("/Applications", join(stagingDir, "Applications"));
 
   run("hdiutil", [
     "create",
     "-volname",
-    "Pi-Deepseek",
+    "Taosi",
     "-srcfolder",
     stagingDir,
     "-ov",

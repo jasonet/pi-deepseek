@@ -79,13 +79,13 @@ function resolvePackagedExecutable(releaseDir) {
   if (process.platform === "darwin") {
     const preferredDir = process.arch === "arm64" ? "mac-arm64" : "mac";
     const candidates = [
-      path.join(releaseDir, preferredDir, "Pi-Deepseek.app"),
-      path.join(releaseDir, "mac-arm64", "Pi-Deepseek.app"),
-      path.join(releaseDir, "mac", "Pi-Deepseek.app"),
+      path.join(releaseDir, preferredDir, "Taosi.app"),
+      path.join(releaseDir, "mac-arm64", "Taosi.app"),
+      path.join(releaseDir, "mac", "Taosi.app"),
     ];
     const appBundle = candidates.find((candidate) => existsSync(candidate));
     if (!appBundle) {
-      throw new Error(`No Pi-Deepseek.app bundle found under ${releaseDir}.`);
+      throw new Error(`No Taosi.app bundle found under ${releaseDir}.`);
     }
     return resolveMacExecutable(appBundle);
   }
@@ -94,18 +94,18 @@ function resolvePackagedExecutable(releaseDir) {
     const unpackedDir = readdirSync(releaseDir, { withFileTypes: true })
       .filter((entry) => entry.isDirectory() && /^linux(?:-[\w]+)?-unpacked$/.test(entry.name))
       .map((entry) => path.join(releaseDir, entry.name))
-      .find((candidate) => existsSync(path.join(candidate, "pi-deepseek")));
+      .find((candidate) => existsSync(path.join(candidate, "taosi")));
     if (!unpackedDir) {
-      throw new Error(`No linux-unpacked Pi-Deepseek executable found under ${releaseDir}.`);
+      throw new Error(`No linux-unpacked Taosi executable found under ${releaseDir}.`);
     }
-    return path.join(unpackedDir, "pi-deepseek");
+    return path.join(unpackedDir, "taosi");
   }
 
   if (process.platform === "win32") {
     const unpackedDir = path.join(releaseDir, "win-unpacked");
-    const executable = path.join(unpackedDir, "Pi-Deepseek.exe");
+    const executable = path.join(unpackedDir, "Taosi.exe");
     if (!existsSync(executable)) {
-      throw new Error(`No Windows Pi-Deepseek.exe found at ${executable}.`);
+      throw new Error(`No Windows Taosi.exe found at ${executable}.`);
     }
     return executable;
   }
@@ -166,7 +166,7 @@ function redactSecrets(value) {
 
 async function assertPortAvailable(url, label) {
   if (await healthOk(url)) {
-    throw new Error(`${label} already responds before launch; close existing Pi-Deepseek/Kun instances before first-run smoke.`);
+    throw new Error(`${label} already responds before launch; close existing Taosi/Kun instances before first-run smoke.`);
   }
 }
 

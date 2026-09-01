@@ -34,7 +34,7 @@
 └──────────────────────┬──────────────────────────────────────┘
                        ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ 1. Pi-Deepseek IM Bridge (app-store)                       │
+│ 1. Taosi IM Bridge (app-store)                       │
 │    - 解析 webhook payload                                   │
 │    - 写入 im/messages/{provider}/{channelId}.jsonl          │
 │    - 匹配 ImChannel（按 provider + channelId）               │

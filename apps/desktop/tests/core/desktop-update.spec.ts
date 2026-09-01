@@ -48,7 +48,7 @@ test("downloads an available update with progress and prompts to restart", async
       latestVersion: "2.9.2",
       percent: 100,
     });
-    await expect(banner).toContainText("Restart Pi-Deepseek to apply the update");
+    await expect(banner).toContainText("Restart Taosi to apply the update");
     await window.getByRole("button", { name: "Restart now", exact: true }).click();
     await expect.poll(() => getUpdateInstallRequestCount(harness)).toBe(1);
   } finally {

@@ -11,15 +11,17 @@ export const TimelineItem = memo(function TimelineItem({
   expandedToolCallIds,
   onToggleToolCall,
   onViewFileInDiff,
+  onPreviewFile,
 }: {
   readonly item: TranscriptMessage;
   readonly expandedToolCallIds?: ReadonlySet<string>;
   readonly onToggleToolCall?: (callId: string) => void;
   readonly onViewFileInDiff?: (path: string) => void;
+  readonly onPreviewFile?: (path: string) => void;
 }) {
   switch (item.kind) {
     case "message":
-      return <TimelineMessage item={item} />;
+      return <TimelineMessage item={item} onPreviewFile={onPreviewFile} />;
     case "activity":
       return <TimelineActivityItem item={item} />;
     case "tool":
@@ -38,7 +40,13 @@ export const TimelineItem = memo(function TimelineItem({
   }
 });
 
-function TimelineMessage({ item }: { readonly item: SessionTranscriptMessage }) {
+function TimelineMessage({
+  item,
+  onPreviewFile,
+}: {
+  readonly item: SessionTranscriptMessage;
+  readonly onPreviewFile?: (path: string) => void;
+}) {
   if (item.role === "user") {
     return (
       <article className="timeline-item timeline-item--user">
@@ -68,7 +76,7 @@ function TimelineMessage({ item }: { readonly item: SessionTranscriptMessage }) 
               )}
             </div>
           ) : null}
-          <MessageMarkdown text={item.text} />
+          <MessageMarkdown text={item.text} onPreviewFile={onPreviewFile} />
         </div>
       </article>
     );
@@ -80,14 +88,14 @@ function TimelineMessage({ item }: { readonly item: SessionTranscriptMessage }) 
         <div className="timeline-item__summary-eyebrow">
           {item.role === "branchSummary" ? "Branch summary" : "Compaction summary"}
         </div>
-        <MessageMarkdown text={item.text} />
+        <MessageMarkdown text={item.text} onPreviewFile={onPreviewFile} />
       </article>
     );
   }
 
   return (
     <article className="timeline-item timeline-item--assistant">
-      <MessageMarkdown text={item.text} />
+      <MessageMarkdown text={item.text} onPreviewFile={onPreviewFile} />
     </article>
   );
 }

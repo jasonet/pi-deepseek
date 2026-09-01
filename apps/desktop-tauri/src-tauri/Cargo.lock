@@ -2351,7 +2351,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "pi-deepseek"
+name = "taosi"
 version = "2.9.5"
 dependencies = [
  "serde",

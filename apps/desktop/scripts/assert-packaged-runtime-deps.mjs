@@ -127,10 +127,10 @@ function resolveAsarPath(desktopDir, packagePlatform) {
 function resolveMacAppPath(desktopDir, ...segments) {
   const releaseDir = path.join(desktopDir, "release");
   const appBundlePath = ["mac-arm64", "mac"]
-    .map((directoryName) => path.join(releaseDir, directoryName, "Pi-Deepseek.app"))
+    .map((directoryName) => path.join(releaseDir, directoryName, "Taosi.app"))
     .find((candidatePath) => existsSync(candidatePath));
 
-  return path.join(appBundlePath ?? path.join(releaseDir, "mac-arm64", "Pi-Deepseek.app"), ...segments);
+  return path.join(appBundlePath ?? path.join(releaseDir, "mac-arm64", "Taosi.app"), ...segments);
 }
 
 function verifyRequiredPackages(extractedDir) {

@@ -4,7 +4,7 @@
   "type": "module",
   "version": "0.0.0",
   "license": "MIT",
-  "description": "Durable session driver contract for Pi-Deepseek.",
+  "description": "Durable session driver contract for Taosi.",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

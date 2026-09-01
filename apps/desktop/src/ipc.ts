@@ -50,6 +50,20 @@ export type DesktopUpdatePhase =
   | "error"
   | "unsupported";
 
+export type FilePreviewKind = "markdown" | "code" | "text" | "image" | "pdf" | "unsupported";
+
+export interface FilePreviewResult {
+  readonly ok: boolean;
+  readonly kind: FilePreviewKind;
+  readonly path: string;
+  readonly name: string;
+  readonly sizeBytes: number;
+  readonly content?: string;
+  readonly dataUrl?: string;
+  readonly language?: string;
+  readonly message?: string;
+}
+
 export interface DesktopUpdateStatus {
   readonly phase: DesktopUpdatePhase;
   readonly currentVersion: string;
@@ -181,6 +195,8 @@ export const desktopIpc = {
   navigateSessionTree: "pi-gui:navigate-session-tree",
   toggleWindowMaximize: "pi-gui:toggle-window-maximize",
   listWorkspaceFiles: "pi-gui:list-workspace-files",
+  previewWorkspaceFile: "pi-gui:preview-workspace-file",
+  saveWorkspaceFileAs: "pi-gui:save-workspace-file-as",
   getChangedFiles: "pi-gui:get-changed-files",
   getFileDiff: "pi-gui:get-file-diff",
   stageFile: "pi-gui:stage-file",
@@ -535,6 +551,8 @@ export interface PiDesktopApi {
     options?: NavigateSessionTreeOptions,
   ): Promise<{ readonly state: DesktopAppState; readonly result: NavigateSessionTreeResult }>;
   listWorkspaceFiles(workspaceId: string): Promise<string[]>;
+  previewWorkspaceFile(workspaceId: string, filePath: string): Promise<FilePreviewResult>;
+  saveWorkspaceFileAs(workspaceId: string, filePath: string): Promise<boolean>;
   getChangedFiles(workspaceId: string): Promise<{ path: string; status: "added" | "modified" | "deleted" | "untracked"; staged: boolean }[]>;
   getFileDiff(workspaceId: string, filePath: string): Promise<string>;
   stageFile(workspaceId: string, filePath: string): Promise<void>;

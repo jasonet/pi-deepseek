@@ -5,6 +5,7 @@ import {
   type DshWebStatus,
   type DesktopNotificationPermissionStatus,
   type DesktopUpdateStatus,
+  type FilePreviewResult,
   type OpenDesignStatus,
   type PiDesktopCommand,
   type TerminalDataEvent,
@@ -363,6 +364,10 @@ contextBridge.exposeInMainWorld("piApp", {
     }>,
   listWorkspaceFiles: (workspaceId: string) =>
     ipcRenderer.invoke(desktopIpc.listWorkspaceFiles, workspaceId) as Promise<string[]>,
+  previewWorkspaceFile: (workspaceId: string, filePath: string) =>
+    ipcRenderer.invoke(desktopIpc.previewWorkspaceFile, workspaceId, filePath) as Promise<FilePreviewResult>,
+  saveWorkspaceFileAs: (workspaceId: string, filePath: string) =>
+    ipcRenderer.invoke(desktopIpc.saveWorkspaceFileAs, workspaceId, filePath) as Promise<boolean>,
   getChangedFiles: (workspaceId: string) =>
     ipcRenderer.invoke(desktopIpc.getChangedFiles, workspaceId) as Promise<{ path: string; status: "added" | "modified" | "deleted" | "untracked"; staged: boolean }[]>,
   getFileDiff: (workspaceId: string, filePath: string) =>

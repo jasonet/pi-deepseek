@@ -1,6 +1,6 @@
 # DeepSeek Doctor & Contract PR Plan
 
-Status: planning. Target: Pi-Deepseek v0.3.x
+Status: planning. Target: Taosi v0.3.x
 
 ## PR-1：`packages/deepseek-contract` — 离线单元测试与工具函数
 

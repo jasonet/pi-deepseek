@@ -122,7 +122,7 @@ export function ProviderExternalConfigDialog({ provider, onClose }: { provider: 
           <code style={{ fontSize: 13, color: "#7ee787" }}>export {envVar}="sk-your-key-here"</code>
         </div>
         <p className="extension-dialog__body" style={{ fontSize: 12, opacity: 0.7 }}>
-          Add this to ~/.zshrc or ~/.bashrc for permanent configuration. Restart Pi-Deepseek after setting.
+          Add this to ~/.zshrc or ~/.bashrc for permanent configuration. Restart Taosi after setting.
         </p>
         <div className="extension-dialog__actions">
           <button className="button button--secondary" type="button" onClick={onClose}>Close</button>

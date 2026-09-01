@@ -1,5 +1,5 @@
 appId: com.pi-deepseek.desktop
-productName: Pi-Deepseek
+productName: Taosi
 copyright: Copyright 2026 Yiding by HKEZ
 electronVersion: 35.7.5
 
@@ -49,7 +49,6 @@ asarUnpack:
   - "**/node_modules/.pnpm/node-pty*/node_modules/node-pty/**/*"
 
 artifactName: ${productName}-${version}-${os}-${arch}.${ext}
-buildVersion: 2.9.4
 
 electronLanguages:
   - en-US
@@ -61,8 +60,6 @@ electronLanguages:
 
 mac:
   artifactName: ${productName}-${version}-${os}-${arch}.${ext}
-  bundleShortVersion: 2.9.4
-  bundleVersion: 2.9.4
   identity: "-"
   category: public.app-category.developer-tools
   hardenedRuntime: true
@@ -110,7 +107,7 @@ portable:
 
 linux:
   category: Development
-  executableName: pi-deepseek
+  executableName: taosi
   maintainer: Yiding by HKEZ
   target:
     - target: AppImage

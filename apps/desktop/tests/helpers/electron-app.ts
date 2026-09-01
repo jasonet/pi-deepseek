@@ -322,8 +322,8 @@ export async function resolvePackagedAppBundle(releaseDir = packagedReleaseDir):
   const preferredDirectoryName =
     process.platform === "darwin" && process.arch === "arm64" ? `${sep}mac-arm64${sep}` : `${sep}mac${sep}`;
   const appBundle =
-    appBundles.find((candidate) => basename(candidate) === "Pi-Deepseek.app" && candidate.includes(preferredDirectoryName)) ??
-    appBundles.find((candidate) => basename(candidate) === "Pi-Deepseek.app") ??
+    appBundles.find((candidate) => basename(candidate) === "Taosi.app" && candidate.includes(preferredDirectoryName)) ??
+    appBundles.find((candidate) => basename(candidate) === "Taosi.app") ??
     appBundles.find((candidate) => basename(candidate) === "pi-gui.app") ??
     appBundles[0];
   if (!appBundle) {
@@ -368,7 +368,7 @@ export async function resolvePackagedReleaseZip(releaseDir = packagedReleaseDir)
 
 export async function extractPackagedReleaseZipAppBundle(
   releaseDir = packagedReleaseDir,
-  appName = "pi-gui 2.app",
+  appName = "Taosi self-test.app",
 ): Promise<string> {
   const zipPath = await resolvePackagedReleaseZip(releaseDir);
   return extractAppBundleFromReleaseZip(zipPath, appName);
@@ -376,7 +376,7 @@ export async function extractPackagedReleaseZipAppBundle(
 
 export async function extractAppBundleFromReleaseZip(
   zipPath: string,
-  appName = "pi-gui 2.app",
+  appName = "Taosi self-test.app",
 ): Promise<string> {
   const extractionDir = await mkdtemp(join(tmpdir(), "pi-gui-release-zip-"));
   await execFileAsync("ditto", ["-x", "-k", zipPath, extractionDir]);
@@ -894,6 +894,19 @@ export async function stubNextOpenDialog(
   filePaths: readonly string[],
 ): Promise<void> {
   await stubNextOpenDialogResult(harness, { canceled: false, filePaths });
+}
+
+export async function stubNextSaveDialogResult(
+  harness: DesktopHarness,
+  result: { readonly canceled: boolean; readonly filePath?: string },
+): Promise<void> {
+  await harness.electronApp.evaluate(({ dialog }, nextResult) => {
+    const original = dialog.showSaveDialog;
+    dialog.showSaveDialog = async (...args: Parameters<typeof dialog.showSaveDialog>) => {
+      dialog.showSaveDialog = original;
+      return { canceled: nextResult.canceled, filePath: nextResult.filePath };
+    };
+  }, result);
 }
 
 export async function getOpenDialogInvocationCount(harness: DesktopHarness): Promise<number> {

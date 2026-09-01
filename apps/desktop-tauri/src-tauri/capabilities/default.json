@@ -1,6 +1,6 @@
 {
   "identifier": "default",
-  "description": "Default capability for Pi-Deepseek",
+  "description": "Default capability for Taosi",
   "windows": ["*"],
   "permissions": [
     "core:default",

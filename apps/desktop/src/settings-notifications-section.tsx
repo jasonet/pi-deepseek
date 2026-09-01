@@ -97,9 +97,9 @@ function labelForPermissionStatus(status: DesktopNotificationPermissionStatus): 
 
 function descForPermissionStatus(status: DesktopNotificationPermissionStatus): string {
   switch (status) {
-    case "granted": return "Pi-Deepseek has notification access.";
+    case "granted": return "Taosi has notification access.";
     case "denied": return "Notifications are blocked in System Settings.";
-    case "default": return "Pi-Deepseek has not asked for notification access yet.";
+    case "default": return "Taosi has not asked for notification access yet.";
     case "unsupported": return "Notifications are not supported on this system.";
     default: return "Checking notification status…";
   }

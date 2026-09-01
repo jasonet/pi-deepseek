@@ -1,7 +1,7 @@
-# Pi-Deepseek
+# Taosi
 
 <p align="center">
-  <img src="./apps/website/public/icon.svg" width="96" height="96" alt="Pi-Deepseek" />
+  <img src="./apps/website/public/icon.svg" width="96" height="96" alt="Taosi" />
 </p>
 
 <p align="center">
@@ -20,17 +20,25 @@
 
 | 平台 | 架构 | 引擎 | 版本 | 格式 | 大小 | 下载 |
 |------|------|------|------|------|------|------|
-| **macOS** | Apple Silicon (M1–M5) | Electron | v2.9.5 | DMG | 145 MB | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.9.5/Pi-Deepseek-2.9.5-mac-arm64.dmg) |
-| **macOS** | Intel (x64) | Electron | v2.9.5 | DMG | 157 MB | [![Download](https://img.shields.io/badge/Download-x64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.9.5/Pi-Deepseek-2.9.5-mac-x64.dmg) |
-| **macOS** | Apple Silicon (M1–M5) | Tauri | v2.9.5 | DMG | 147 MB | [![Download](https://img.shields.io/badge/Download-arm64-%237C6BF5?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v2.9.5/Pi-Deepseek-2.9.5-tauri-mac-arm64.dmg) |
-| **Windows** | x64 | Electron | v2.9.5 | 安装版 | 125 MB | [![Download](https://img.shields.io/badge/Download-Setup-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v2.9.5/Pi-Deepseek-2.9.5-win-x64-setup.exe) |
-| **Windows** | x64 | Electron | v2.9.5 | 便携版 | 125 MB | [![Download](https://img.shields.io/badge/Download-Portable-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v2.9.5/Pi-Deepseek-2.9.5-win-x64-portable.exe) |
-| **Linux** | x64 | Electron | v2.9.5 | deb | 157 MB | [![Download](https://img.shields.io/badge/Download-.deb-%234D6BFE?logo=ubuntu)](https://github.com/jasonet/pi-deepseek/releases/download/v2.9.5/Pi-Deepseek-2.9.5-linux-amd64.deb) |
-| **Linux** | x64 | Electron | v2.9.5 | AppImage | 161 MB | [![Download](https://img.shields.io/badge/Download-AppImage-%234D6BFE?logo=linux)](https://github.com/jasonet/pi-deepseek/releases/download/v2.9.5/Pi-Deepseek-2.9.5-linux-x86_64.AppImage) |
+| **macOS** | Apple Silicon (M1–M5) | Electron | v3.0.0 | DMG | 145 MB | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.0/Taosi-3.0.0-mac-arm64.dmg) |
+| **macOS** | Intel (x64) | Electron | v3.0.0 | DMG | 157 MB | [![Download](https://img.shields.io/badge/Download-x64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.0/Taosi-3.0.0-mac-x64.dmg) |
+| **macOS** | Apple Silicon (M1–M5) | Tauri | v3.0.0 | DMG | 147 MB | [![Download](https://img.shields.io/badge/Download-arm64-%237C6BF5?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.0/Taosi-3.0.0-tauri-mac-arm64.dmg) |
+| **Windows** | x64 | Electron | v3.0.0 | 安装版 | 125 MB | [![Download](https://img.shields.io/badge/Download-Setup-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.0/Taosi-3.0.0-win-x64-setup.exe) |
+| **Windows** | x64 | Electron | v3.0.0 | 便携版 | 125 MB | [![Download](https://img.shields.io/badge/Download-Portable-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.0/Taosi-3.0.0-win-x64-portable.exe) |
+| **Linux** | x64 | Electron | v3.0.0 | deb | 157 MB | [![Download](https://img.shields.io/badge/Download-.deb-%234D6BFE?logo=ubuntu)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.0/Taosi-3.0.0-linux-amd64.deb) |
+| **Linux** | x64 | Electron | v3.0.0 | AppImage | 161 MB | [![Download](https://img.shields.io/badge/Download-AppImage-%234D6BFE?logo=linux)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.0/Taosi-3.0.0-linux-x86_64.AppImage) |
 
 > 🧭 **双引擎版本矩阵 / Dual-engine version matrix:**
-> **Electron `v2.9.5`**（macOS / Windows / Linux）与 **Tauri `v2.9.5`**（macOS arm64）。macOS / Linux Electron 为完整双 harness 体验的推荐版本；Windows 因上游暂未提供 fx binary，当前为 Pi harness。
-> **Electron `v2.9.5`** (macOS / Windows / Linux) and **Tauri `v2.9.5`** (macOS arm64). Electron is recommended for the complete dual-harness experience; About identifies the Electron / Tauri build.
+> **Electron `v3.0.0`**（macOS / Windows / Linux）与 **Tauri `v3.0.0`**（macOS arm64）。macOS / Linux Electron 为完整双 harness 体验的推荐版本；Windows 因上游暂未提供 fx binary，当前为 Pi harness。
+> **Electron `v3.0.0`** (macOS / Windows / Linux) and **Tauri `v3.0.0`** (macOS arm64). Electron is recommended for the complete dual-harness experience; About identifies the Electron / Tauri build.
+
+> 🚀 **v3.0.0 重大更新 / Major Release — 全新品牌 Taosi 与全平台重构:**
+> **全新品牌 Taosi**：应用正式更名为 **Taosi**，全面升级品牌标识与多语言支持。
+> **文件预览面板（File Preview Panel）**：支持在应用右侧实时预览会话中提及的代码文件、Markdown 以及多格式文档。
+> **OpenAI 兼容供应商（CLIProxyAPI）**：提供商设置升级支持 EasyCLIProxyAPI（OAuth with Claude, Antigravity, Codex, Kimi, xAI）、llama.cpp、Ollama、LM Studio、vLLM 等兼容网关。
+> **会话列表与顶栏交互升级**：会话列表引入内嵌引擎图标及自适应长标题展示；侧边栏折叠按钮移入顶栏，收起时依然随时可用。
+> **时间线滚动优化与更新友好化**：彻底修复长 URL 导致的页面横向滚动与抖动，更新提示增加关闭/稍后操作与更友好的错误提示。
+> *Major release rebrands Pi-Deepseek to **Taosi** across all platforms. Introduces interactive file preview panel, full OpenAI-compatible / CLIProxyAPI provider support, redesigned session list & topbar sidebar toggle, robust timeline anti-jitter, and user-friendly update dialog controls.*
 
 > **v2.9.5 更新 / What's new:**
 > **OpenAI 兼容供应商（CLIProxyAPI）**：提供商设置升级支持 EasyCLIProxyAPI（OAuth with Claude, Antigravity, Codex, Kimi, xAI）、llama.cpp、Ollama、LM Studio、vLLM 等兼容网关。
@@ -74,7 +82,7 @@
 > 🛡️ **稳定性**：30 天 × 20 workspace 长期运行零洩漏验证通过
 > *Performance & memory overhaul: code splitting (-49% initial JS), 8 lazy-loaded views, SessionRecord cache skipping, transcript LRU, bounded session data maps, periodic GC.*
 
-> 💡 **macOS**：下载 `.dmg` 双击挂载，将 `Pi-Deepseek.app` 拖入 `/Applications`。
+> 💡 **macOS**：下载 `.dmg` 双击挂载，将 `Taosi.app` 拖入 `/Applications`。
 > **Windows**：`Setup.exe` 为安装版（推荐），`Portable.exe` 为绿色免安装版。
 > **Linux**：Ubuntu/Debian/Deepin/UOS 用 `sudo dpkg -i xxx.deb` 安装；其他发行版用 `chmod +x xxx.AppImage && ./xxx.AppImage` 运行。
 > 首次启动自动弹出设置引导，填入 DeepSeek API Key 即可开始。
@@ -85,7 +93,7 @@
 
 ## 简介
 
-`Pi-Deepseek` 利用 Pi/fx coding agent 充分发挥 DeepSeek V4 Pro/Flash（DeepSeek已经失去性价比，目前首推codex订阅，fx可以无缝login openai codex/grok），同时内置了DeepSeek Harness Web UI（npx @deepseek-ai/dsh web），一个面向本地 AI 编程工作流的桌面客户端。现已支持 macOS / Windows / Linux 三平台，为 pi和fx 会话提供深推理、无提示词的 Agent 级工程自动交互体验。
+`Taosi` 利用 Pi/fx coding agent 充分发挥 DeepSeek V4 Pro/Flash（DeepSeek已经失去性价比，目前首推codex订阅，fx可以无缝login openai codex/grok），同时内置了DeepSeek Harness Web UI（npx @deepseek-ai/dsh web），一个面向本地 AI 编程工作流的桌面客户端。现已支持 macOS / Windows / Linux 三平台，为 pi和fx 会话提供深推理、无提示词的 Agent 级工程自动交互体验。
 
 ![dual-pane](./docs/readme/dual-pane.jpg)
 

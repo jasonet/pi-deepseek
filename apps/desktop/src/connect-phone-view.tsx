@@ -60,7 +60,7 @@ export function ConnectPhoneView({
       const api = window.piApp;
       if (!api) {
         setStatus("error");
-        setMessage("桌面桥接未就绪，请重新打开 Pi-Deepseek。");
+        setMessage("桌面桥接未就绪，请重新打开 Taosi。");
         return;
       }
 
@@ -101,7 +101,7 @@ export function ConnectPhoneView({
     const api = window.piApp;
     if (!api) {
       setStatus("error");
-      setMessage("桌面桥接未就绪，请重新打开 Pi-Deepseek。");
+      setMessage("桌面桥接未就绪，请重新打开 Taosi。");
       return;
     }
 
@@ -132,7 +132,7 @@ export function ConnectPhoneView({
       <div className="conversation settings-view connect-phone" data-testid="connect-phone-surface">
         <header className="view-header">
           <div>
-            <div className="chat-header__eyebrow">Pi-Deepseek</div>
+            <div className="chat-header__eyebrow">Taosi</div>
             <h1 className="view-header__title">连接手机</h1>
             <p className="view-header__body">
               通过扫码把微信或飞书连接到 pi 会话；生成和轮询机制与 Kun 的 IM 安装流程保持一致。

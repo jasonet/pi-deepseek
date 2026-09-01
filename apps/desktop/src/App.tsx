@@ -59,12 +59,14 @@ const DeepSeekHarnessView = lazy(() => import("./deepseek-harness-view").then((m
   })),
 );
 const DiffPanel = lazy(() => import("./diff-panel").then((m) => ({ default: m.DiffPanel })));
+const FilePreviewPanel = lazy(() => import("./file-preview-panel").then((m) => ({ default: m.FilePreviewPanel })));
 const TerminalPanel = lazy(() => import("./terminal-panel").then((m) => ({ default: m.TerminalPanel })));
 const TreeModal = lazy(() => import("./tree-modal").then((m) => ({ default: m.TreeModal })));
 import { SecondarySurface } from "./secondary-surface";
 import { HarnessEngineSwitch } from "./harness-engine-switch";
 import type { SettingsSection } from "./settings-view";
 import type { DiffPanelFileRequest } from "./diff-panel";
+import type { FilePreviewRequest } from "./file-preview-panel";
 import { UpdateStatusBanner } from "./update-status-banner";
 import {
   isFxRuntimeProvider,
@@ -238,6 +240,7 @@ export default function App() {
   const handledComposerSyncNonceRef = useRef(0);
   const [showJumpToLatest, setShowJumpToLatest] = useState(false);
   const [showDiffPanel, setShowDiffPanel] = useState(false);
+  const [filePreviewRequest, setFilePreviewRequest] = useState<FilePreviewRequest | null>(null);
   const [openTerminalSessionKey, setOpenTerminalSessionKey] = useState("");
   const [takeoverTerminalSessionKey, setTakeoverTerminalSessionKey] = useState("");
   const [terminalHeight, setTerminalHeight] = useState(340);
@@ -993,8 +996,14 @@ export default function App() {
   );
 
   const handleViewFileInDiff = useCallback((path: string) => {
+    setFilePreviewRequest(null);
     setShowDiffPanel(true);
     setDiffFileRequest({ path, nonce: Date.now() });
+  }, []);
+
+  const handlePreviewFile = useCallback((workspaceId: string, path: string) => {
+    setShowDiffPanel(true);
+    setFilePreviewRequest({ workspaceId, path, nonce: Date.now() });
   }, []);
 
   const toggleDiffPanel = useCallback(() => {
@@ -1004,14 +1013,18 @@ export default function App() {
       preserveBottomOnNextPaneResizeRef.current = true;
     }
 
-    setShowDiffPanel((prev) => !prev);
+    const nextVisible = !showDiffPanel;
+    setShowDiffPanel(nextVisible);
+    if (nextVisible) {
+      setFilePreviewRequest(null);
+    }
 
     if (!shouldPreserveBottom) {
       return;
     }
 
     schedulePinnedBottomRealignment(3);
-  }, [schedulePinnedBottomRealignment]);
+  }, [schedulePinnedBottomRealignment, showDiffPanel]);
 
   const openSettings = (workspaceId?: string, section?: SettingsSection) => {
     if (!api) {
@@ -1737,7 +1750,7 @@ export default function App() {
     return (
       <div className="shell shell--loading">
         <main className="loading-card">
-          <div className="loading-card__eyebrow">Pi-Deepseek</div>
+          <div className="loading-card__eyebrow">Taosi</div>
           <h1>Loading sessions</h1>
           <p>The desktop shell is restoring folder and thread state from the main process.</p>
         </main>
@@ -3040,6 +3053,7 @@ export default function App() {
                   onJumpToLatest={jumpToLatest}
                   onContentHeightChange={handleTimelineContentHeightChange}
                   onViewFileInDiff={handleViewFileInDiff}
+                  onPreviewFile={(path) => handlePreviewFile(selectedWorkspace.id, path)}
                 />
               </div>
             </section>
@@ -3137,6 +3151,7 @@ export default function App() {
                       onJumpToLatest={() => {}}
                       onContentHeightChange={() => {}}
                       onViewFileInDiff={handleViewFileInDiff}
+                      onPreviewFile={(path) => secondaryWorkspace && handlePreviewFile(secondaryWorkspace.id, path)}
                     />
                   </div>
                 </section>
@@ -3240,6 +3255,7 @@ export default function App() {
                   onJumpToLatest={jumpToLatest}
                   onContentHeightChange={handleTimelineContentHeightChange}
                   onViewFileInDiff={handleViewFileInDiff}
+                  onPreviewFile={(path) => handlePreviewFile(selectedWorkspace.id, path)}
                 />
               </div>
             </section>
@@ -3351,15 +3367,27 @@ export default function App() {
         {terminalPanel}
           </>
         )}
-        {diffVisibleInCurrentView && selectedWorkspace && selectedSession ? (
+        {diffVisibleInCurrentView && (selectedWorkspace && selectedSession || filePreviewRequest) ? (
           <Suspense fallback={<ViewFallback />}>
-              <DiffPanel
-            workspaceId={selectedWorkspace.id}
-            sessionId={selectedSession.id}
-            api={api}
-            sessionStatus={selectedSession.status}
-            fileRequest={diffFileRequest}
+            {filePreviewRequest ? (
+              <FilePreviewPanel
+                api={api}
+                request={filePreviewRequest}
+                onClose={() => {
+                  setFilePreviewRequest(null);
+                  setShowDiffPanel(false);
+                }}
+                onPreviewFile={(path) => handlePreviewFile(filePreviewRequest.workspaceId, path)}
               />
+            ) : selectedWorkspace && selectedSession ? (
+              <DiffPanel
+                workspaceId={selectedWorkspace.id}
+                sessionId={selectedSession.id}
+                api={api}
+                sessionStatus={selectedSession.status}
+                fileRequest={diffFileRequest}
+              />
+            ) : null}
             </Suspense>
         ) : null}
       </main>

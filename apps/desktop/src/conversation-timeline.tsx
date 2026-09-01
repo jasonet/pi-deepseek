@@ -31,6 +31,7 @@ interface ConversationTimelineProps {
   readonly onJumpToLatest: () => void;
   readonly onContentHeightChange: () => void;
   readonly onViewFileInDiff?: (path: string) => void;
+  readonly onPreviewFile?: (path: string) => void;
 }
 
 export function ConversationTimeline({
@@ -46,6 +47,7 @@ export function ConversationTimeline({
   onJumpToLatest,
   onContentHeightChange,
   onViewFileInDiff,
+  onPreviewFile,
 }: ConversationTimelineProps) {
   // Giant prose blocks and attachment-heavy rows routinely blow past the estimator,
   // so keep those transcripts on the exact DOM path instead of restoring to a fake bottom.
@@ -178,6 +180,7 @@ export function ConversationTimeline({
           onHeightChange={updateMeasuredHeight}
           onToggleToolCall={toggleToolCall}
           onViewFileInDiff={onViewFileInDiff}
+          onPreviewFile={onPreviewFile}
         />
       )}
       {showJumpToLatest ? (
@@ -200,6 +203,7 @@ function TranscriptList({
   onHeightChange,
   onToggleToolCall,
   onViewFileInDiff,
+  onPreviewFile,
 }: {
   readonly transcript: readonly TranscriptMessage[];
   readonly virtualize: boolean;
@@ -211,6 +215,7 @@ function TranscriptList({
   readonly onHeightChange: (id: string, height: number) => void;
   readonly onToggleToolCall: (callId: string) => void;
   readonly onViewFileInDiff?: (path: string) => void;
+  readonly onPreviewFile?: (path: string) => void;
 }) {
   const [viewport, setViewport] = useState({ scrollTop: 0, height: 0 });
   const previousTotalHeightRef = useRef(0);
@@ -301,6 +306,7 @@ function TranscriptList({
             expandedToolCallIds={expandedToolCallIds}
             onToggleToolCall={onToggleToolCall}
             onViewFileInDiff={onViewFileInDiff}
+            onPreviewFile={onPreviewFile}
           />
         );
       })}
@@ -316,6 +322,7 @@ function MeasuredTimelineItem({
   expandedToolCallIds,
   onToggleToolCall,
   onViewFileInDiff,
+  onPreviewFile,
 }: {
   readonly item: TranscriptMessage;
   readonly className?: string;
@@ -324,6 +331,7 @@ function MeasuredTimelineItem({
   readonly expandedToolCallIds: ReadonlySet<string>;
   readonly onToggleToolCall: (callId: string) => void;
   readonly onViewFileInDiff?: (path: string) => void;
+  readonly onPreviewFile?: (path: string) => void;
 }) {
   const rowRef = useRef<HTMLDivElement | null>(null);
 
@@ -359,6 +367,7 @@ function MeasuredTimelineItem({
         expandedToolCallIds={expandedToolCallIds}
         onToggleToolCall={onToggleToolCall}
         onViewFileInDiff={onViewFileInDiff}
+        onPreviewFile={onPreviewFile}
       />
     </div>
   );

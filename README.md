@@ -46,24 +46,6 @@
 > **Cmd+Enter 重试快捷键**：对话输入框及会话中新增 `Cmd+Enter`（Windows/Linux 为 `Ctrl+Enter`）一键重试上一条失败或历史消息，并在通用快捷键设置中完整展示。
 > *Provider settings upgraded to OpenAI-compatible provider (CLIProxyAPI) supporting EasyCLIProxyAPI (OAuth with Claude, Antigravity, Codex, Kimi, xAI). Fixed cramped layout for Pi default model in Harness settings. Added Cmd+Enter (Ctrl+Enter) shortcut to retry the last message in conversations.*
 
-> **v2.9.4 更新 / What's new:**
-> **会话列表视觉与交互优化**：会话列表中引入引擎图标并置于左侧，精简引擎标识，加宽会话标题显示区域，使长会话名称一目了然。
-> **侧边栏折叠交互优化**：侧边栏切换按钮移入顶部顶栏，确保侧边栏在完全折叠收起时按钮依然清晰可见、随时展开。
-> **时间线滚动优化**：修复长 URL 链接导致时间线出现横向滚动条以及页面微抖动的问题。
-> **稳定性与退出保护**：优化应用退出时的窗口生命周期处理，避免访问已销毁的窗口实例；改进 Linux 打包 smoke 测试退出逻辑。
-> *Session list redesign with inset left-aligned engine icons, simplified labels, and wider title display for long session names. Sidebar toggle relocated to topbar to remain accessible when collapsed. Timeline horizontal jitter and scrollbar caused by long URLs fixed. Improved app shutdown safety against destroyed window access.*
-
-> **v2.9.3 更新 / What's new:**
-> **Windows 应用内升级与差分下载**：安装版自动检测新版本，应用内实时展示下载进度与安装重启提示；发布流水线严格校验 `latest.yml`、NSIS 安装包及 `.blockmap`。
-> **OpenRouter 批量选模**：「编辑已启用模型」新增全不选、全选与智能选择，智能选择按模型系列自动保留最新最高阶版本。
-> **fx 原生渠道与模型发现**：Harness 设置原生连接 Vercel AI Gateway、OpenAI Codex 与 xAI Grok；新建 fx 会话读取当前渠道目录，本地模型选择后自动切回 Pi 运行。
-> **稳定性与错误处理**：优化渲染进程崩溃恢复、错误提示去重、慢速本地 LLM 端点超时兼容与更新提示人文化处理。
-> *Windows setup builds now support in-app update notifications, differential download progress, and restart prompts. OpenRouter bulk selection adds Select none, Select all, and Smart select. Harness settings support native fx login for Vercel, Codex, and Grok while preserving active channels. Includes renderer crash recovery, error deduplication, and slow local LLM endpoint compatibility.*
-
-> **v2.9.1 更新 / What's new:**
-> **新建会话引擎选择**：新线程默认 Pi harness，可在项目下拉框右侧一键切换 fx（fx 可用时显示）；两枚引擎图标（Pi / ƒx）并排展示，选中即高亮。
-> *New-session harness picker: new threads default to Pi, with a Pi/ƒx toggle right of the workspace dropdown (fx shown when available).*
-
 > **v2.9.0 更新 / What's new:**
 > **Pi/fx 双 harness 引擎**：支持在双栏中并排运行 Pi 与 fx；每栏左上角显示引擎图标与名称，并可直接交换两套独立 runtime 的左右位置。
 > **内置 fx**：优先复用系统 fx 及其现有登录，找不到或不兼容时自动回退到应用内置、校验过的 fx runtime。

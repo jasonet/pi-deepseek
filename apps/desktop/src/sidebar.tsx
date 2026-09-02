@@ -15,7 +15,7 @@ import {
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { AppView, ImChannel, SessionRecord, WorkspaceRecord, WorktreeRecord } from "./desktop-state";
-import { ArchiveIcon, ChevronDownIcon, ClawIcon, ExtensionIcon, FolderIcon, PhoneIcon, PlusIcon, RestoreIcon, SettingsIcon, SkillIcon, WeixinIcon, WorktreeIcon } from "./icons";
+import { ArchiveIcon, ChevronDownIcon, ClawIcon, ExtensionIcon, FolderIcon, PlusIcon, RestoreIcon, SettingsIcon, SkillIcon, WeixinIcon, WorktreeIcon } from "./icons";
 import { getDesktopShortcutLabel } from "./ipc";
 import type { PiDesktopApi } from "./ipc";
 import { formatRelativeTime } from "./string-utils";
@@ -54,7 +54,6 @@ interface SidebarProps {
   readonly onOpenSkills: (workspaceId?: string) => void;
   readonly onOpenExtensions: (workspaceId?: string) => void;
   readonly onOpenSettings: (workspaceId?: string) => void;
-  readonly onOpenConnectPhone: () => void;
   readonly onArchiveSession: (target: { workspaceId: string; sessionId: string }) => void;
   readonly onSelectSession: (target: { workspaceId: string; sessionId: string }) => void;
   readonly onUnarchiveSession: (target: { workspaceId: string; sessionId: string }) => void;
@@ -78,7 +77,6 @@ export function Sidebar(props: SidebarProps) {
     onOpenSkills,
     onOpenExtensions,
     onOpenSettings,
-    onOpenConnectPhone,
     onArchiveSession,
     onSelectSession,
     onUnarchiveSession,
@@ -184,15 +182,6 @@ export function Sidebar(props: SidebarProps) {
           <button
             className="sidebar__nav-item"
             type="button"
-            onClick={() => onOpenConnectPhone()}
-          >
-            <PhoneIcon />
-            <span>{t("sidebar.connectPhone")}</span>
-            <kbd className="sidebar__shortcut-kbd">{getDesktopShortcutLabel(api.platform, "M")}</kbd>
-          </button>
-          <button
-            className="sidebar__nav-item"
-            type="button"
             onClick={() => onOpenSettings(selectedWorkspace?.rootWorkspaceId ?? selectedWorkspace?.id)}
           >
             <SettingsIcon />
@@ -291,17 +280,6 @@ export function Sidebar(props: SidebarProps) {
             </DragOverlay>
           </DndContext>
         )}
-      </div>
-      <div className="sidebar__footer">
-        <button
-          className={`sidebar__settings ${activeView === "connect-phone" ? "sidebar__settings--active" : ""}`}
-          type="button"
-          onClick={onOpenConnectPhone}
-        >
-          <span className="sidebar__settings-mark"><PhoneIcon /></span>
-          <span>{t("sidebar.connectPhone")}</span>
-          <kbd className="sidebar__shortcut-kbd">{getDesktopShortcutLabel(api.platform, "M")}</kbd>
-        </button>
       </div>
     </aside>
   );

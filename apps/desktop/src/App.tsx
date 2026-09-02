@@ -31,7 +31,7 @@ import {
 } from "./ipc";
 import { deriveModelOnboardingState } from "./model-onboarding";
 import { NewThreadView } from "./new-thread-view";
-import { buildThreadGroups } from "./thread-groups";
+import { buildThreadGroups, getVisibleThreadNavigationEntries } from "./thread-groups";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 import { LocaleProvider, useT } from "./i18n";
@@ -1448,19 +1448,24 @@ export default function App() {
       // Cmd+Tab / Ctrl+Tab : next session, Ctrl+Shift+Tab : prev session
       if ((event.metaKey || event.ctrlKey) && (event.key === "Tab" || event.code === "Tab") && snapshot) {
         event.preventDefault();
-        const allSessions = snapshot.workspaces.flatMap((w) => w.sessions.filter((s) => !s.archivedAt));
-        if (allSessions.length <= 1) return;
-        const currentId = selectedSession?.id ?? selectedWorkspace?.sessions[0]?.id;
-        const currentIdx = allSessions.findIndex((s) => s.id === currentId);
+        const visibleThreads = getVisibleThreadNavigationEntries(
+          threadGroups,
+          wsMenu.collapsedWorkspaces,
+        );
+        if (visibleThreads.length <= 1) return;
+        const currentIdx = visibleThreads.findIndex(
+          (entry) => entry.workspaceId === selectedWorkspace?.id && entry.session.id === selectedSession?.id,
+        );
         const nextIdx = event.shiftKey
-          ? currentIdx <= 0 ? allSessions.length - 1 : currentIdx - 1
-          : currentIdx >= allSessions.length - 1 || currentIdx === -1 ? 0 : currentIdx + 1;
+          ? currentIdx <= 0 ? visibleThreads.length - 1 : currentIdx - 1
+          : currentIdx >= visibleThreads.length - 1 || currentIdx === -1 ? 0 : currentIdx + 1;
         if (!api) return;
-        const nextSession = allSessions[nextIdx];
-        if (!nextSession) return;
-        const workspaceId = snapshot.workspaces.find((w) => w.sessions.some((s) => s.id === nextSession.id))?.id;
-        if (!workspaceId) return;
-        void updateSnapshot(api, setSnapshot, () => api.selectSession({ workspaceId, sessionId: nextSession.id }));
+        const nextThread = visibleThreads[nextIdx];
+        if (!nextThread) return;
+        void updateSnapshot(api, setSnapshot, () => api.selectSession({
+          workspaceId: nextThread.workspaceId,
+          sessionId: nextThread.session.id,
+        }));
         return;
       }
       // Cmd+Enter / Ctrl+Enter: retry last message when session is idle and not inside a form input
@@ -2883,7 +2888,6 @@ export default function App() {
           onOpenSkills={openSkills}
           onOpenExtensions={openExtensions}
           onOpenSettings={openSettings}
-          onOpenConnectPhone={openConnectPhone}
           onArchiveSession={handleArchiveSession}
           onSelectSession={handleSelectSession}
           onUnarchiveSession={handleUnarchiveSession}
@@ -3096,7 +3100,7 @@ export default function App() {
                   runningLabel={runningLabel}
                   selectedSession={selectedSession}
                   lastError={snapshot?.lastError}
-                  hideErrorBanner={api?.platform === "win32" && activeTranscript.some((item) => item.kind === "activity" && item.tone === "error" && item.label === snapshot?.lastError)}
+                  hideErrorBanner={activeTranscript.some((item) => item.kind === "activity" && item.tone === "error" && item.label === snapshot?.lastError)}
                   selectedSlashCommand={slashMenu.activeSlashOptionCommand ?? slashMenu.selectedSlashCommand}
                   selectedSlashOption={slashMenu.selectedSlashOption}
                   slashOptionEmptyState={slashMenu.slashOptionEmptyState}
@@ -3204,7 +3208,7 @@ export default function App() {
                   selectedMentionIndex={0}
                   onSelectMention={() => {}}
                           lastError={secondarySession.backendId === "fx" ? undefined : snapshot?.lastError}
-                  hideErrorBanner={api?.platform === "win32" && secondaryTranscriptMessages.some((item) => item.kind === "activity" && item.tone === "error" && item.label === snapshot?.lastError)}
+                  hideErrorBanner={secondaryTranscriptMessages.some((item) => item.kind === "activity" && item.tone === "error" && item.label === snapshot?.lastError)}
                   extensionDockExpanded={false}
                   onToggleExtensionDock={() => {}}
                   runtime={secondaryModelRuntime}
@@ -3303,7 +3307,7 @@ export default function App() {
               runningLabel={runningLabel}
               selectedSession={selectedSession}
               lastError={snapshot.lastError}
-              hideErrorBanner={api.platform === "win32" && activeTranscript.some((item) => item.kind === "activity" && item.tone === "error" && item.label === snapshot.lastError)}
+              hideErrorBanner={activeTranscript.some((item) => item.kind === "activity" && item.tone === "error" && item.label === snapshot.lastError)}
               selectedSlashCommand={slashMenu.activeSlashOptionCommand ?? slashMenu.selectedSlashCommand}
               selectedSlashOption={slashMenu.selectedSlashOption}
               slashOptionEmptyState={slashMenu.slashOptionEmptyState}

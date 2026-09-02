@@ -19,6 +19,15 @@ export interface ThreadGroup {
   readonly archivedThreads: readonly ThreadListEntry[];
 }
 
+export function getVisibleThreadNavigationEntries(
+  groups: readonly ThreadGroup[],
+  collapsedWorkspaces: Readonly<Record<string, boolean>>,
+): readonly ThreadListEntry[] {
+  return groups.flatMap((group) =>
+    collapsedWorkspaces[group.rootWorkspace.id] ? [] : group.threads,
+  );
+}
+
 export function buildThreadGroups(state: DesktopAppState): readonly ThreadGroup[] {
   const workspacesById = new Map(state.workspaces.map((workspace) => [workspace.id, workspace] as const));
   const rootWorkspaces = state.workspaces.filter((workspace) => workspace.kind === "primary");

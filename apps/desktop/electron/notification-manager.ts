@@ -8,6 +8,7 @@ import { sessionKey } from "@pi-gui/pi-sdk-driver";
 import type { SessionDriverEvent, SessionRef } from "@pi-gui/session-driver";
 import { getSelectedSession } from "../src/desktop-state";
 import { isSessionActivelyViewed } from "./session-visibility";
+import { formatSessionNotification } from "./notification-content";
 
 export class NotificationManager {
   private readonly completedRunKeys = new Set<string>();
@@ -121,21 +122,34 @@ export class NotificationManager {
         return;
       }
       this.completedRunKeys.add(dedupeKey);
-      await this.showNotification(event.sessionRef, event.snapshot.title, "Agent finished responding");
+      const content = formatSessionNotification({
+        kind: "completed",
+        locale: this.latestState?.locale ?? "en",
+        sessionTitle: event.snapshot.title,
+      });
+      await this.showNotification(event.sessionRef, content.title, content.body);
       return;
     }
 
     if (event.type === "runFailed") {
-      await this.showNotification(event.sessionRef, this.titleForSession(event.sessionRef), event.error.message);
+      const content = formatSessionNotification({
+        kind: "failed",
+        locale: this.latestState?.locale ?? "en",
+        sessionTitle: this.titleForSession(event.sessionRef),
+        detail: event.error.message,
+      });
+      await this.showNotification(event.sessionRef, content.title, content.body);
       return;
     }
 
     if (event.type === "hostUiRequest" && requiresAttention(event)) {
-      await this.showNotification(
-        event.sessionRef,
-        this.titleForSession(event.sessionRef),
-        hostUiBody(event),
-      );
+      const content = formatSessionNotification({
+        kind: "attention",
+        locale: this.latestState?.locale ?? "en",
+        sessionTitle: this.titleForSession(event.sessionRef),
+        detail: hostUiBody(event),
+      });
+      await this.showNotification(event.sessionRef, content.title, content.body);
     }
   }
 

@@ -72,9 +72,8 @@ test("logs a completion notification and blue dot for a focused different sessio
       })
       .toBe("idle");
 
-    await expect.poll(() => readOptionalLog(notificationLogPath), { timeout: 30_000 }).toContain("Session A");
     await expect.poll(() => readOptionalLog(notificationLogPath), { timeout: 30_000 }).toContain(
-      '"body":"Agent finished responding"',
+      '"title":"✅ Completed","body":"Session A · Agent finished responding"',
     );
     await expect(window.locator(".session-row", { hasText: "Session A" })).toHaveAttribute(
       "data-sidebar-indicator",
@@ -117,9 +116,8 @@ test("logs a completion notification and blue dot for a selected session after t
       })
       .toBe("idle");
 
-    await expect.poll(() => readOptionalLog(notificationLogPath), { timeout: 30_000 }).toContain("Selected Session");
     await expect.poll(() => readOptionalLog(notificationLogPath), { timeout: 30_000 }).toContain(
-      '"body":"Agent finished responding"',
+      '"title":"✅ Completed","body":"Selected Session · Agent finished responding"',
     );
     await expect(row).toHaveAttribute("data-sidebar-indicator", "unseen");
   } finally {
@@ -145,7 +143,7 @@ test("logs a failure notification and blue dot for a focused different session",
     await selectSessionByTitle(window, "Failed Session A");
     await selectSessionByTitle(window, "Failed Session B");
 
-    await emitFailedEvent(harness, sessionA, "Failure", "The run failed");
+    await emitFailedEvent(harness, sessionA, "Failure", "HTTP 500: The run failed");
 
     await expect
       .poll(async () => {
@@ -154,8 +152,9 @@ test("logs a failure notification and blue dot for a focused different session",
       })
       .toBe("failed");
 
-    await expect.poll(() => readOptionalLog(notificationLogPath), { timeout: 30_000 }).toContain("Failed Session A");
-    await expect.poll(() => readOptionalLog(notificationLogPath), { timeout: 30_000 }).toContain("The run failed");
+    await expect.poll(() => readOptionalLog(notificationLogPath), { timeout: 30_000 }).toContain(
+      '"title":"⚠️ Request failed (500)","body":"Failed Session A · HTTP 500: The run failed"',
+    );
     await expect(window.locator(".session-row", { hasText: "Failed Session A" })).toHaveAttribute(
       "data-sidebar-indicator",
       "unseen",
@@ -185,9 +184,8 @@ test("logs an attention-needed notification and blue dot for a focused different
 
     await emitAttentionRequest(harness, sessionA, "Attention", "Needs your approval");
 
-    await expect.poll(() => readOptionalLog(notificationLogPath), { timeout: 30_000 }).toContain("Attention Session A");
     await expect.poll(() => readOptionalLog(notificationLogPath), { timeout: 30_000 }).toContain(
-      "Needs your approval",
+      '"title":"⚠️ Attention needed","body":"Attention Session A · Needs your approval"',
     );
     await expect(window.locator(".session-row", { hasText: "Attention Session A" })).toHaveAttribute(
       "data-sidebar-indicator",

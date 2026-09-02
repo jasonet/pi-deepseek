@@ -32,10 +32,17 @@
 
 .sidebar {
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: 40px auto 1fr auto;
   overflow: hidden;
   background: var(--sidebar);
   border-right: 1px solid var(--line);
+}
+
+.sidebar__drag-region {
+  width: 100%;
+  min-width: 0;
+  -webkit-app-region: drag;
+  user-select: none;
 }
 
 .enable-transparency .sidebar {
@@ -49,7 +56,7 @@
 }
 
 .sidebar__top {
-  padding-top: 54px;
+  padding-top: 14px;
 }
 
 .sidebar__nav {

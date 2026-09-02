@@ -20,6 +20,53 @@ async function restoreSidebarIfNeeded(window: Page): Promise<void> {
   }
 }
 
+test("keeps the sidebar window drag region isolated above sortable content", async () => {
+  const userDataDir = await makeUserDataDir();
+  const workspacePath = await makeWorkspace("sidebar-drag-region-workspace");
+  const harness = await launchDesktop(userDataDir, {
+    initialWorkspaces: [workspacePath],
+    testMode: "background",
+  });
+
+  try {
+    const window = await harness.firstWindow();
+    await waitForWorkspaceByPath(window, workspacePath);
+
+    const sidebar = window.locator(".sidebar");
+    const dragRegion = window.getByTestId("sidebar-drag-region");
+    const sidebarTop = window.locator(".sidebar__top");
+    const workspaceList = window.getByTestId("workspace-list");
+
+    await expect(dragRegion).toBeVisible();
+    await expect(workspaceList).toBeVisible();
+
+    const [sidebarBox, dragBox, topBox, listBox, dragStyles] = await Promise.all([
+      sidebar.boundingBox(),
+      dragRegion.boundingBox(),
+      sidebarTop.boundingBox(),
+      workspaceList.boundingBox(),
+      dragRegion.evaluate((element) => ({
+        appRegion: getComputedStyle(element).getPropertyValue("-webkit-app-region"),
+        pointerEvents: getComputedStyle(element).pointerEvents,
+      })),
+    ]);
+
+    expect(sidebarBox).not.toBeNull();
+    expect(dragBox).not.toBeNull();
+    expect(topBox).not.toBeNull();
+    expect(listBox).not.toBeNull();
+    expect(dragBox?.x).toBe(sidebarBox?.x);
+    expect(dragBox?.width).toBe(sidebarBox?.width);
+    expect(dragBox?.y).toBe(sidebarBox?.y);
+    expect((dragBox?.y ?? 0) + (dragBox?.height ?? 0)).toBeLessThanOrEqual(topBox?.y ?? 0);
+    expect((dragBox?.y ?? 0) + (dragBox?.height ?? 0)).toBeLessThanOrEqual(listBox?.y ?? 0);
+    expect(dragStyles.appRegion).toBe("drag");
+    expect(dragStyles.pointerEvents).not.toBe("none");
+  } finally {
+    await harness.close();
+  }
+});
+
 test("toggles and persists the primary sidebar from the button and keyboard shortcut", async () => {
   test.setTimeout(90_000);
   const userDataDir = await makeUserDataDir();

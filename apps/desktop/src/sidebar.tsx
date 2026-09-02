@@ -133,6 +133,12 @@ export function Sidebar(props: SidebarProps) {
 
   return (
     <aside className="sidebar">
+      <div
+        aria-hidden="true"
+        className="sidebar__drag-region"
+        data-testid="sidebar-drag-region"
+        onDoubleClick={() => void api.toggleWindowMaximize()}
+      />
       <div className="sidebar__top">
         <button
           className="sidebar__new"

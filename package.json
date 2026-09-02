@@ -1,7 +1,7 @@
 {
   "name": "taosi",
   "private": true,
-  "version": "3.0.0",
+  "version": "3.0.1",
   "license": "MIT",
   "packageManager": "pnpm@10.25.0",
   "scripts": {

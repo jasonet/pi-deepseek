@@ -20,17 +20,23 @@
 
 | 平台 | 架构 | 引擎 | 版本 | 格式 | 大小 | 下载 |
 |------|------|------|------|------|------|------|
-| **macOS** | Apple Silicon (M1–M5) | Electron | v3.0.0 | DMG | 145 MB | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.0/Taosi-3.0.0-mac-arm64.dmg) |
-| **macOS** | Intel (x64) | Electron | v3.0.0 | DMG | 157 MB | [![Download](https://img.shields.io/badge/Download-x64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.0/Taosi-3.0.0-mac-x64.dmg) |
-| **macOS** | Apple Silicon (M1–M5) | Tauri | v3.0.0 | DMG | 147 MB | [![Download](https://img.shields.io/badge/Download-arm64-%237C6BF5?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.0/Taosi-3.0.0-tauri-mac-arm64.dmg) |
-| **Windows** | x64 | Electron | v3.0.0 | 安装版 | 125 MB | [![Download](https://img.shields.io/badge/Download-Setup-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.0/Taosi-3.0.0-win-x64-setup.exe) |
-| **Windows** | x64 | Electron | v3.0.0 | 便携版 | 125 MB | [![Download](https://img.shields.io/badge/Download-Portable-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.0/Taosi-3.0.0-win-x64-portable.exe) |
-| **Linux** | x64 | Electron | v3.0.0 | deb | 157 MB | [![Download](https://img.shields.io/badge/Download-.deb-%234D6BFE?logo=ubuntu)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.0/Taosi-3.0.0-linux-amd64.deb) |
-| **Linux** | x64 | Electron | v3.0.0 | AppImage | 161 MB | [![Download](https://img.shields.io/badge/Download-AppImage-%234D6BFE?logo=linux)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.0/Taosi-3.0.0-linux-x86_64.AppImage) |
+| **macOS** | Apple Silicon (M1–M5) | Electron | v3.0.1 | DMG | 145 MB | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.1/Taosi-3.0.1-mac-arm64.dmg) |
+| **macOS** | Intel (x64) | Electron | v3.0.1 | DMG | 157 MB | [![Download](https://img.shields.io/badge/Download-x64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.1/Taosi-3.0.1-mac-x64.dmg) |
+| **macOS** | Apple Silicon (M1–M5) | Tauri | v3.0.1 | DMG | 147 MB | [![Download](https://img.shields.io/badge/Download-arm64-%237C6BF5?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.1/Taosi-3.0.1-tauri-mac-arm64.dmg) |
+| **Windows** | x64 | Electron | v3.0.1 | 安装版 | 125 MB | [![Download](https://img.shields.io/badge/Download-Setup-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.1/Taosi-3.0.1-win-x64-setup.exe) |
+| **Windows** | x64 | Electron | v3.0.1 | 便携版 | 125 MB | [![Download](https://img.shields.io/badge/Download-Portable-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.1/Taosi-3.0.1-win-x64-portable.exe) |
+| **Linux** | x64 | Electron | v3.0.1 | deb | 157 MB | [![Download](https://img.shields.io/badge/Download-.deb-%234D6BFE?logo=ubuntu)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.1/Taosi-3.0.1-linux-amd64.deb) |
+| **Linux** | x64 | Electron | v3.0.1 | AppImage | 161 MB | [![Download](https://img.shields.io/badge/Download-AppImage-%234D6BFE?logo=linux)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.1/Taosi-3.0.1-linux-x86_64.AppImage) |
 
 > 🧭 **双引擎版本矩阵 / Dual-engine version matrix:**
-> **Electron `v3.0.0`**（macOS / Windows / Linux）与 **Tauri `v3.0.0`**（macOS arm64）。macOS / Linux Electron 为完整双 harness 体验的推荐版本；Windows 因上游暂未提供 fx binary，当前为 Pi harness。
-> **Electron `v3.0.0`** (macOS / Windows / Linux) and **Tauri `v3.0.0`** (macOS arm64). Electron is recommended for the complete dual-harness experience; About identifies the Electron / Tauri build.
+> **Electron `v3.0.1`**（macOS / Windows / Linux）与 **Tauri `v3.0.1`**（macOS arm64）。macOS / Linux Electron 为完整双 harness 体验的推荐版本；Windows 因上游暂未提供 fx binary，当前为 Pi harness。
+> **Electron `v3.0.1`** (macOS / Windows / Linux) and **Tauri `v3.0.1`** (macOS arm64). Electron is recommended for the complete dual-harness experience; About identifies the Electron / Tauri build.
+
+> 🛠️ **v3.0.1 更新 / What’s new:**
+> **系统通知修正**：macOS 通知现在先显示带 ✅/⚠️/🈳 标记的消息类型，正文显示会话名称与详情；429 限流使用友好提示，400/500 错误显示状态码。
+> **侧边栏体验**：左侧顶部空白区域可拖动应用窗口且不干扰会话/工作区排序；隐藏所有“连接手机”侧边栏入口。
+> **会话与错误体验**：Cmd+Tab 只切换展开工作区内可见会话，并在所有平台消除重复错误横幅。
+> *Fixes macOS notification title/body ordering with clear status markers, adds an isolated draggable sidebar titlebar, hides Connect Phone sidebar entries, scopes session shortcuts to visible threads, and removes duplicate error banners across platforms.*
 
 > 🚀 **v3.0.0 重大更新 / Major Release — 全新品牌 Taosi 与全平台重构:**
 > **全新品牌 Taosi**：应用正式更名为 **Taosi**，全面升级品牌标识与多语言支持。

@@ -20,7 +20,7 @@
 
 | 平台 | 架构 | 引擎 | 版本 | 格式 | 大小 | 下载 |
 |------|------|------|------|------|------|------|
-| **macOS** | Apple Silicon (M1–M5) | Electron | v3.0.1 | DMG | 145 MB | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.1/Taosi-3.0.1-mac-arm64.dmg) |
+| **macOS** | Apple Silicon (M1–M5) | Electron | v3.0.2 | DMG | 待发布 | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.2/Taosi-3.0.2-mac-arm64.dmg) |
 | **macOS** | Intel (x64) | Electron | v3.0.1 | DMG | 157 MB | [![Download](https://img.shields.io/badge/Download-x64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.1/Taosi-3.0.1-mac-x64.dmg) |
 | **macOS** | Apple Silicon (M1–M5) | Tauri | v3.0.1 | DMG | 147 MB | [![Download](https://img.shields.io/badge/Download-arm64-%237C6BF5?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.1/Taosi-3.0.1-tauri-mac-arm64.dmg) |
 | **Windows** | x64 | Electron | v3.0.1 | 安装版 | 125 MB | [![Download](https://img.shields.io/badge/Download-Setup-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.1/Taosi-3.0.1-win-x64-setup.exe) |
@@ -29,8 +29,14 @@
 | **Linux** | x64 | Electron | v3.0.1 | AppImage | 161 MB | [![Download](https://img.shields.io/badge/Download-AppImage-%234D6BFE?logo=linux)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.1/Taosi-3.0.1-linux-x86_64.AppImage) |
 
 > 🧭 **双引擎版本矩阵 / Dual-engine version matrix:**
+> **Electron `v3.0.2`** 当前发布 macOS arm64；其他平台沿用各自已发布版本，待对应构建完成后再更新下载链接。
 > **Electron `v3.0.1`**（macOS / Windows / Linux）与 **Tauri `v3.0.1`**（macOS arm64）。macOS / Linux Electron 为完整双 harness 体验的推荐版本；Windows 因上游暂未提供 fx binary，当前为 Pi harness。
 > **Electron `v3.0.1`** (macOS / Windows / Linux) and **Tauri `v3.0.1`** (macOS arm64). Electron is recommended for the complete dual-harness experience; About identifies the Electron / Tauri build.
+
+> 🛠️ **v3.0.2 更新 / What’s new:**
+> **提供商配置体验**：自定义供应商已保存的 API Key 在设置中安全遮罩，探测时自动复用已保存密钥；模型较多时配置弹窗支持滚动。
+> **首次启动设置**：没有工作区或会话时仍可直接进入设置配置模型提供商。
+> *Masks saved custom-provider API keys while reusing them for probes, adds scrolling for long model lists, and keeps provider setup available before the first workspace or session.*
 
 > 🛠️ **v3.0.1 更新 / What’s new:**
 > **系统通知修正**：macOS 通知现在先显示带 ✅/⚠️/🈳 标记的消息类型，正文显示会话名称与详情；429 限流使用友好提示，400/500 错误显示状态码。

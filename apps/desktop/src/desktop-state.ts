@@ -5,6 +5,9 @@ export type { SessionRole, TranscriptMessage } from "./timeline-types";
 import type { TranscriptMessage } from "./timeline-types";
 
 export type AppView = "threads" | "new-thread" | "skills" | "extensions" | "settings" | "connect-phone" | "deepseek-harness";
+// Runtime target used for provider/model settings before a folder is opened.
+// It is intentionally absent from `workspaces`, so it can never become a session.
+export const GLOBAL_SETTINGS_WORKSPACE_ID = "__pi-gui-global-settings__";
 export type WorkspaceKind = "primary" | "worktree";
 export type WorktreeStatus = "ready" | "missing" | "error";
 export type NewThreadEnvironment = "local" | "worktree";

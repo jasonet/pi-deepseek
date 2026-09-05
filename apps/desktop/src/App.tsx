@@ -3,6 +3,7 @@ import type { AgentBackendId, SessionTreeSnapshot } from "@pi-gui/session-driver
 import type { RuntimeSnapshot } from "@pi-gui/session-driver/runtime-types";
 import {
   DEFAULT_NEW_THREAD_BACKEND,
+  GLOBAL_SETTINGS_WORKSPACE_ID,
   getSelectedSession,
   getSelectedWorkspace,
   type AppView,
@@ -77,6 +78,15 @@ import {
 function ViewFallback() {
   return <div className="pi-loading-placeholder" />;
 }
+
+const GLOBAL_SETTINGS_WORKSPACE: WorkspaceRecord = {
+  id: GLOBAL_SETTINGS_WORKSPACE_ID,
+  name: "App settings",
+  path: "",
+  lastOpenedAt: "",
+  kind: "primary",
+  sessions: [],
+};
 
 function useDesktopAppState() {
   const [snapshot, setSnapshot] = useState<DesktopAppState | null>(null);
@@ -595,9 +605,10 @@ export default function App() {
     isInDualPane &&
     selectedSession?.status === "running" &&
     secondarySession?.status === "running";
-  const settingsWorkspace = settingsWorkspaceId
-    ? rootWorkspaceOptions.find((workspace) => workspace.id === settingsWorkspaceId)
-    : undefined;
+  const settingsWorkspace =
+    (settingsWorkspaceId
+      ? rootWorkspaceOptions.find((workspace) => workspace.id === settingsWorkspaceId)
+      : undefined) ?? rootWorkspaceOptions[0] ?? GLOBAL_SETTINGS_WORKSPACE;
   const skillsWorkspace = skillsWorkspaceId
     ? rootWorkspaceOptions.find((workspace) => workspace.id === skillsWorkspaceId)
     : undefined;
@@ -1033,10 +1044,8 @@ export default function App() {
     const nextWorkspaceId =
       workspaceId && rootWorkspaceOptions.some((workspace) => workspace.id === workspaceId)
         ? workspaceId
-        : settingsWorkspace?.id || rootWorkspaceOptions[0]?.id || "";
-    if (nextWorkspaceId) {
-      setSettingsWorkspaceId(nextWorkspaceId);
-    }
+        : settingsWorkspace?.id || rootWorkspaceOptions[0]?.id || GLOBAL_SETTINGS_WORKSPACE_ID;
+    setSettingsWorkspaceId(nextWorkspaceId);
     if (section) {
       setSettingsSection(section);
     }
@@ -1269,7 +1278,7 @@ export default function App() {
 
   useEffect(() => {
     if (rootWorkspaceOptions.length === 0) {
-      setSettingsWorkspaceId("");
+      setSettingsWorkspaceId(GLOBAL_SETTINGS_WORKSPACE_ID);
       setSkillsWorkspaceId("");
       setExtensionsWorkspaceId("");
       setPendingNewThreadWorkspaceId("");
@@ -1280,7 +1289,7 @@ export default function App() {
       return;
     }
     setSettingsWorkspaceId((current) =>
-      rootWorkspaceOptions.some((workspace) => workspace.id === current) ? current : current || rootWorkspaceOptions[0]?.id || "",
+      rootWorkspaceOptions.some((workspace) => workspace.id === current) ? current : rootWorkspaceOptions[0]?.id || GLOBAL_SETTINGS_WORKSPACE_ID,
     );
     setSkillsWorkspaceId((current) =>
       rootWorkspaceOptions.some((workspace) => workspace.id === current) ? current : current || rootWorkspaceOptions[0]?.id || "",
@@ -2681,7 +2690,7 @@ export default function App() {
         testId="settings-surface"
         title={t("sidebar.settings")}
       >
-        {settingsSection === "providers" || (settingsSection === "models" && snapshot.modelSettingsScopeMode === "per-repo") ? (
+        {rootWorkspaceOptions.length > 0 && (settingsSection === "providers" || (settingsSection === "models" && snapshot.modelSettingsScopeMode === "per-repo")) ? (
           <div className="surface-toolbar">
             <label className="surface-toolbar__field">
               <span>{t("common.selectWorkspace")}</span>

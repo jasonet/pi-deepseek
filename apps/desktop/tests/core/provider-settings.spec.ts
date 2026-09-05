@@ -72,6 +72,55 @@ test("settings lets the user save an API key for a built-in provider", async () 
   }
 });
 
+test("settings can configure a provider before a workspace or session exists", async () => {
+  test.setTimeout(60_000);
+  const userDataDir = await makeUserDataDir();
+  const agentDir = join(userDataDir, "agent");
+  await seedAgentDir(agentDir, {
+    withOpenAiAuth: false,
+    withDefaultModel: false,
+    enabledModels: ["openai/gpt-5"],
+  });
+
+  const harness = await launchDesktop(userDataDir, {
+    agentDir,
+    scrubProviderEnv: true,
+    testMode: "background",
+  });
+
+  try {
+    const window = await harness.firstWindow();
+    await expect(window.getByTestId("empty-state")).toBeVisible();
+    await window.keyboard.press(desktopShortcut(","));
+    await expect(window.getByTestId("settings-surface")).toBeVisible();
+    await window.getByRole("button", { name: "Providers", exact: true }).click();
+    await expect(window.locator(".view-header__title")).toHaveText("Providers");
+
+    const allProviders = window.locator(".settings-section", {
+      has: window.locator(".settings-section__title", { hasText: "All providers" }),
+    });
+    const openAiRow = allProviders.locator(".settings-row", {
+      has: window.locator(".settings-row__title", { hasText: /^OpenAI$/ }),
+    });
+    await openAiRow.getByRole("button", { name: "Set API key" }).click();
+    const dialog = window.getByTestId("provider-api-key-dialog");
+    await dialog.getByLabel("OpenAI API key").fill("test-openai-key");
+    await dialog.getByRole("button", { name: "Set API key" }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(window.locator(".settings-section", {
+      has: window.locator(".settings-section__title", { hasText: /^Connected$/ }),
+    })).toContainText("OpenAI");
+    expect(JSON.parse(await readFile(join(agentDir, "auth.json"), "utf8"))["openai"])
+      .toEqual({ type: "api_key", key: "test-openai-key" });
+
+    const state = await getDesktopState(window);
+    expect(state.workspaces).toHaveLength(0);
+    expect(state.selectedSessionId).toBe("");
+  } finally {
+    await harness.close();
+  }
+});
+
 test("settings discovers and saves an OpenAI-compatible custom provider", async () => {
   test.setTimeout(90_000);
   const modelId = "/models/gemma-4-26B-A4B-it-mlx";

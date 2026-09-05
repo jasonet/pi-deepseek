@@ -60,6 +60,7 @@ import {
   type StartThreadInput,
   type TranscriptMessage,
   type WorkspaceSessionTarget,
+  GLOBAL_SETTINGS_WORKSPACE_ID,
 } from "../src/desktop-state";
 import type { FxAuthProvider, FxAuthStatus } from "../src/fx-auth";
 import {
@@ -159,6 +160,7 @@ export class DesktopAppStore implements AppStoreInternals {
   readonly pendingRuntimeCommandsBySession = new Map<string, PendingRuntimeCommandExecution>();
   private readonly reportedCompatibilityIssuesBySession = new Map<string, Set<string>>();
   private readonly initialWorkspacePaths: readonly string[];
+  private readonly globalSettingsWorkspace: WorkspaceRef;
   private readonly getWindow: () => BrowserWindow | null;
   private persistUiStateTimer: NodeJS.Timeout | undefined;
   private readonly transcriptPersistTimers = new Map<string, NodeJS.Timeout>();
@@ -200,6 +202,11 @@ export class DesktopAppStore implements AppStoreInternals {
     this.transcriptStore = new JsonFileStore<PersistedTranscriptStoreValue>(options.userDataDir, "transcripts");
     this.attachmentStore = new JsonFileStore<ComposerAttachment[]>(options.userDataDir, "attachments");
     this.initialWorkspacePaths = options.initialWorkspacePaths;
+    this.globalSettingsWorkspace = {
+      workspaceId: GLOBAL_SETTINGS_WORKSPACE_ID,
+      path: options.userDataDir,
+      displayName: "App settings",
+    };
     this.getWindow = options.getWindow ?? (() => null);
   }
 
@@ -1307,6 +1314,15 @@ export class DesktopAppStore implements AppStoreInternals {
             { sessions: this.cachedSessionsSnapshot! }]
         : await Promise.all([this.driver.listWorkspaces(), this.driver.listSessions()]);
 
+      if (workspacesSnapshot.workspaces.length === 0 && !this.runtimeByWorkspace.has(GLOBAL_SETTINGS_WORKSPACE_ID)) {
+        // Provider credentials and global model settings remain configurable
+        // before a folder/session exists, without exposing a fake workspace.
+        this.runtimeByWorkspace.set(
+          GLOBAL_SETTINGS_WORKSPACE_ID,
+          await this.driver.runtimeSupervisor.getRuntimeSnapshot(this.globalSettingsWorkspace),
+        );
+      }
+
       if (!skipList) {
         this.cachedWorkspacesSnapshot = workspacesSnapshot.workspaces;
         this.cachedSessionsSnapshot = sessionsSnapshot.sessions;
@@ -1356,7 +1372,9 @@ export class DesktopAppStore implements AppStoreInternals {
       const worktreesByWorkspace = buildWorktreeRecords(workspacesSnapshot.workspaces, worktreeEntries);
       const liveWorkspaceIds = new Set(workspaces.map((w) => w.id));
       for (const wsId of this.runtimeByWorkspace.keys()) {
-        if (!liveWorkspaceIds.has(wsId)) {
+        const isActiveGlobalSettingsRuntime =
+          liveWorkspaceIds.size === 0 && wsId === GLOBAL_SETTINGS_WORKSPACE_ID;
+        if (!liveWorkspaceIds.has(wsId) && !isActiveGlobalSettingsRuntime) {
           this.runtimeByWorkspace.delete(wsId);
         }
       }
@@ -1940,6 +1958,9 @@ export class DesktopAppStore implements AppStoreInternals {
   }
 
   workspaceRefFromState(workspaceId: string): WorkspaceRef | undefined {
+    if (workspaceId === GLOBAL_SETTINGS_WORKSPACE_ID) {
+      return this.globalSettingsWorkspace;
+    }
     const ws = this.state.workspaces.find((entry) => entry.id === workspaceId);
     if (!ws) {
       return undefined;
@@ -1966,6 +1987,15 @@ export class DesktopAppStore implements AppStoreInternals {
     const fallbackWorkspace =
       (preferredWorkspaceId ? workspaces.find((entry) => entry.workspaceId === preferredWorkspaceId) : undefined) ?? workspaces[0];
     if (!fallbackWorkspace) {
+      const runtimeSettings = this.runtimeByWorkspace.get(GLOBAL_SETTINGS_WORKSPACE_ID)?.settings;
+      if (runtimeSettings) {
+        return {
+          ...(runtimeSettings.defaultProvider ? { defaultProvider: runtimeSettings.defaultProvider } : {}),
+          ...(runtimeSettings.defaultModelId ? { defaultModelId: runtimeSettings.defaultModelId } : {}),
+          ...(runtimeSettings.defaultThinkingLevel ? { defaultThinkingLevel: runtimeSettings.defaultThinkingLevel } : {}),
+          enabledModelPatterns: [...runtimeSettings.enabledModelPatterns],
+        };
+      }
       return this.state.globalModelSettings;
     }
     return this.driver.runtimeSupervisor.getGlobalModelSettings({

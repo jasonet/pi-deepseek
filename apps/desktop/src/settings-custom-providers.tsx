@@ -24,6 +24,8 @@ interface ProviderDraft {
   readonly selectedModelIds: ReadonlySet<string>;
 }
 
+const MASKED_KEY_PLACEHOLDER = "••••••••••••";
+
 const EMPTY_DRAFT: ProviderDraft = {
   editing: false,
   id: "custom-local-openai",
@@ -76,7 +78,7 @@ export function SettingsCustomProviders({ workspaceId }: SettingsCustomProviders
       id: provider.id,
       name: provider.name,
       baseUrl: provider.baseUrl,
-      apiKey: "",
+      apiKey: provider.hasApiKey ? MASKED_KEY_PLACEHOLDER : "",
       thinkingFormat: provider.thinkingFormat,
       models: provider.models,
       selectedModelIds: new Set(provider.models.map((model) => model.id)),
@@ -100,9 +102,11 @@ export function SettingsCustomProviders({ workspaceId }: SettingsCustomProviders
     if (!draft || !window.piApp) return;
     setPending(true);
     resetFeedback();
+    const effectiveApiKey = draft.apiKey.trim() === MASKED_KEY_PLACEHOLDER ? undefined : draft.apiKey.trim();
     const result = await window.piApp.probeCustomModelProvider({
       baseUrl: draft.baseUrl,
-      ...(draft.apiKey.trim() ? { apiKey: draft.apiKey.trim() } : {}),
+      ...(effectiveApiKey ? { apiKey: effectiveApiKey } : {}),
+      ...(draft.editing ? { providerId: draft.id } : {}),
     });
     setPending(false);
     if (!result.ok) {
@@ -169,11 +173,12 @@ export function SettingsCustomProviders({ workspaceId }: SettingsCustomProviders
     if (!draft || !workspaceId || !window.piApp) return;
     setPending(true);
     resetFeedback();
+    const effectiveApiKey = draft.apiKey.trim() === MASKED_KEY_PLACEHOLDER ? undefined : draft.apiKey.trim();
     const input: SaveRuntimeCustomModelProviderInput = {
       id: draft.id,
       name: draft.name,
       baseUrl: draft.baseUrl,
-      ...(draft.apiKey.trim() ? { apiKey: draft.apiKey.trim() } : {}),
+      ...(effectiveApiKey ? { apiKey: effectiveApiKey } : {}),
       thinkingFormat: draft.thinkingFormat,
       models: selectedModels,
     };
@@ -289,6 +294,11 @@ export function SettingsCustomProviders({ workspaceId }: SettingsCustomProviders
                   placeholder={draft.editing ? t("settings.providers.customApiKeyKeep") : t("settings.providers.customApiKeyOptional")}
                   type="password"
                   value={draft.apiKey}
+                  onFocus={() => {
+                    if (draft.apiKey === MASKED_KEY_PLACEHOLDER) {
+                      updateDraft({ apiKey: "" });
+                    }
+                  }}
                   onChange={(event) => updateDraft({ apiKey: event.target.value })}
                 />
               </label>
@@ -324,22 +334,24 @@ export function SettingsCustomProviders({ workspaceId }: SettingsCustomProviders
                 <strong>{t("settings.providers.customDiscovered")}</strong>
                 <span>{selectedModels.length}/{draft.models.length}</span>
               </div>
-              {draft.models.length > 0 ? draft.models.map((model) => (
-                <div className="custom-provider-dialog__model" key={model.id}>
-                  <label className="settings-toggle settings-toggle--row">
-                    <input
-                      checked={draft.selectedModelIds.has(model.id)}
-                      type="checkbox"
-                      onChange={(event) => toggleModel(model.id, event.target.checked)}
-                    />
-                    <span><strong>{model.name}</strong><span className="settings-list__meta"> · {model.id}</span></span>
-                  </label>
-                  <div className="custom-provider-dialog__capabilities">
-                    <label><input checked={model.reasoning} type="checkbox" onChange={(event) => toggleModelCapability(model.id, "reasoning", event.target.checked)} /> {t("settings.providers.customReasoning")}</label>
-                    <label><input checked={model.supportsImages} type="checkbox" onChange={(event) => toggleModelCapability(model.id, "supportsImages", event.target.checked)} /> {t("settings.providers.customImages")}</label>
+              <div className="custom-provider-dialog__models-list">
+                {draft.models.length > 0 ? draft.models.map((model) => (
+                  <div className="custom-provider-dialog__model" key={model.id}>
+                    <label className="settings-toggle settings-toggle--row">
+                      <input
+                        checked={draft.selectedModelIds.has(model.id)}
+                        type="checkbox"
+                        onChange={(event) => toggleModel(model.id, event.target.checked)}
+                      />
+                      <span><strong>{model.name}</strong><span className="settings-list__meta"> · {model.id}</span></span>
+                    </label>
+                    <div className="custom-provider-dialog__capabilities">
+                      <label><input checked={model.reasoning} type="checkbox" onChange={(event) => toggleModelCapability(model.id, "reasoning", event.target.checked)} /> {t("settings.providers.customReasoning")}</label>
+                      <label><input checked={model.supportsImages} type="checkbox" onChange={(event) => toggleModelCapability(model.id, "supportsImages", event.target.checked)} /> {t("settings.providers.customImages")}</label>
+                    </div>
                   </div>
-                </div>
-              )) : <p className="extension-dialog__body">{t("settings.providers.customNoModels")}</p>}
+                )) : <p className="extension-dialog__body">{t("settings.providers.customNoModels")}</p>}
+              </div>
               <div className="custom-provider-dialog__manual-model">
                 <input
                   aria-label={t("settings.providers.customManualModel")}

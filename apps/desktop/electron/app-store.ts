@@ -952,6 +952,10 @@ export class DesktopAppStore implements AppStoreInternals {
     return this.driver.runtimeSupervisor.listCustomModelProviders();
   }
 
+  getCustomModelProviderApiKey(providerId: string): Promise<string | undefined> {
+    return this.driver.runtimeSupervisor.getCustomModelProviderApiKey(providerId);
+  }
+
   async saveCustomModelProvider(
     workspaceId: string,
     input: SaveRuntimeCustomModelProviderInput,

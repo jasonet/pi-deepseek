@@ -75,6 +75,7 @@ export interface SaveRuntimeCustomModelProviderInput {
 export interface ProbeRuntimeCustomModelProviderInput {
   readonly baseUrl: string;
   readonly apiKey?: string;
+  readonly providerId?: string;
 }
 
 export type ProbeRuntimeCustomModelProviderResult =

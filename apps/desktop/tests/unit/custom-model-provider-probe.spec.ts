@@ -94,3 +94,43 @@ test("probe recommends Gemma 4 26B A4B and allows saving when generation is slow
   });
   expect(completionBody).toMatchObject({ model: preferredModelId });
 });
+
+test("probe resolves saved API key by providerId when apiKey is omitted", async () => {
+  let authorizationHeader: string | undefined;
+  const fetcher = (async (input: string | URL | Request, init?: RequestInit) => {
+    const url = new URL(input instanceof Request ? input.url : input.toString());
+    const headers = init?.headers as Record<string, string> | undefined;
+    authorizationHeader = headers?.authorization;
+    if (url.pathname === "/v1/models") {
+      return new Response(JSON.stringify({
+        data: [{ id: "test-model" }],
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+    if (url.pathname === "/props") {
+      return new Response("Not found", { status: 404 });
+    }
+    if (url.pathname === "/v1/chat/completions") {
+      return new Response(`data: ${JSON.stringify({
+        choices: [{ index: 0, delta: { content: "O" }, finish_reason: null }],
+      })}\n\ndata: [DONE]\n\n`, {
+        status: 200,
+        headers: { "content-type": "text/event-stream" },
+      });
+    }
+    return new Response("Not found", { status: 404 });
+  }) as typeof fetch;
+
+  const resolveSavedApiKey = async (providerId: string) => {
+    if (providerId === "custom-test-provider") return "saved-secret-token";
+    return undefined;
+  };
+
+  const result = await probeCustomModelProvider({
+    baseUrl: "http://127.0.0.1:8080/v1",
+    providerId: "custom-test-provider",
+  }, fetcher, resolveSavedApiKey);
+
+  expect(result.ok).toBe(true);
+  expect(authorizationHeader).toBe("Bearer saved-secret-token");
+});
+

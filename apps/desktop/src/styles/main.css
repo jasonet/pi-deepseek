@@ -3167,6 +3167,8 @@ textarea.settings-input {
 .custom-provider-dialog {
   width: min(680px, calc(100vw - 48px));
   max-width: 680px;
+  max-height: min(760px, calc(100vh - 48px));
+  overflow-y: auto;
 }
 
 .custom-provider-dialog__fields {
@@ -3205,6 +3207,12 @@ textarea.settings-input {
 .custom-provider-dialog__models {
   border-top: 1px solid var(--line);
   padding-top: 12px;
+}
+
+.custom-provider-dialog__models-list {
+  max-height: 260px;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .custom-provider-dialog__models-header {

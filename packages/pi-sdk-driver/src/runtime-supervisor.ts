@@ -150,6 +150,15 @@ export class RuntimeSupervisor implements RuntimeResourceDriver {
       .sort((left, right) => left.name.localeCompare(right.name));
   }
 
+  async getCustomModelProviderApiKey(providerId: string): Promise<string | undefined> {
+    const normalizedId = normalizeCustomProviderId(providerId);
+    const auth = this.authStorage.get(normalizedId);
+    if (auth?.type === "api_key" && auth.key) {
+      return auth.key;
+    }
+    return undefined;
+  }
+
   async saveCustomModelProvider(
     workspace: WorkspaceRef,
     input: SaveRuntimeCustomModelProviderInput,

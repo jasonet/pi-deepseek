@@ -1507,7 +1507,11 @@ app.whenReady().then(async () => {
   );
   ipcMain.handle(desktopIpc.listCustomModelProviders, () => store.listCustomModelProviders());
   ipcMain.handle(desktopIpc.probeCustomModelProvider, (_event, input) =>
-    probeCustomModelProvider(input, (url, init) => net.fetch(url.toString(), init)),
+    probeCustomModelProvider(
+      input,
+      (url, init) => net.fetch(url.toString(), init),
+      (providerId) => store.getCustomModelProviderApiKey(providerId),
+    ),
   );
   ipcMain.handle(desktopIpc.saveCustomModelProvider, (_event, workspaceId: string, input) =>
     store.saveCustomModelProvider(workspaceId, input),

@@ -17,6 +17,7 @@ interface CompletionProbeFailure {
 export async function probeCustomModelProvider(
   input: ProbeRuntimeCustomModelProviderInput,
   fetcher: typeof fetch,
+  resolveSavedApiKey?: (providerId: string) => Promise<string | undefined>,
 ): Promise<ProbeRuntimeCustomModelProviderResult> {
   let modelsUrl: URL;
   let baseUrl: string;
@@ -27,11 +28,19 @@ export async function probeCustomModelProvider(
     return { ok: false, message: error instanceof Error ? error.message : String(error) };
   }
 
+  let effectiveApiKey = input.apiKey?.trim();
+  if (!effectiveApiKey && input.providerId && resolveSavedApiKey) {
+    try {
+      effectiveApiKey = (await resolveSavedApiKey(input.providerId))?.trim();
+    } catch {
+      // If resolving saved API key fails, continue with unauthenticated probe
+    }
+  }
+
   try {
     const headers: Record<string, string> = { accept: "application/json" };
-    const apiKey = input.apiKey?.trim();
-    if (apiKey) {
-      headers.authorization = `Bearer ${apiKey}`;
+    if (effectiveApiKey) {
+      headers.authorization = `Bearer ${effectiveApiKey}`;
     }
     const response = await fetcher(modelsUrl, {
       headers,

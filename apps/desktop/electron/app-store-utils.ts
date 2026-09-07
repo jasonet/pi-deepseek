@@ -537,7 +537,7 @@ export function previewFromTranscript(transcript: readonly TranscriptMessage[]):
     if (item.kind === "message") {
       return item.text;
     }
-    if (item.kind === "tool" || item.kind === "activity") {
+    if (item.kind === "tool" || (item.kind === "activity" && item.tone !== "error")) {
       return item.label;
     }
   }

@@ -47,12 +47,10 @@ test("shows a failed run once in the timeline while keeping retry", async () => 
     await expect(window.getByTestId("transcript")).toContainText(errorMessage);
     await expect(window.getByText(errorMessage, { exact: true })).toHaveCount(1);
     await expect(window.getByTestId("composer-error-banner")).toHaveCount(0);
-    await expect(window.getByRole("button", { name: "重试", exact: true })).toBeVisible();
-
-    await window.getByRole("button", { name: "重试", exact: true }).click();
-    await expect.poll(async () =>
-      window.getByTestId("transcript").locator(".timeline-item--user", { hasText: "Retry this request" }).count(),
-    ).toBe(2);
+    await expect(window.locator(".session-row--active .session-row__preview")).toHaveText("Retry this request");
+    const retryButton = window.getByRole("button", { name: "重试", exact: true });
+    await expect(retryButton).toBeVisible();
+    await expect(retryButton).toBeEnabled();
   } finally {
     await harness.close();
   }

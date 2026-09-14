@@ -2091,6 +2091,9 @@ export default function App() {
       ...current,
       [key]: { ...current[key], provider, modelId },
     }));
+    if (api && composerDraft) {
+      void api.updateComposerDraft(composerDraft);
+    }
     void updateSnapshot(api, setSnapshot, () =>
       api.setSessionModel(selectedWorkspace.id, selectedSession.id, provider, modelId),
     );
@@ -2105,6 +2108,9 @@ export default function App() {
       ...current,
       [key]: { ...current[key], thinkingLevel: level },
     }));
+    if (api && composerDraft) {
+      void api.updateComposerDraft(composerDraft);
+    }
     void updateSnapshot(api, setSnapshot, () =>
       api.setSessionThinkingLevel(
         selectedWorkspace.id,
@@ -2123,6 +2129,9 @@ export default function App() {
       ...current,
       [key]: { ...current[key], provider, modelId },
     }));
+    if (api && secondaryDraft) {
+      void api.updateComposerDraft(secondaryDraft);
+    }
     void updateSnapshot(api, setSnapshot, () =>
       api.setSessionModel(secondaryWorkspaceId, secondarySession.id, provider, modelId),
     );
@@ -2137,6 +2146,9 @@ export default function App() {
       ...current,
       [key]: { ...current[key], thinkingLevel: level },
     }));
+    if (api && secondaryDraft) {
+      void api.updateComposerDraft(secondaryDraft);
+    }
     void updateSnapshot(api, setSnapshot, () =>
       api.setSessionThinkingLevel(
         secondaryWorkspaceId,

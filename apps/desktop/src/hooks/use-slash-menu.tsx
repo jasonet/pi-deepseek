@@ -311,8 +311,11 @@ export function useSlashMenu(params: UseSlashMenuParams): SlashMenuState {
       if (!providerId) {
         return;
       }
+      const nextDraft = activeSlashQuery
+        ? `${composerDraft.slice(0, activeSlashQuery.start)}${composerDraft.slice(activeSlashQuery.end)}`.trim()
+        : composerDraft;
       resetSlashUi();
-      setComposerDraft("");
+      setComposerDraft(nextDraft);
       if (onSelectModelOption) {
         onSelectModelOption(providerId, option.value);
         return;
@@ -322,15 +325,16 @@ export function useSlashMenu(params: UseSlashMenuParams): SlashMenuState {
       }
       void updateSnapshot(api, setSnapshot, () =>
         api.setSessionModel(selectedWorkspace.id, selectedSession.id, providerId, option.value),
-      ).then((state) => {
-        setComposerDraft(state.composerDraft);
-      });
+      );
       return;
     }
 
     if (activeSlashOptionCommand.kind === "thinking") {
+      const nextDraft = activeSlashQuery
+        ? `${composerDraft.slice(0, activeSlashQuery.start)}${composerDraft.slice(activeSlashQuery.end)}`.trim()
+        : composerDraft;
       resetSlashUi();
-      setComposerDraft("");
+      setComposerDraft(nextDraft);
       if (onSelectThinkingOption) {
         onSelectThinkingOption(option.value);
         return;
@@ -344,9 +348,7 @@ export function useSlashMenu(params: UseSlashMenuParams): SlashMenuState {
           selectedSession.id,
           option.value as NonNullable<RuntimeSnapshot["settings"]["defaultThinkingLevel"]>,
         ),
-      ).then((state) => {
-        setComposerDraft(state.composerDraft);
-      });
+      );
       return;
     }
 

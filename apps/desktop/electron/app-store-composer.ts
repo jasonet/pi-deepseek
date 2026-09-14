@@ -412,7 +412,9 @@ export async function setSessionModel(
   return store.withErrorHandling(async () => {
     await store.driver.setSessionModel(sessionRef, { provider, modelId });
     syncSessionConfig(store, key, { provider, modelId });
-    return finishComposerCommand(store, sessionRef, key, `Model set to ${provider}:${modelId}`);
+    return finishComposerCommand(store, sessionRef, key, `Model set to ${provider}:${modelId}`, {
+      preserveDraft: true,
+    });
   });
 }
 
@@ -426,7 +428,9 @@ export async function setSessionThinkingLevel(
   return store.withErrorHandling(async () => {
     await store.driver.setSessionThinkingLevel(sessionRef, thinkingLevel);
     syncSessionConfig(store, key, { thinkingLevel });
-    return finishComposerCommand(store, sessionRef, key, `Thinking set to ${thinkingLevel}`);
+    return finishComposerCommand(store, sessionRef, key, `Thinking set to ${thinkingLevel}`, {
+      preserveDraft: true,
+    });
   });
 }
 
@@ -635,12 +639,25 @@ function finishComposerCommand(
   sessionRef: SessionRef,
   key: string,
   label: string,
+  options?: { readonly preserveDraft?: boolean },
 ): DesktopAppState {
-  store.sessionState.composerDraftsBySession.delete(key);
-  store.sessionState.composerAttachmentsBySession.delete(key);
+  if (!options?.preserveDraft) {
+    store.sessionState.composerDraftsBySession.delete(key);
+    store.sessionState.composerAttachmentsBySession.delete(key);
+  }
   appendLocalActivity(store, sessionRef, label);
   const transcript = store.sessionState.transcriptCache.get(key) ?? [];
   const preview = previewFromTranscript(transcript);
+  const isSelectedSession =
+    sessionRef.workspaceId === store.state.selectedWorkspaceId &&
+    sessionRef.sessionId === store.state.selectedSessionId;
+  const draft = options?.preserveDraft
+    ? (store.sessionState.composerDraftsBySession.get(key) ?? (isSelectedSession ? store.state.composerDraft : ""))
+    : "";
+  const attachments = options?.preserveDraft
+    ? (store.sessionState.composerAttachmentsBySession.get(key) ?? (isSelectedSession ? store.state.composerAttachments : []))
+    : [];
+
   store.state = {
     ...store.state,
     workspaces: store.state.workspaces.map((workspace) =>
@@ -659,10 +676,12 @@ function finishComposerCommand(
           }
         : workspace,
     ),
-    composerDraft: "",
-    composerDraftSyncSource: "command",
-    composerDraftSyncNonce: store.state.composerDraftSyncNonce + 1,
-    composerAttachments: [],
+    composerDraft: draft,
+    composerDraftSyncSource: options?.preserveDraft ? "state" : "command",
+    composerDraftSyncNonce: options?.preserveDraft
+      ? store.state.composerDraftSyncNonce
+      : store.state.composerDraftSyncNonce + 1,
+    composerAttachments: attachments,
     lastError: undefined,
     revision: store.state.revision + 1,
   };

@@ -1,7 +1,7 @@
 import type { AgentBackendId, HostUiRequest, SessionConfig, SessionId } from "@pi-gui/session-driver";
 import type { ModelSettingsSnapshot, RuntimeCommandRecord, RuntimeSnapshot } from "@pi-gui/session-driver/runtime-types";
 export type SessionStatus = "idle" | "running" | "failed";
-export type { SessionRole, TranscriptMessage } from "./timeline-types";
+export type { SessionRole, TimelineEntry, TimelineToolCall, TimelineToolGroup, TranscriptMessage } from "./timeline-types";
 import type { TranscriptMessage } from "./timeline-types";
 
 export type AppView = "threads" | "new-thread" | "skills" | "extensions" | "settings" | "connect-phone" | "deepseek-harness";

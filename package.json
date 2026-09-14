@@ -1,7 +1,7 @@
 {
   "name": "taosi",
   "private": true,
-  "version": "3.0.2",
+  "version": "3.0.4",
   "license": "MIT",
   "packageManager": "pnpm@10.25.0",
   "scripts": {
@@ -21,9 +21,12 @@
     "bun:test": "for dir in apps/* packages/*; do (cd \"$dir\" && (grep -q '\"bun:test\":' package.json && bun run bun:test || (grep -q '\"test\":' package.json && bun run test))); done",
     "e2e": "playwright test",
     "test:homebrew-tap": "node scripts/test-update-homebrew-tap.mjs",
+    "test:retention": "node scripts/test-manage-release-retention.mjs",
     "verify:install-copy": "node scripts/verify-install-copy.mjs",
     "verify:homebrew-flow": "node scripts/verify-homebrew-flow.mjs",
-    "release:homebrew-sync": "node scripts/release-homebrew-sync.mjs"
+    "release:homebrew-sync": "node scripts/release-homebrew-sync.mjs",
+    "release:retention": "node scripts/manage-release-retention.mjs",
+    "release:retention:clean": "node scripts/manage-release-retention.mjs --apply"
   },
   "devDependencies": {
     "@playwright/test": "1.57.0",

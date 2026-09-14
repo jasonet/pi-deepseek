@@ -9,6 +9,11 @@ These rules apply for the full session.
 - Commit in small focused checkpoints; don’t batch unrelated changes.
 - Run `simplify` before closing non-trivial implementation work.
 
+## Build & Release Retention
+- Build outputs only keep the latest version number and the immediately previous version number (for GitHub release rollback); all older versions must be deleted.
+- The latest built application must be copied to the local applications directory (`/Applications/Taosi.app`) for manual testing and verification.
+- Run `node scripts/manage-release-retention.mjs --apply` to enforce retention and prune older release artifacts.
+
 ## Product
 - This repo is building a Codex-style desktop app for `pi`; preserve that product direction.
 - Desktop work is not done until it is verified on the real Electron surface, not only by unit tests.

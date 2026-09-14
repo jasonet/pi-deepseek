@@ -38,4 +38,11 @@ export interface TimelineSummary {
   readonly presentation: TimelineSummaryPresentation;
 }
 
+export interface TimelineToolGroup {
+  readonly kind: "tool-group";
+  readonly id: string;
+  readonly tools: readonly TimelineToolCall[];
+}
+
 export type TranscriptMessage = SessionTranscriptMessage | TimelineActivity | TimelineToolCall | TimelineSummary;
+export type TimelineEntry = TranscriptMessage | TimelineToolGroup;

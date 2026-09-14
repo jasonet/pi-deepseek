@@ -10,3 +10,4 @@ Apply these rules for changes under `apps/desktop/`.
 - Don’t expose broad filesystem/process APIs through preload; add only narrow IPC needed by the renderer.
 - Prefer shared helpers over duplicating Electron test harness or IPC glue.
 - Keep composer and timeline behavior fast on hot paths; avoid full-state disk writes for keystrokes if a narrower path works.
+- Build retention: keep only the latest version and the previous version in release outputs; delete all older versions. The latest build must be synced to `/Applications/Taosi.app` for manual verification.

@@ -1,11 +1,67 @@
-import { useCallback, useLayoutEffect, useRef, useState, type MutableRefObject, type RefCallback, type RefObject } from "react";
-import type { TranscriptMessage } from "./desktop-state";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState, type MutableRefObject, type RefCallback, type RefObject } from "react";
+import type { TimelineEntry, TimelineToolCall, TimelineToolGroup, TranscriptMessage } from "./desktop-state";
 import { ThreadSearchBar } from "./thread-search";
-import { TimelineItem } from "./timeline-item";
+import { TimelineItem, TimelineToolGroupItem } from "./timeline-item";
 
 const OVERSCAN_PX = 720;
 const ROW_GAP_PX = 14;
 export const VIRTUALIZATION_THRESHOLD = 80;
+
+export function groupTranscript(transcript: readonly TranscriptMessage[]): readonly TimelineEntry[] {
+  const result: TimelineEntry[] = [];
+  let currentTools: TimelineToolCall[] = [];
+
+  const flush = () => {
+    if (currentTools.length === 0) return;
+    if (currentTools.length === 1) {
+      const first = currentTools[0];
+      if (first) {
+        result.push(first);
+      }
+    } else {
+      const first = currentTools[0];
+      if (first) {
+        result.push({
+          kind: "tool-group",
+          id: `tool-group-${first.id}`,
+          tools: [...currentTools],
+        });
+      }
+    }
+    currentTools = [];
+  };
+
+  for (let i = 0; i < transcript.length; i++) {
+    const item = transcript[i];
+    if (!item) continue;
+
+    if (item.kind === "activity" && item.label === "Working…") {
+      const next = transcript[i + 1];
+      if (next && next.kind === "tool") {
+        continue;
+      }
+    }
+
+    if (item.kind === "tool") {
+      currentTools.push(item);
+    } else {
+      flush();
+      const last = result[result.length - 1];
+      if (
+        item.kind === "summary" &&
+        item.presentation === "inline" &&
+        last &&
+        last.kind === "tool-group"
+      ) {
+        continue;
+      }
+      result.push(item);
+    }
+  }
+  flush();
+
+  return result;
+}
 
 interface ThreadSearchModel {
   readonly isOpen: boolean;
@@ -49,19 +105,34 @@ export function ConversationTimeline({
   onViewFileInDiff,
   onPreviewFile,
 }: ConversationTimelineProps) {
+  const entries = useMemo(() => groupTranscript(transcript), [transcript]);
+
   // Giant prose blocks and attachment-heavy rows routinely blow past the estimator,
   // so keep those transcripts on the exact DOM path instead of restoring to a fake bottom.
-  const hasUnreliableVirtualizedHeights = transcript.some(
+  const hasUnreliableVirtualizedHeights = entries.some(
     (item) => item.kind === "message" && (item.text.length > 2000 || Boolean(item.attachments?.length)),
   );
   const shouldVirtualize =
     !threadSearch.isOpen &&
-    transcript.length > VIRTUALIZATION_THRESHOLD &&
+    entries.length > VIRTUALIZATION_THRESHOLD &&
     !disableVirtualization &&
     !hasUnreliableVirtualizedHeights;
   const [expandedToolCallIds, setExpandedToolCallIds] = useState<Set<string>>(() => new Set());
+  const [expandedGroupIds, setExpandedGroupIds] = useState<Set<string>>(() => new Set());
   const measuredHeightsRef = useRef(new Map<string, number>());
   const [measurementVersion, setMeasurementVersion] = useState(0);
+
+  const toggleToolGroup = useCallback((groupId: string) => {
+    setExpandedGroupIds((current) => {
+      const next = new Set(current);
+      if (next.has(groupId)) {
+        next.delete(groupId);
+      } else {
+        next.add(groupId);
+      }
+      return next;
+    });
+  }, []);
 
   useLayoutEffect(() => {
     const availableToolCallIds = new Set(
@@ -85,7 +156,28 @@ export function ConversationTimeline({
   }, [transcript]);
 
   useLayoutEffect(() => {
-    const knownIds = new Set(transcript.map((item) => item.id));
+    const availableGroupIds = new Set(
+      entries.filter((entry): entry is TimelineToolGroup => entry.kind === "tool-group").map((g) => g.id),
+    );
+    setExpandedGroupIds((current) => {
+      if (current.size === 0) {
+        return current;
+      }
+      let changed = false;
+      const next = new Set<string>();
+      for (const id of current) {
+        if (!availableGroupIds.has(id)) {
+          changed = true;
+          continue;
+        }
+        next.add(id);
+      }
+      return changed ? next : current;
+    });
+  }, [entries]);
+
+  useLayoutEffect(() => {
+    const knownIds = new Set(entries.map((item) => item.id));
     let removedAny = false;
     for (const id of measuredHeightsRef.current.keys()) {
       if (knownIds.has(id)) {
@@ -97,18 +189,18 @@ export function ConversationTimeline({
     if (removedAny) {
       setMeasurementVersion((current) => current + 1);
     }
-  }, [transcript]);
+  }, [entries]);
 
   useLayoutEffect(() => {
-    if (!disableVirtualization || isTranscriptLoading || transcript.length === 0) {
+    if (!disableVirtualization || isTranscriptLoading || entries.length === 0) {
       return;
     }
-    const allRowsMeasured = transcript.every((item) => measuredHeightsRef.current.has(item.id));
+    const allRowsMeasured = entries.every((item) => measuredHeightsRef.current.has(item.id));
     if (!allRowsMeasured) {
       return;
     }
     onDisableVirtualizationReady?.();
-  }, [disableVirtualization, isTranscriptLoading, measurementVersion, onDisableVirtualizationReady, transcript]);
+  }, [disableVirtualization, isTranscriptLoading, measurementVersion, onDisableVirtualizationReady, entries]);
 
   const toggleToolCall = useCallback((callId: string) => {
     setExpandedToolCallIds((current) => {
@@ -160,7 +252,7 @@ export function ConversationTimeline({
         <div className="timeline" data-testid="transcript">
           <div className="timeline-empty">Loading transcript…</div>
         </div>
-      ) : transcript.length === 0 ? (
+      ) : entries.length === 0 ? (
         <div className="timeline" data-testid="transcript">
           <div className="timeline-empty">Send a prompt to start the session.</div>
         </div>
@@ -170,15 +262,17 @@ export function ConversationTimeline({
         // and remounting the whole list (which flashed the timeline during
         // streaming + auto-scroll when shouldVirtualize switched).
         <TranscriptList
-          transcript={transcript}
+          entries={entries}
           virtualize={shouldVirtualize}
           timelinePaneRef={timelinePaneRef}
           onContentHeightChange={onContentHeightChange}
           measuredHeightsRef={measuredHeightsRef}
           measurementVersion={measurementVersion}
           expandedToolCallIds={expandedToolCallIds}
+          expandedGroupIds={expandedGroupIds}
           onHeightChange={updateMeasuredHeight}
           onToggleToolCall={toggleToolCall}
+          onToggleToolGroup={toggleToolGroup}
           onViewFileInDiff={onViewFileInDiff}
           onPreviewFile={onPreviewFile}
         />
@@ -193,27 +287,31 @@ export function ConversationTimeline({
 }
 
 function TranscriptList({
-  transcript,
+  entries,
   virtualize,
   timelinePaneRef,
   onContentHeightChange,
   measuredHeightsRef,
   measurementVersion,
   expandedToolCallIds,
+  expandedGroupIds,
   onHeightChange,
   onToggleToolCall,
+  onToggleToolGroup,
   onViewFileInDiff,
   onPreviewFile,
 }: {
-  readonly transcript: readonly TranscriptMessage[];
+  readonly entries: readonly TimelineEntry[];
   readonly virtualize: boolean;
   readonly timelinePaneRef: MutableRefObject<HTMLDivElement | null>;
   readonly onContentHeightChange: () => void;
   readonly measuredHeightsRef: MutableRefObject<Map<string, number>>;
   readonly measurementVersion: number;
   readonly expandedToolCallIds: ReadonlySet<string>;
+  readonly expandedGroupIds: ReadonlySet<string>;
   readonly onHeightChange: (id: string, height: number) => void;
   readonly onToggleToolCall: (callId: string) => void;
+  readonly onToggleToolGroup: (groupId: string) => void;
   readonly onViewFileInDiff?: (path: string) => void;
   readonly onPreviewFile?: (path: string) => void;
 }) {
@@ -255,7 +353,7 @@ function TranscriptList({
     };
   }, [timelinePaneRef, virtualize]);
 
-  const rowHeights = transcript.map((item) => measuredHeightsRef.current.get(item.id) ?? estimateTimelineItemHeight(item));
+  const rowHeights = entries.map((item) => measuredHeightsRef.current.get(item.id) ?? estimateTimelineItemHeight(item, expandedGroupIds));
   const rowOffsets: number[] = [];
   let totalHeight = 0;
   for (const [index, rowHeight] of rowHeights.entries()) {
@@ -280,7 +378,7 @@ function TranscriptList({
   }, [onContentHeightChange, totalHeight, virtualize]);
 
   let startIndex = 0;
-  let endIndex = transcript.length;
+  let endIndex = entries.length;
   if (virtualize) {
     const startOffset = Math.max(0, viewport.scrollTop - OVERSCAN_PX);
     const endOffset = viewport.scrollTop + viewport.height + OVERSCAN_PX;
@@ -294,17 +392,19 @@ function TranscriptList({
       data-testid="transcript"
       style={virtualize ? { height: `${totalHeight}px` } : undefined}
     >
-      {transcript.slice(startIndex, endIndex).map((item, offsetIndex) => {
+      {entries.slice(startIndex, endIndex).map((entry, offsetIndex) => {
         const index = startIndex + offsetIndex;
         return (
           <MeasuredTimelineItem
-            item={item}
-            key={item.id}
+            entry={entry}
+            key={entry.id}
             className={virtualize ? "timeline__virtual-row" : undefined}
             top={virtualize ? (rowOffsets[index] ?? 0) : undefined}
             onHeightChange={onHeightChange}
             expandedToolCallIds={expandedToolCallIds}
+            expandedGroupIds={expandedGroupIds}
             onToggleToolCall={onToggleToolCall}
+            onToggleToolGroup={onToggleToolGroup}
             onViewFileInDiff={onViewFileInDiff}
             onPreviewFile={onPreviewFile}
           />
@@ -315,21 +415,25 @@ function TranscriptList({
 }
 
 function MeasuredTimelineItem({
-  item,
+  entry,
   className,
   top,
   onHeightChange,
   expandedToolCallIds,
+  expandedGroupIds,
   onToggleToolCall,
+  onToggleToolGroup,
   onViewFileInDiff,
   onPreviewFile,
 }: {
-  readonly item: TranscriptMessage;
+  readonly entry: TimelineEntry;
   readonly className?: string;
   readonly top?: number;
   readonly onHeightChange: (id: string, height: number) => void;
   readonly expandedToolCallIds: ReadonlySet<string>;
+  readonly expandedGroupIds: ReadonlySet<string>;
   readonly onToggleToolCall: (callId: string) => void;
+  readonly onToggleToolGroup: (groupId: string) => void;
   readonly onViewFileInDiff?: (path: string) => void;
   readonly onPreviewFile?: (path: string) => void;
 }) {
@@ -342,7 +446,7 @@ function MeasuredTimelineItem({
     }
 
     const measure = () => {
-      onHeightChange(item.id, element.getBoundingClientRect().height);
+      onHeightChange(entry.id, element.getBoundingClientRect().height);
     };
 
     measure();
@@ -354,7 +458,7 @@ function MeasuredTimelineItem({
     return () => {
       resizeObserver.disconnect();
     };
-  }, [item.id, onHeightChange]);
+  }, [entry.id, onHeightChange]);
 
   return (
     <div
@@ -362,13 +466,24 @@ function MeasuredTimelineItem({
       ref={rowRef}
       style={top == null ? undefined : { transform: `translateY(${top}px)` }}
     >
-      <TimelineItem
-        item={item}
-        expandedToolCallIds={expandedToolCallIds}
-        onToggleToolCall={onToggleToolCall}
-        onViewFileInDiff={onViewFileInDiff}
-        onPreviewFile={onPreviewFile}
-      />
+      {entry.kind === "tool-group" ? (
+        <TimelineToolGroupItem
+          group={entry}
+          isExpanded={expandedGroupIds.has(entry.id)}
+          onToggleExpand={() => onToggleToolGroup(entry.id)}
+          expandedToolCallIds={expandedToolCallIds}
+          onToggleToolCall={onToggleToolCall}
+          onViewFileInDiff={onViewFileInDiff}
+        />
+      ) : (
+        <TimelineItem
+          item={entry}
+          expandedToolCallIds={expandedToolCallIds}
+          onToggleToolCall={onToggleToolCall}
+          onViewFileInDiff={onViewFileInDiff}
+          onPreviewFile={onPreviewFile}
+        />
+      )}
     </div>
   );
 }
@@ -411,21 +526,24 @@ function findEndIndex(offsets: readonly number[], targetOffset: number): number 
   return Math.min(offsets.length, Math.max(lastVisibleIndex + 1, 1));
 }
 
-function estimateTimelineItemHeight(item: TranscriptMessage): number {
-  if (item.kind === "message") {
-    const attachmentHeight = item.attachments?.some((attachment) => attachment.kind === "image")
+function estimateTimelineItemHeight(entry: TimelineEntry, expandedGroupIds: ReadonlySet<string>): number {
+  if (entry.kind === "tool-group") {
+    return expandedGroupIds.has(entry.id) ? 36 + entry.tools.length * 40 : 36;
+  }
+  if (entry.kind === "message") {
+    const attachmentHeight = entry.attachments?.some((attachment) => attachment.kind === "image")
       ? 120
-      : item.attachments?.length
+      : entry.attachments?.length
         ? 56
         : 0;
-    const textLength = Math.max(item.text.length, 1);
+    const textLength = Math.max(entry.text.length, 1);
     return 48 + attachmentHeight + Math.min(240, Math.ceil(textLength / 90) * 20);
   }
-  if (item.kind === "tool") {
-    return 52;
+  if (entry.kind === "tool") {
+    return 40;
   }
-  if (item.kind === "summary") {
-    return item.presentation === "divider" ? 44 : 38;
+  if (entry.kind === "summary") {
+    return entry.presentation === "divider" ? 44 : 36;
   }
-  return 38;
+  return 36;
 }

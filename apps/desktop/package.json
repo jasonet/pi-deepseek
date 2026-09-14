@@ -1,7 +1,7 @@
 {
   "name": "@pi-gui/desktop",
   "private": true,
-  "version": "3.0.2",
+  "version": "3.0.4",
   "author": "Yiding by HKEZ",
   "license": "MIT",
   "description": "Taosi desktop app for the pi coding agent",
@@ -34,6 +34,8 @@
     "verify:packaged-runtime-deps": "pnpm run verify:runtime-model-registry && node scripts/assert-packaged-runtime-deps.mjs",
     "verify:packaged-runtime-deps:linux": "pnpm run verify:runtime-model-registry && cross-env PI_APP_PACKAGE_PLATFORM=linux node scripts/assert-packaged-runtime-deps.mjs",
     "verify:release-no-secrets": "node scripts/assert-release-no-secrets.mjs",
+    "release:retention": "node ../../scripts/manage-release-retention.mjs",
+    "release:retention:clean": "node ../../scripts/manage-release-retention.mjs --apply",
     "verify:windows-update-assets": "node scripts/assert-windows-update-assets.mjs",
     "verify:first-run:packaged": "node scripts/first-run-smoke.mjs",
     "test": "pnpm run test:e2e",

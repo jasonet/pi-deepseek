@@ -1,6 +1,6 @@
 import { memo } from "react";
 import type { SessionTranscriptMessage } from "@pi-gui/pi-sdk-driver";
-import type { TimelineActivity, TimelineToolCall, TimelineSummary, TranscriptMessage } from "./timeline-types";
+import type { TimelineActivity, TimelineToolCall, TimelineToolGroup, TimelineSummary, TranscriptMessage } from "./timeline-types";
 import { MessageMarkdown } from "./message-markdown";
 import { InlineDiff, extractDiffFromOutput } from "./diff-inline";
 import { ChevronRightIcon, CopyIcon, DiffIcon, FileIcon } from "./icons";
@@ -288,5 +288,73 @@ function TimelineSummaryItem({ item }: { readonly item: TimelineSummary }) {
       <span className="timeline-activity__label">{item.label}</span>
       {item.metadata ? <span className="timeline-activity__meta">{item.metadata}</span> : null}
     </div>
+  );
+}
+
+export function TimelineToolGroupItem({
+  group,
+  isExpanded,
+  onToggleExpand,
+  expandedToolCallIds,
+  onToggleToolCall,
+  onViewFileInDiff,
+}: {
+  readonly group: TimelineToolGroup;
+  readonly isExpanded: boolean;
+  readonly onToggleExpand: () => void;
+  readonly expandedToolCallIds?: ReadonlySet<string>;
+  readonly onToggleToolCall?: (callId: string) => void;
+  readonly onViewFileInDiff?: (path: string) => void;
+}) {
+  const isRunning = group.tools.some((t) => t.status === "running");
+  const failedCount = group.tools.filter((t) => t.status === "error").length;
+  const status = isRunning ? "running" : failedCount > 0 ? "error" : "success";
+
+  // When running, show the currently active tool or the latest one executed
+  const activeTool = group.tools.find((t) => t.status === "running") ?? group.tools[group.tools.length - 1];
+  const activeCompactLabel = activeTool ? buildCompactLabel(activeTool, undefined) : "Running tool";
+
+  const label = isRunning
+    ? activeCompactLabel
+    : `Ran ${group.tools.length} tools`;
+
+  const metaLabel = isRunning
+    ? `${group.tools.length} actions · running`
+    : failedCount > 0
+      ? `${group.tools.length} actions · ${failedCount} failed`
+      : `${group.tools.length} actions · done`;
+
+  return (
+    <article className={`timeline-tool-group timeline-tool-group--${status}`}>
+      <div className="timeline-tool-group__header-row">
+        <button
+          className="timeline-tool-group__header"
+          type="button"
+          aria-expanded={isExpanded}
+          onClick={onToggleExpand}
+          title={isExpanded ? "Collapse tool executions" : `Click to expand ${group.tools.length} tool executions`}
+        >
+          <span className={`timeline-tool__chevron ${isExpanded ? "timeline-tool__chevron--expanded" : ""}`}>
+            <ChevronRightIcon />
+          </span>
+          {isRunning ? <span className="timeline-tool-group__pulse" aria-hidden="true" /> : null}
+          <span className="timeline-tool-group__label">{label}</span>
+          <span className="timeline-tool-group__meta-inline">{metaLabel}</span>
+        </button>
+      </div>
+      {isExpanded ? (
+        <div className="timeline-tool-group__items">
+          {group.tools.map((tool) => (
+            <TimelineToolCallItem
+              key={tool.id}
+              item={tool}
+              expanded={expandedToolCallIds?.has(tool.callId) ?? false}
+              onToggle={onToggleToolCall}
+              onViewFileInDiff={onViewFileInDiff}
+            />
+          ))}
+        </div>
+      ) : null}
+    </article>
   );
 }

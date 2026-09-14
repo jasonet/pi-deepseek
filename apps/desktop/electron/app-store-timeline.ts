@@ -140,9 +140,11 @@ export function applyTimelineEvent(
           searchCount: 0,
           fileCount: 0,
         });        
-        const activity = makeActivityItem("Working…");
-        state.activeWorkingActivityBySession.set(key, activity.id);
-        transcript.push(activity);
+        if (!state.activeWorkingActivityBySession.has(key)) {
+          const activity = makeActivityItem("Working…");
+          state.activeWorkingActivityBySession.set(key, activity.id);
+          transcript.push(activity);
+        }
       } else if (event.snapshot.status !== "running") {
         clearRunState(transcript, key, event.sessionRef, state);
       }

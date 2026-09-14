@@ -168,8 +168,8 @@ export class SessionSupervisor {
   private readonly composer: SystemPromptComposer;
   private readonly records = new Map<string, ManagedSessionRecord>();
   private readonly configuredAgents = new WeakSet<object>();
-  private readonly customCompactionTimeouts = new WeakMap<ManagedSessionRecord, ReturnType<typeof setTimeout>>();
-  private readonly timedOutCustomCompactions = new WeakSet<ManagedSessionRecord>();
+  private readonly compactionTimeouts = new WeakMap<ManagedSessionRecord, ReturnType<typeof setTimeout>>();
+  private readonly timedOutCompactions = new WeakSet<ManagedSessionRecord>();
 
   constructor(options: PiSdkDriverOptions = {}) {
     this.catalogs = options.catalogStorage ?? (options.catalogFilePath
@@ -524,7 +524,7 @@ export class SessionSupervisor {
       return;
     }
 
-    this.clearCustomCompactionTimeout(record);
+    this.clearCompactionTimeout(record);
     record.session.abortCompaction();
     await record.session.abort();
     record.runningRunId = undefined;
@@ -800,7 +800,7 @@ export class SessionSupervisor {
   }
 
   private async disposeRecordRuntime(record: ManagedSessionRecord): Promise<void> {
-    this.clearCustomCompactionTimeout(record);
+    this.clearCompactionTimeout(record);
     const runtime = record.runtime;
     const session = record.session;
     record.runtime = undefined;
@@ -909,29 +909,37 @@ export class SessionSupervisor {
     };
   }
 
-  private startCustomCompactionTimeout(record: ManagedSessionRecord): void {
-    this.clearCustomCompactionTimeout(record);
-    if (!record.session || !isCustomProvider(record.session.agent.state.model.provider)) {
+  private startCompactionTimeout(record: ManagedSessionRecord): void {
+    this.clearCompactionTimeout(record);
+    if (!record.session) {
       return;
     }
 
-    this.timedOutCustomCompactions.delete(record);
+    const timeoutMs = isCustomProvider(record.session.agent.state.model.provider)
+      ? customModelTimeoutMs()
+      : (Number(process.env.PI_APP_COMPACTION_TIMEOUT_MS) || 90_000);
+
+    this.timedOutCompactions.delete(record);
     const timeout = setTimeout(() => {
-      this.timedOutCustomCompactions.add(record);
-      record.session?.abortCompaction();
-    }, customModelTimeoutMs());
+      this.timedOutCompactions.add(record);
+      try {
+        record.session?.abortCompaction();
+      } catch {
+        // Best effort
+      }
+    }, timeoutMs);
     timeout.unref?.();
-    this.customCompactionTimeouts.set(record, timeout);
+    this.compactionTimeouts.set(record, timeout);
   }
 
-  private clearCustomCompactionTimeout(record: ManagedSessionRecord): boolean {
-    const timeout = this.customCompactionTimeouts.get(record);
+  private clearCompactionTimeout(record: ManagedSessionRecord): boolean {
+    const timeout = this.compactionTimeouts.get(record);
     if (timeout) {
       clearTimeout(timeout);
-      this.customCompactionTimeouts.delete(record);
+      this.compactionTimeouts.delete(record);
     }
-    const timedOut = this.timedOutCustomCompactions.has(record);
-    this.timedOutCustomCompactions.delete(record);
+    const timedOut = this.timedOutCompactions.has(record);
+    this.timedOutCompactions.delete(record);
     return timedOut;
   }
 
@@ -1498,7 +1506,7 @@ export class SessionSupervisor {
       case "turn_end":
         return [sessionUpdatedEvent(record)];
       case "compaction_start":
-        this.startCustomCompactionTimeout(record);
+        this.startCompactionTimeout(record);
         record.status = "running";
         return [{
           type: "runProgress" as const,
@@ -1509,13 +1517,32 @@ export class SessionSupervisor {
           ...(record.runningRunId ? { runId: record.runningRunId } : {}),
         }, sessionUpdatedEvent(record)];
       case "compaction_end": {
-        const timedOut = this.clearCustomCompactionTimeout(record);
+        const timedOut = this.clearCompactionTimeout(record);
         const activeRunId = record.runningRunId;
         const errorMessage = timedOut
           ? "Conversation compaction timed out. Start a new thread or reduce the current context."
-          : event.errorMessage;
+          : (event.aborted ? "Conversation compaction was aborted." : event.errorMessage);
 
-        if (event.willRetry || activeRunId) {
+        // If compaction failed or was aborted and cannot retry, fail the run cleanly
+        if (errorMessage && !event.willRetry) {
+          record.updatedAt = timestamp;
+          record.runningRunId = undefined;
+          record.status = "failed";
+          record.preview = errorMessage;
+          return toDriverEvents({
+            type: "runFailed" as const,
+            sessionRef: record.ref,
+            timestamp,
+            error: {
+              message: errorMessage,
+              code: timedOut ? "COMPACTION_TIMEOUT" : (event.aborted ? "COMPACTION_ABORTED" : "COMPACTION_FAILED"),
+            },
+            ...(activeRunId ? { runId: activeRunId } : {}),
+          }, record);
+        }
+
+        // If auto-retry is queued or an active prompt is in progress
+        if (event.willRetry || (activeRunId && record.session?.isStreaming)) {
           record.status = "running";
           record.runningRunId ??= crypto.randomUUID();
           return errorMessage

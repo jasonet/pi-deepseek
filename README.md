@@ -33,35 +33,16 @@
 > **Electron `v3.0.1`**（macOS / Windows / Linux）与 **Tauri `v3.0.1`**（macOS arm64）。macOS / Linux Electron 为完整双 harness 体验的推荐版本；Windows 因上游暂未提供 fx binary，当前为 Pi harness。
 > **Electron `v3.0.1`** (macOS / Windows / Linux) and **Tauri `v3.0.1`** (macOS arm64). Electron is recommended for the complete dual-harness experience; About identifies the Electron / Tauri build.
 
-> 🛠️ **v3.0.5 更新 / What’s new:**
-> **Computer Use 桌面控制扩展集成**：内置集成 `@injaneity/pi-computer-use` 扩展，赋能 AI 智能体直接观察与操控操作系统桌面应用，支持屏幕截屏、UI 辅助功能树提取与键鼠精准交互。
-> **系统权限智能一键自动引导**：支持 macOS 辅助功能（Accessibility）与屏幕录制（Screen Recording）权限的实时双向检测与一键智能自动弹窗引导，用户切换系统设置后自动感知生效。
-> **上下文压缩挂起修复**：为全量模型提供 90s 超时防护并修正结束状态流转，彻底解决长时间停留于 `Compacting conversation context... Working…` 不结束的问题。
-> *Bundles `@injaneity/pi-computer-use` for OS-level GUI observation and automation, adds intelligent one-click system permission auto-guidance (Accessibility & Screen Recording) with focus reconciliation, and fixes context compaction hangs.*
-
-> 🛠️ **v3.0.4 更新 / What’s new:**
-> **任务执行单行滚屏**：多步工具调用折叠为单行实时滚屏，参考 Claude 体验，只展示最新指令与执行状态，避免冗长刷屏，支持点击展开查看详情。
-> **输入框模型切换保护**：在输入框内切换模型或思考等级时，完整保留已输入的提示词草稿与附件，不再清空。
-> *Collapses multi-step tool calls into a single rolling row during execution showing the latest instruction (Claude-style) with click-to-expand details, and preserves composer text drafts and attachments when switching models or thinking levels.*
-
-> 🛠️ **v3.0.2 更新 / What’s new:**
-> **提供商配置体验**：自定义供应商已保存的 API Key 在设置中安全遮罩，探测时自动复用已保存密钥；模型较多时配置弹窗支持滚动。
-> **首次启动设置**：没有工作区或会话时仍可直接进入设置配置模型提供商。
-> *Masks saved custom-provider API keys while reusing them for probes, adds scrolling for long model lists, and keeps provider setup available before the first workspace or session.*
-
-> 🛠️ **v3.0.1 更新 / What’s new:**
-> **系统通知修正**：macOS 通知现在先显示带 ✅/⚠️/🈳 标记的消息类型，正文显示会话名称与详情；429 限流使用友好提示，400/500 错误显示状态码。
-> **侧边栏体验**：左侧顶部空白区域可拖动应用窗口且不干扰会话/工作区排序；隐藏所有“连接手机”侧边栏入口。
-> **会话与错误体验**：Cmd+Tab 只切换展开工作区内可见会话，并在所有平台消除重复错误横幅。
-> *Fixes macOS notification title/body ordering with clear status markers, adds an isolated draggable sidebar titlebar, hides Connect Phone sidebar entries, scopes session shortcuts to visible threads, and removes duplicate error banners across platforms.*
-
-> 🚀 **v3.0.0 重大更新 / Major Release — 全新品牌 Taosi 与全平台重构:**
-> **全新品牌 Taosi**：应用正式更名为 **Taosi**，全面升级品牌标识与多语言支持。
-> **文件预览面板（File Preview Panel）**：支持在应用右侧实时预览会话中提及的代码文件、Markdown 以及多格式文档。
-> **OpenAI 兼容供应商（CLIProxyAPI）**：提供商设置升级支持 EasyCLIProxyAPI（OAuth with Claude, Antigravity, Codex, Kimi, xAI）、llama.cpp、Ollama、LM Studio、vLLM 等兼容网关。
-> **会话列表与顶栏交互升级**：会话列表引入内嵌引擎图标及自适应长标题展示；侧边栏折叠按钮移入顶栏，收起时依然随时可用。
-> **时间线滚动优化与更新友好化**：彻底修复长 URL 导致的页面横向滚动与抖动，更新提示增加关闭/稍后操作与更友好的错误提示。
-> *Major release rebrands Pi-Deepseek to **Taosi** across all platforms. Introduces interactive file preview panel, full OpenAI-compatible / CLIProxyAPI provider support, redesigned session list & topbar sidebar toggle, robust timeline anti-jitter, and user-friendly update dialog controls.*
+> 🚀 **v3.x / v3.0.5 重大版本汇总 / Taosi 3.x Consolidated Highlights:**
+> - **全新品牌与全平台重构（v3.0.0）**：正式升级更名为 **Taosi**；新增右侧**文件实时预览面板（File Preview Panel）**；原生支持 EasyCLIProxyAPI（OAuth with Claude, Antigravity, Codex, Kimi, xAI）及各类 OpenAI 兼容网关；全新顶栏折叠与长标题自适应交互。
+> - **桌面自动化控制扩展（v3.0.5）**：内置集成 `@injaneity/pi-computer-use`，赋能 AI 智能体直接观察与操控操作系统桌面应用，支持屏幕截屏、UI 辅助功能树提取与精准键鼠交互。
+> - **系统权限智能一键引导（v3.0.5）**：支持 macOS 辅助功能（Accessibility）与屏幕录制（Screen Recording）权限的实时双向检测与一键智能自动引导弹窗，切换系统设置后自动感知刷新，支持 Esc 紧急打断。
+> - **多步工具调用单行实时滚屏（v3.0.4）**：多步工具执行折叠为单行实时滚屏（参考 Claude 体验），仅展示最新指令与状态，避免冗长刷屏，支持点击展开详情。
+> - **输入框草稿保护与体验优化（v3.0.4）**：在输入框内切换模型或思考等级时，完整保留已输入的提示词草稿与文件/图片附件，不再清空。
+> - **代码块折叠与语法高亮（v3.0.5）**：时间线代码块默认折叠显示语言标签、行数与首行预览，展开显示行号与语法高亮，支持一键复制代码。
+> - **上下文压缩防挂起修复（v3.0.5）**：为全量模型提供 90s 超时防护与状态收敛流转，彻底解决长时间停留于 `Compacting conversation context... Working…` 不结束的问题。
+> - **提供商与通知体验优化（v3.0.1 / v3.0.2）**：自定义供应商 API Key 安全遮罩并支持探测自动复用；长模型列表支持滚动；macOS 通知先显示状态类型标记，会话快捷键 Cmd+Tab 作用域隔离。
+> *Consolidates the Taosi 3.x series: complete Taosi rebrand & file preview panel; @injaneity/pi-computer-use desktop automation; intelligent one-click macOS Accessibility & Screen Recording guidance; Claude-style rolling single-row tool execution; composer draft & attachment preservation across model switches; collapsible syntax-highlighted code blocks; and 90s timeout guard against conversation compaction hangs.*
 
 > **v2.9.5 更新 / What's new:**
 > **OpenAI 兼容供应商（CLIProxyAPI）**：提供商设置升级支持 EasyCLIProxyAPI（OAuth with Claude, Antigravity, Codex, Kimi, xAI）、llama.cpp、Ollama、LM Studio、vLLM 等兼容网关。
@@ -132,20 +113,39 @@ In 2.9.2, Settings → Harnesses shows fx connection state for Vercel AI Gateway
 
 ## 功能
 
-- 桌面客户端中打开本地工作区，按工作区管理 `pi` 会话
-- 创建新会话，通过 `pi` 运行时发送提示词
-- 持久保存界面状态（工作区、会话、输入框草稿）
-- Codex 风格的时间线与会话交互
-- **内置 DeepSeek V4 Pro 1M / Flash 1M 模型**，一键配置 API Key
-- **中文简体 / 中文繁體 / 日文 UI**，Settings → Appearance 即时切换
-- **40+ 提供商品牌图标**，余额显示，紧凑布局
-- **Open Design MCP 集成**（扩展 → Open Design → 查看 daemon 状态）
-- **Cmd/Ctrl+Tab** 快速切换会话
-- **自动更新**（Settings → Notifications → Auto Update）：Windows 安装版支持应用内通知、下载进度和完成后重启；有可用 blockmap 与本地旧安装包缓存时使用差分下载，否则安全回退为完整更新包
-- **Pi/fx 双 harness**：新会话默认 Pi、可切换 fx；已有会话可用双列布局并交换左右位置，`Cmd+D` 分列 / `Cmd+W` 关列 / `Cmd+[` `Cmd+]` 切换 / 拖拽调整比例
-- **包管理（Packages）** 🆕：在「扩展」面板为工作区安装 / 更新 / 移除 npm / git / 本地包
-- **系统提示词补充** 🆕：在「扩展」面板编辑项目级 `.pi/APPEND_SYSTEM.md` 与全局 `APPEND_SYSTEM.md`，将自定义内容追加到 agent 系统提示词（项目文件优先于全局，对新建 / 重新加载的会话生效）
-- **Dual-engine 统一版本**：Electron + Tauri 同步发版，版本号对齐
+### 核心基础功能
+- **本地工作区与多会话管理**：在桌面客户端中打开本地目录，按工作区管理并持久化会话状态与输入草稿。
+- **Codex 交互时间线**：流式消息响应、单行工具执行滚屏、代码块折叠高亮与智能排版。
+- **内置模型与一键接入**：内置 DeepSeek V4 Pro 1M / Flash 1M 等主流模型，一键配置 API Key 快速启动。
+- **全球化多语言**：支持中文简体、中文繁體、日文、英文 UI，设置（Settings → Appearance）中即时切换。
+- **40+ 提供商与余额可视**：涵盖主流商业与开源大模型网关，紧凑布局与实时余额状态展示。
+- **高效快捷键体系**：`Cmd/Ctrl+Tab` 快速切换展开会话，`Cmd+Enter` 重试消息，`Cmd+D` 双栏分列。
+- **自动更新机制**：全平台版本对齐，Windows 安装版支持应用内静默差分更新与重启生效。
+- **Open Design MCP 集成**：支持一键调度设计系统生成与修改网页/组件。
+
+### 2.7 之后重点功能演进 (Major Milestones Since v2.7)
+
+- **v2.8.0 阶段**：
+  - **DeepSeek Harness Web UI 深度集成**：内置 Harness 嵌入页签，未启动本机服务时自动提示并引导执行 `npx @deepseek-ai/dsh web`。
+  - **自定义本地与兼容模型端点**：全面放开自定义 OpenAI 兼容接口（llama.cpp, Ollama, LM Studio, vLLM 等本地端点）。
+  - **Tauri 2 跨平台端侧内核加固**：侧边栏 IPC 参数对齐、内置 Node runtime 与 YAML 依赖打包优化。
+
+- **v2.9.0 – v2.9.5 阶段**：
+  - **Pi / fx 双 Harness 独立运行引擎**：双栏并排独立运行 Pi 与 Vercel fx 运行时；栏首一键切换左右位置；支持原生通道热切换（OpenAI Codex, xAI Grok, Vercel AI Gateway）与内置 fx 自动回退。
+  - **OpenAI 兼容供应商（CLIProxyAPI）**：提供商设置升级支持 EasyCLIProxyAPI（OAuth with Claude, Antigravity, Codex, Kimi, xAI）认证网关。
+  - **包管理与系统提示词补充**：在「扩展」面板为工作区安装/更新/移除 npm/git 包，支持项目级 `.pi/APPEND_SYSTEM.md` 系统提示词动态注入。
+  - **Cmd+Enter 重试快捷键**：对话输入框及会话中新增 `Cmd+Enter`（Windows/Linux 为 `Ctrl+Enter`）一键重试上一条失败或历史消息。
+
+- **v3.0.0 – v3.0.5 阶段（Taosi 3.x）**：
+  - **全新品牌 Taosi 重构（v3.0.0）**：应用品牌全面升级为 **Taosi**；重构侧边栏长标题自适应、顶栏折叠与全球化界面。
+  - **文件实时预览面板（v3.0.0）**：会话中提及的代码文件、Markdown 及多格式文档可在右侧独立分栏中即时预览与高亮。
+  - **Computer Use 跨平台桌面自动化控制（v3.0.5）**：内置集成 `@injaneity/pi-computer-use`，AI 智能体可直接读取系统前台 UI 元素树、截屏与执行精准键鼠操控（点击、文本输入、按键、等待、浏览器观测）。
+  - **系统权限智能一键自动引导（v3.0.5）**：macOS 辅助功能（Accessibility）与屏幕录制（Screen Recording）权限双向实时检测，一键智能引导弹窗开启并自动聚焦感知生效，支持 Esc 紧急中止。
+  - **多步工具调用单行实时滚屏（v3.0.4）**：多步工具执行折叠为单行实时滚屏（参考 Claude 体验），仅展示最新指令，支持点击展开详情，避免冗长刷屏。
+  - **输入框草稿保护（v3.0.4）**：在输入框内切换模型或思考等级时，完整保留已输入的提示词文本与图片/文件草稿，杜绝误清空。
+  - **代码块折叠与语法高亮（v3.0.5）**：时间线代码块默认折叠行数并展示语言标签与首行预览，展开显示行号与语法高亮，支持一键复制代码。
+  - **上下文压缩挂起修复（v3.0.5）**：全量模型提供 90s 超时防护与状态流转收敛，彻底解决长时间 `Compacting conversation context... Working…` 挂起卡死问题。
+  - **模型配置安全与展示体验（v3.0.2）**：已保存的自定义 API Key 在设置中安全遮罩，探测时自动复用；长模型列表支持平滑滚动。
 
 ## Open Design 使用
 

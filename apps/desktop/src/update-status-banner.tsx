@@ -119,7 +119,7 @@ function descriptionForStatus(
     case "available": return t("update.availableDesc");
     case "downloading": return t("update.downloadingDesc");
     case "ready": return t("update.readyDesc");
-    default: return t("update.failedDesc");
+    default: return status.message || t("update.failedDesc");
   }
 }
 

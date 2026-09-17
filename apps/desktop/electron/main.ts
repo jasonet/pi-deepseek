@@ -43,6 +43,7 @@ import { ensurePathForGuiLaunch } from "./ensure-path";
 import { seedBundledExtensions } from "./seed-extensions";
 import { DshWebService } from "./dsh-web-service";
 import { TregService } from "./treg-service";
+import { humanizeUpdateError } from "./update-version";
 import type { DesktopAppState, SelectedTranscriptRecord, ThemeMode } from "../src/desktop-state";
 import {
   desktopCommands,
@@ -660,15 +661,6 @@ async function registerBuiltInPlugins(): Promise<void> {
       console.log(`[Taosi] Auto-registered plugin: ${pluginPath}`);
     }
   } catch { /* silently skip */ }
-}
-
-/** Convert internal updater errors into concise user-facing text. */
-function humanizeUpdateError(message: string): string {
-  if (/ENOENT/i.test(message)) return "Could not access the application package. Try reinstalling or check disk permissions.";
-  if (/EACCES|EPERM/i.test(message)) return "Permission denied. Try running as administrator or check folder permissions.";
-  if (/ETIMEDOUT|ECONNREFUSED|ENOTFOUND|EAI_AGAIN|socket hang up/i.test(message)) return "Network error. Check your connection and try again.";
-  if (/net::ERR_/i.test(message)) return "Download failed due to a network issue. Check your connection and try again.";
-  return message;
 }
 
 function setDesktopUpdateStatus(status: DesktopUpdateStatus): DesktopUpdateStatus {

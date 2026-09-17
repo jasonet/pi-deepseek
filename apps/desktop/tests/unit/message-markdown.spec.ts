@@ -26,24 +26,30 @@ test.describe("Markdown formatting utilities", () => {
     });
   });
 
-  test.describe("resolveLanguage", () => {
-    test("maps extensions and aliases to highlight.js registered languages", () => {
-      expect(resolveLanguage("ts")).toBe("typescript");
-      expect(resolveLanguage("tsx")).toBe("typescript");
-      expect(resolveLanguage("typescript")).toBe("typescript");
-      expect(resolveLanguage("js")).toBe("javascript");
-      expect(resolveLanguage("jsx")).toBe("javascript");
-      expect(resolveLanguage("py")).toBe("python");
-      expect(resolveLanguage("python")).toBe("python");
-      expect(resolveLanguage("sh")).toBe("bash");
-      expect(resolveLanguage("bash")).toBe("bash");
-      expect(resolveLanguage("zsh")).toBe("bash");
-      expect(resolveLanguage("json")).toBe("json");
+  test.describe("resolveHighlightLanguage", () => {
+    test("maps extensions and fence aliases to highlight.js registered languages", () => {
+      expect(resolveHighlightLanguage("ts")).toBe("typescript");
+      expect(resolveHighlightLanguage("tsx")).toBe("typescript");
+      expect(resolveHighlightLanguage("typescript")).toBe("typescript");
+      expect(resolveHighlightLanguage("js")).toBe("javascript");
+      expect(resolveHighlightLanguage("jsx")).toBe("javascript");
+      expect(resolveHighlightLanguage("py")).toBe("python");
+      expect(resolveHighlightLanguage("python")).toBe("python");
+      expect(resolveHighlightLanguage("sh")).toBe("bash");
+      expect(resolveHighlightLanguage("bash")).toBe("bash");
+      expect(resolveHighlightLanguage("zsh")).toBe("bash");
+      expect(resolveHighlightLanguage("json")).toBe("json");
     });
 
     test("returns undefined for unknown or undefined languages", () => {
-      expect(resolveLanguage(undefined)).toBeUndefined();
-      expect(resolveLanguage("unknown-lang")).toBeUndefined();
+      expect(resolveHighlightLanguage(undefined)).toBeUndefined();
+      expect(resolveHighlightLanguage("unknown-lang")).toBeUndefined();
+    });
+
+    test("shares one alias table with extensionToLanguage", () => {
+      expect(extensionToLanguage("src/app.tsx")).toBe("typescript");
+      expect(extensionToLanguage("run.sh")).toBe("bash");
+      expect(extensionToLanguage("Makefile")).toBeUndefined();
     });
   });
 

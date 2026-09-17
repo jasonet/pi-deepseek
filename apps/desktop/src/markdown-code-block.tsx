@@ -24,9 +24,6 @@ export function isCommandLanguage(language?: string): boolean {
   return Boolean(language && COMMAND_LANGUAGES.has(language.toLowerCase().trim()));
 }
 
-/** Maps a markdown fence language (or alias) to a registered highlight.js grammar. */
-export const resolveLanguage = resolveHighlightLanguage;
-
 const PREVIEW_MAX_LENGTH = 42;
 
 /** `undefined` when the block is too large to highlight without blocking the UI thread. */

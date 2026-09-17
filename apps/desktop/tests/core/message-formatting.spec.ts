@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import {
   createNamedThread,
   launchDesktop,
@@ -17,12 +17,27 @@ const MARKDOWN_BODY = [
   "> Quoted guidance lives here.",
   "",
   "```bash",
+  "# Install dependencies",
   "pnpm install",
-  "pnpm test",
   "```",
   "",
   "See [the docs](https://example.com/docs).",
 ].join("\n");
+
+/** Palette mirrors the `:root` / `:root.dark` tokens in src/styles/main.css. */
+const PALETTE = {
+  light: { inlineCode: "rgb(21, 128, 61)", link: "rgb(124, 58, 237)", quoteBorder: "rgb(59, 130, 246)" },
+  dark: { inlineCode: "rgb(74, 222, 128)", link: "rgb(167, 139, 250)", quoteBorder: "rgb(96, 165, 250)" },
+} as const;
+
+async function resolvePalette(window: Page) {
+  const isDark = await window.evaluate(() => document.documentElement.classList.contains("dark"));
+  return isDark ? PALETTE.dark : PALETTE.light;
+}
+
+function colorOf(locator: Locator, property: "color" | "borderLeftColor") {
+  return locator.evaluate((el, prop) => getComputedStyle(el)[prop as "color"], property);
+}
 
 test("renders Claude-style markdown formatting in assistant messages", async () => {
   const userDataDir = await makeUserDataDir();
@@ -45,41 +60,41 @@ test("renders Claude-style markdown formatting in assistant messages", async () 
 
     const assistantRow = window.locator(".timeline-item--assistant").last();
     await expect(assistantRow).toBeVisible();
+    const palette = await resolvePalette(window);
 
-    // 指令 — inline code renders with the green command chip class.
+    // 指令 — inline code renders as a green command chip.
     const inlineCode = assistantRow.locator("code.message-inline-code");
     await expect(inlineCode).toHaveText("pnpm install");
-    const inlineColor = await inlineCode.evaluate((el) => getComputedStyle(el).color);
-    expect(inlineColor).toBe("rgb(21, 128, 61)");
+    expect(await colorOf(inlineCode, "color")).toBe(palette.inlineCode);
 
-    // 链接 — anchors render purple.
+    // 链接 — anchors render purple and keep their target.
     const link = assistantRow.locator("a", { hasText: "the docs" });
     await expect(link).toHaveAttribute("href", "https://example.com/docs");
-    const linkColor = await link.evaluate((el) => getComputedStyle(el).color);
-    expect(linkColor).toBe("rgb(124, 58, 237)");
+    expect(await colorOf(link, "color")).toBe(palette.link);
 
     // 引用 — blockquotes carry the blue accent border.
     const quote = assistantRow.locator("blockquote");
     await expect(quote).toContainText("Quoted guidance lives here.");
-    const quoteBorder = await quote.evaluate((el) => getComputedStyle(el).borderLeftColor);
-    expect(quoteBorder).toBe("rgb(59, 130, 246)");
+    expect(await colorOf(quote, "borderLeftColor")).toBe(palette.quoteBorder);
 
-    // 数字 — prose numbers are bolded, numbers inside code are not.
+    // 数字 — prose numbers are bolded; unit-suffixed numbers and code are left alone.
     const boldNumbers = assistantRow.locator("p strong.markdown-num");
-    await expect(boldNumbers).toHaveCount(4);
-    await expect(boldNumbers.first()).toHaveText("42");
-    const boldWeight = await boldNumbers.first().evaluate((el) => getComputedStyle(el).fontWeight);
-    expect(Number(boldWeight)).toBeGreaterThanOrEqual(700);
+    await expect(boldNumbers).toHaveCount(3);
+    await expect(boldNumbers).toHaveText(["42", "3", "100%"]);
+    const firstWeight = await boldNumbers.first().evaluate((el) => getComputedStyle(el).fontWeight);
+    expect(Number(firstWeight)).toBeGreaterThanOrEqual(700);
+    // `3.14s` is a unit-suffixed value, so it stays plain text.
+    await expect(assistantRow.locator("strong.markdown-num", { hasText: "3.14" })).toHaveCount(0);
     await expect(inlineCode.locator("strong.markdown-num")).toHaveCount(0);
 
-    // 代码段 — fenced blocks are collapsed by default behind a header bar.
+    // 代码段 — fenced blocks start collapsed behind a header bar.
     const block = assistantRow.locator(".markdown-code-block");
     await expect(block).toHaveCount(1);
     await expect(block).toHaveClass(/markdown-code-block--collapsed/);
     await expect(block).toHaveClass(/markdown-code-block--command/);
     await expect(block.locator(".markdown-code-block__badge")).toHaveText("bash");
-    await expect(block.locator(".markdown-code-block__lines")).toHaveText("2 行");
-    // Collapsed blocks keep the source hidden until expanded.
+    // Unit label follows the UI locale ("2 lines" / "2 行").
+    await expect(block.locator(".markdown-code-block__lines")).toHaveText(/^2\s*(lines|行)$/);
     await expect(block.locator(".markdown-code-block__body")).toHaveCount(0);
 
     // Expanding reveals line-numbered, syntax-highlighted source.
@@ -88,10 +103,12 @@ test("renders Claude-style markdown formatting in assistant messages", async () 
     const body = block.locator(".markdown-code-block__body");
     await expect(body).toBeVisible();
     await expect(body.locator(".markdown-code-block__line")).toHaveCount(2);
-    await expect(body.locator(".markdown-code-block__line").first()).toContainText("pnpm install");
-    await expect(body.locator(".hljs-built_in").first()).toHaveText("pnpm");
+    await expect(body.locator(".markdown-code-block__line").first()).toContainText(
+      "# Install dependencies",
+    );
+    await expect(body.locator(".hljs-comment").first()).toHaveText("# Install dependencies");
 
-    // Copy button is available without expanding.
+    // Copy works without collapsing the block.
     await block.locator(".markdown-code-block__copy").click();
     await expect(block.locator(".markdown-code-block__copy")).toHaveClass(
       /markdown-code-block__copy--copied/,

@@ -112,8 +112,7 @@ export function planRetention({
         entry.name === "SHA256SUMS.txt" ||
         entry.name === "checksums.txt" ||
         entry.name === "latest-linux-arm64.yml" ||
-        entry.name === "latest-linux.yml" ||
-        entry.name === "latest.yml"
+        entry.name === "latest-linux.yml"
       ) {
         toDelete.push({ path: fullPath, reason: `Stale checksum / manifest for legacy releases: ${entry.name}` });
       } else {

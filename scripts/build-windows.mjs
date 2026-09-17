@@ -16,18 +16,18 @@ const version = pkg.version;
 console.log(`[win-build] Starting Windows build for Taosi v${version}...`);
 
 try {
-  // Step 1: Temporarily set packageManager to traversal to avoid node:sqlite bug in Bun/electron-builder collector
-  pkg.packageManager = "traversal";
-  writeFileSync(rootPkgPath, JSON.stringify(pkg, null, 2) + "\n");
-  console.log(`[win-build] Switched packageManager to traversal for electron-builder.`);
-
-  // Step 2: Build desktop assets
-  console.log(`[win-build] Step 1: Building desktop app assets...`);
+  // Step 1: Build desktop assets using pnpm
+  console.log(`[win-build] Step 1: Building desktop app assets with pnpm...`);
   execFileSync("pnpm", ["run", "build"], {
     cwd: desktopDir,
     stdio: "inherit",
     env: process.env,
   });
+
+  // Step 2: Temporarily set packageManager to traversal so electron-builder uses traversal collector
+  pkg.packageManager = "traversal";
+  writeFileSync(rootPkgPath, JSON.stringify(pkg, null, 2) + "\n");
+  console.log(`[win-build] Switched packageManager to traversal for electron-builder.`);
 
   // Step 3: Run electron-builder for Windows x64
   console.log(`[win-build] Step 2: Packaging Windows targets (nsis + portable)...`);
@@ -43,6 +43,10 @@ try {
       },
     }
   );
+
+  // Restore packageManager immediately after packaging
+  writeFileSync(rootPkgPath, originalPkgText);
+  console.log(`[win-build] Restored packageManager to ${originalPM}`);
 
   console.log(`[win-build] Step 3: Verifying packaged Windows runtime dependencies...`);
   execFileSync(

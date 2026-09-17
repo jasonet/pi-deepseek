@@ -383,3 +383,12 @@ export function DiffIcon() {
     </Icon>
   );
 }
+
+export function CheckSmallIcon() {
+  return (
+    <Icon>
+      <path d="m4.5 10 3.5 3.5 7.5-7.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" />
+    </Icon>
+  );
+}
+

@@ -1544,11 +1544,16 @@
   font-size: 0.92em;
 }
 
-.message__content :not(pre) > code {
-  padding: 0.1em 0.38em;
+.message__content :not(pre) > code,
+.message-inline-code {
+  padding: 0.15em 0.42em;
   border-radius: 6px;
-  background: #eef2f8;
-  color: #2c3550;
+  background: rgba(16, 185, 129, 0.09);
+  color: #15803d;
+  border: 1px solid rgba(16, 185, 129, 0.22);
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  letter-spacing: -0.01em;
 }
 
 .message__content pre {
@@ -1565,18 +1570,238 @@
 }
 
 .message__content blockquote {
-  padding-left: 12px;
-  border-left: 3px solid #d8deea;
-  color: var(--muted-strong);
+  margin: 4px 0;
+  padding: 8px 14px;
+  border-left: 3px solid #3b82f6;
+  background: rgba(59, 130, 246, 0.05);
+  border-radius: 0 8px 8px 0;
+  color: #1e40af;
+  line-height: 1.45;
 }
 
 .message__content a {
-  color: #3358d4;
+  color: #7c3aed;
   text-decoration: none;
+  transition: color 0.15s ease, text-decoration-color 0.15s ease;
 }
 
 .message__content a:hover {
+  color: #5b21b6;
   text-decoration: underline;
+}
+
+.markdown-num {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.message__content ol > li::marker {
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+/* ── Collapsible Markdown Code Block ── */
+
+.markdown-code-block {
+  margin: 6px 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-muted);
+  overflow: hidden;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.markdown-code-block:hover {
+  border-color: var(--line-strong);
+}
+
+.markdown-code-block--command {
+  border-color: rgba(16, 185, 129, 0.28);
+}
+
+.markdown-code-block__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 12px;
+  font-size: 12px;
+  user-select: none;
+  cursor: pointer;
+  gap: 12px;
+  background: var(--surface);
+  transition: background 0.15s ease;
+}
+
+.markdown-code-block__header:hover {
+  background: var(--surface-muted);
+}
+
+.markdown-code-block__header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.markdown-code-block__chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+  transition: transform 0.18s ease, color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.markdown-code-block__chevron--expanded {
+  transform: rotate(90deg);
+}
+
+.markdown-code-block__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 7px;
+  border-radius: 5px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--surface-muted);
+  color: var(--muted-strong);
+  border: 1px solid var(--line);
+  text-transform: lowercase;
+  flex-shrink: 0;
+}
+
+.markdown-code-block__badge-icon {
+  display: inline-flex;
+  width: 13px;
+  height: 13px;
+}
+
+.markdown-code-block__badge-icon svg {
+  width: 13px;
+  height: 13px;
+}
+
+.markdown-code-block__badge--command {
+  background: rgba(16, 185, 129, 0.12);
+  color: #15803d;
+  border-color: rgba(16, 185, 129, 0.28);
+}
+
+.markdown-code-block__lines {
+  font-size: 11px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.markdown-code-block__preview {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.markdown-code-block__header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.markdown-code-block__copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 5px;
+  font-size: 11px;
+  color: var(--muted-strong);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.markdown-code-block__copy svg {
+  width: 12px;
+  height: 12px;
+}
+
+.markdown-code-block__copy:hover {
+  background: var(--surface-muted);
+  color: var(--text-strong);
+  border-color: var(--line-strong);
+}
+
+.markdown-code-block__copy--copied {
+  color: #15803d;
+  border-color: rgba(16, 185, 129, 0.35);
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.markdown-code-block__toggle-text {
+  font-size: 11px;
+  color: var(--muted);
+  transition: color 0.15s ease;
+}
+
+.markdown-code-block__header:hover .markdown-code-block__toggle-text {
+  color: var(--text);
+}
+
+.markdown-code-block__body {
+  border-top: 1px solid var(--line);
+  background: #f8fafd;
+  max-height: 520px;
+  overflow: auto;
+}
+
+.markdown-code-block__pre {
+  margin: 0 !important;
+  padding: 10px 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  overflow: visible !important;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.markdown-code-block__line {
+  display: flex;
+  padding: 0 12px;
+  min-width: fit-content;
+}
+
+.markdown-code-block__line:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.markdown-code-block__line-num {
+  width: 38px;
+  padding-right: 14px;
+  text-align: right;
+  color: var(--muted-soft);
+  user-select: none;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+}
+
+.markdown-code-block__line-content {
+  flex: 1 1 auto;
+  white-space: pre;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 
 .composer {
@@ -4366,9 +4591,11 @@ mark.thread-find-active {
   background: var(--line);
 }
 
-:root.dark .message__content :not(pre) > code {
-  background: rgba(255, 255, 255, 0.08);
-  color: #e4e4e7;
+:root.dark .message__content :not(pre) > code,
+:root.dark .message-inline-code {
+  background: rgba(52, 211, 153, 0.12);
+  color: #4ade80;
+  border-color: rgba(52, 211, 153, 0.25);
 }
 
 :root.dark .message__content pre {
@@ -4378,11 +4605,53 @@ mark.thread-find-active {
 }
 
 :root.dark .message__content blockquote {
-  border-left-color: var(--line);
+  border-left-color: #60a5fa;
+  background: rgba(59, 130, 246, 0.10);
+  color: #93c5fd;
 }
 
 :root.dark .message__content a {
-  color: #7c9dfa;
+  color: #a78bfa;
+}
+
+:root.dark .message__content a:hover {
+  color: #c4b5fd;
+}
+
+:root.dark .markdown-code-block {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+:root.dark .markdown-code-block--command {
+  border-color: rgba(52, 211, 153, 0.3);
+}
+
+:root.dark .markdown-code-block__header {
+  background: var(--surface);
+}
+
+:root.dark .markdown-code-block__header:hover {
+  background: var(--surface-muted);
+}
+
+:root.dark .markdown-code-block__body {
+  background: rgba(0, 0, 0, 0.35);
+}
+
+:root.dark .markdown-code-block__line:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+:root.dark .markdown-code-block__badge--command {
+  background: rgba(52, 211, 153, 0.14);
+  color: #4ade80;
+  border-color: rgba(52, 211, 153, 0.3);
+}
+
+:root.dark .markdown-code-block__copy--copied {
+  color: #4ade80;
+  border-color: rgba(52, 211, 153, 0.35);
+  background: rgba(52, 211, 153, 0.1);
 }
 
 :root.dark .composer {

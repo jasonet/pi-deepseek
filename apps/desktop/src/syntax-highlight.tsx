@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { LRUCache } from "lru-cache";
 import hljs from "highlight.js/lib/core";
 import bash from "highlight.js/lib/languages/bash";
@@ -23,27 +24,50 @@ export type HighlightTokenChild = string | HighlightToken;
 
 export type HighlightLine = readonly HighlightTokenChild[];
 
-const EXTENSION_TO_LANGUAGE: Readonly<Record<string, string>> = {
+// Keys are both file extensions and markdown fence language names; shell dialects
+// collapse onto the "bash" grammar, the only shell grammar registered below.
+const LANGUAGE_ALIASES: Readonly<Record<string, string>> = {
   ts: "typescript",
   tsx: "typescript",
   mts: "typescript",
   cts: "typescript",
+  typescript: "typescript",
   js: "javascript",
   jsx: "javascript",
   mjs: "javascript",
   cjs: "javascript",
+  javascript: "javascript",
   json: "json",
   py: "python",
+  python: "python",
   sh: "bash",
   bash: "bash",
   zsh: "bash",
+  shell: "bash",
 };
 
 export function extensionToLanguage(filePath: string): string | undefined {
   const dotIndex = filePath.lastIndexOf(".");
   if (dotIndex < 0) return undefined;
-  const ext = filePath.slice(dotIndex + 1).toLowerCase();
-  return EXTENSION_TO_LANGUAGE[ext];
+  return LANGUAGE_ALIASES[filePath.slice(dotIndex + 1).toLowerCase()];
+}
+
+/** Maps a markdown fence language (or alias) to a registered highlight.js grammar. */
+export function resolveHighlightLanguage(language: string | undefined): string | undefined {
+  if (!language) return undefined;
+  return LANGUAGE_ALIASES[language.toLowerCase().trim()];
+}
+
+export function renderHighlightTokens(tokens: HighlightLine): ReactNode {
+  return tokens.map((token, index) =>
+    typeof token === "string" ? (
+      token
+    ) : (
+      <span className={token.className} key={index}>
+        {renderHighlightTokens(token.children)}
+      </span>
+    ),
+  );
 }
 
 const lineCache = new LRUCache<string, HighlightLine>({ max: 5000 });

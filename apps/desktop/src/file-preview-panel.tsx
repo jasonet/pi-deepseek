@@ -1,8 +1,8 @@
-import { useEffect, useState, type MouseEvent, type ReactNode } from "react";
+import { useEffect, useState, type MouseEvent } from "react";
 import type { FilePreviewResult, PiDesktopApi } from "./ipc";
 import { CloseIcon, FileIcon } from "./icons";
 import { MessageMarkdown } from "./message-markdown";
-import { highlightLine, type HighlightLine } from "./syntax-highlight";
+import { highlightLine, renderHighlightTokens } from "./syntax-highlight";
 
 export interface FilePreviewRequest {
   readonly workspaceId: string;
@@ -128,18 +128,12 @@ function CodePreview({ content, language }: { readonly content: string; readonly
           <span className="file-preview-panel__line" key={`${index}:${line}`}>
             <span className="file-preview-panel__line-number">{index + 1}</span>
             <span className="file-preview-panel__line-content">
-              {language && language !== "text" ? renderTokens(highlightLine(line, language)) : line}
+              {language && language !== "text" ? renderHighlightTokens(highlightLine(line, language)) : line}
             </span>
             {"\n"}
           </span>
         ))}
       </code>
     </pre>
-  );
-}
-
-function renderTokens(tokens: HighlightLine): ReactNode {
-  return tokens.map((token, index) =>
-    typeof token === "string" ? token : <span className={token.className} key={index}>{renderTokens(token.children)}</span>,
   );
 }

@@ -482,6 +482,13 @@ const translations: Record<Locale, Record<string, string>> = {
     "common.search": "Search",
     "common.clear": "Clear",
     "common.refresh": "Refresh",
+
+    // Markdown
+    "markdown.expandCode": "Expand code",
+    "markdown.collapseCode": "Collapse code",
+    "markdown.copy": "Copy",
+    "markdown.copied": "Copied",
+    "markdown.lines": "{count} lines",
   },
 
   "zh-CN": {
@@ -936,6 +943,13 @@ const translations: Record<Locale, Record<string, string>> = {
     "common.search": "搜索",
     "common.clear": "清除",
     "common.refresh": "刷新",
+
+    // Markdown
+    "markdown.expandCode": "展开代码",
+    "markdown.collapseCode": "收起代码",
+    "markdown.copy": "复制",
+    "markdown.copied": "已复制",
+    "markdown.lines": "{count} 行",
   },
 
   "zh-TW": {
@@ -1303,6 +1317,13 @@ const translations: Record<Locale, Record<string, string>> = {
     "common.search": "搜尋",
     "common.clear": "清除",
     "common.refresh": "重新整理",
+
+    // Markdown
+    "markdown.expandCode": "展開程式碼",
+    "markdown.collapseCode": "收起程式碼",
+    "markdown.copy": "複製",
+    "markdown.copied": "已複製",
+    "markdown.lines": "{count} 行",
   },
 
   ja: {
@@ -1754,6 +1775,13 @@ const translations: Record<Locale, Record<string, string>> = {
     "common.search": "検索",
     "common.clear": "クリア",
     "common.refresh": "更新",
+
+    // Markdown
+    "markdown.expandCode": "コードを展開",
+    "markdown.collapseCode": "コードを折りたたむ",
+    "markdown.copy": "コピー",
+    "markdown.copied": "コピーしました",
+    "markdown.lines": "{count} 行",
   },
 };
 

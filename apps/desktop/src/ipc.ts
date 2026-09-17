@@ -40,6 +40,18 @@ export type DesktopNotificationPermissionStatus =
   | "unsupported"
   | "unknown";
 
+export type DesktopSystemPermissionStatus =
+  | "granted"
+  | "denied"
+  | "default"
+  | "unsupported"
+  | "unknown";
+
+export interface DesktopSystemPermissionsState {
+  readonly accessibility: DesktopSystemPermissionStatus;
+  readonly screenRecording: DesktopSystemPermissionStatus;
+}
+
 export type DesktopUpdatePhase =
   | "idle"
   | "checking"
@@ -181,6 +193,10 @@ export const desktopIpc = {
   requestNotificationPermission: "pi-gui:request-notification-permission",
   openSystemNotificationSettings: "pi-gui:open-system-notification-settings",
   notificationPermissionStatusChanged: "pi-gui:notification-permission-status-changed",
+  getSystemPermissionsStatus: "pi-gui:get-system-permissions-status",
+  requestSystemPermission: "pi-gui:request-system-permission",
+  openSystemPermissionSettings: "pi-gui:open-system-permission-settings",
+  systemPermissionsStatusChanged: "pi-gui:system-permissions-status-changed",
   pickComposerAttachments: "pi-gui:pick-composer-attachments",
   readClipboardImage: "pi-gui:read-clipboard-image",
   addComposerAttachments: "pi-gui:add-composer-attachments",
@@ -528,6 +544,12 @@ export interface PiDesktopApi {
   openSystemNotificationSettings(): Promise<void>;
   onNotificationPermissionStatusChanged(
     callback: (status: DesktopNotificationPermissionStatus) => void,
+  ): () => void;
+  getSystemPermissionsStatus(): Promise<DesktopSystemPermissionsState>;
+  requestSystemPermission(type?: "accessibility" | "screenRecording" | "all"): Promise<DesktopSystemPermissionsState>;
+  openSystemPermissionSettings(type: "accessibility" | "screenRecording"): Promise<void>;
+  onSystemPermissionsStatusChanged(
+    callback: (status: DesktopSystemPermissionsState) => void,
   ): () => void;
   pickComposerAttachments(): Promise<DesktopAppState>;
   readClipboardImage(): ComposerImageAttachment | null;

@@ -4,6 +4,7 @@ import {
   desktopIpc,
   type DshWebStatus,
   type DesktopNotificationPermissionStatus,
+  type DesktopSystemPermissionsState,
   type DesktopUpdateStatus,
   type FilePreviewResult,
   type OpenDesignStatus,
@@ -329,6 +330,19 @@ contextBridge.exposeInMainWorld("piApp", {
     ipcRenderer.on(desktopIpc.notificationPermissionStatusChanged, handler);
     return () => {
       ipcRenderer.removeListener(desktopIpc.notificationPermissionStatusChanged, handler);
+    };
+  },
+  getSystemPermissionsStatus: () =>
+    ipcRenderer.invoke(desktopIpc.getSystemPermissionsStatus) as Promise<DesktopSystemPermissionsState>,
+  requestSystemPermission: (type?: "accessibility" | "screenRecording" | "all") =>
+    ipcRenderer.invoke(desktopIpc.requestSystemPermission, type) as Promise<DesktopSystemPermissionsState>,
+  openSystemPermissionSettings: (type: "accessibility" | "screenRecording") =>
+    ipcRenderer.invoke(desktopIpc.openSystemPermissionSettings, type) as Promise<void>,
+  onSystemPermissionsStatusChanged: (callback: (status: DesktopSystemPermissionsState) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, status: DesktopSystemPermissionsState) => callback(status);
+    ipcRenderer.on(desktopIpc.systemPermissionsStatusChanged, handler);
+    return () => {
+      ipcRenderer.removeListener(desktopIpc.systemPermissionsStatusChanged, handler);
     };
   },
   pickComposerAttachments: () => ipcRenderer.invoke(desktopIpc.pickComposerAttachments) as Promise<DesktopAppState>,

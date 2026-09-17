@@ -1,6 +1,6 @@
 import type { RuntimeSettingsSnapshot, RuntimeSnapshot } from "@pi-gui/session-driver/runtime-types";
 import type { ImChannel, ModelSettingsScopeMode, NotificationPreferences, SaveImChannelInput, WorkspaceRecord } from "./desktop-state";
-import type { DesktopNotificationPermissionStatus } from "./ipc";
+import type { DesktopNotificationPermissionStatus, DesktopSystemPermissionsState } from "./ipc";
 import { SettingsAppearanceSection } from "./settings-appearance-section";
 import { SettingsChannelsSection } from "./settings-channels-section";
 import { SettingsGeneralSection } from "./settings-general-section";
@@ -52,6 +52,10 @@ interface SettingsViewProps {
   readonly onSetThemeMode: (mode: "system" | "light" | "dark") => void;
   readonly onSetEnableTransparency: (enabled: boolean) => void;
   readonly onSetLocale: (locale: string) => void;
+  readonly systemPermissionsStatus?: DesktopSystemPermissionsState;
+  readonly systemPermissionsPending?: boolean;
+  readonly onRequestSystemPermission?: (type?: "accessibility" | "screenRecording" | "all") => void;
+  readonly onOpenSystemPermissionSettings?: (type: "accessibility" | "screenRecording") => void;
 }
 
 export function SettingsView({
@@ -72,6 +76,10 @@ export function SettingsView({
   locale,
   autoUpdateEnabled,
   skipAutoTitle,
+  systemPermissionsStatus,
+  systemPermissionsPending,
+  onRequestSystemPermission,
+  onOpenSystemPermissionSettings,
   onSetModelSettingsScopeMode,
   onSetDefaultModel,
   onSetThinkingLevel,
@@ -142,6 +150,10 @@ export function SettingsView({
               onToggleSkillCommands={onToggleSkillCommands}
               skipAutoTitle={skipAutoTitle}
               onSetSkipAutoTitle={onSetSkipAutoTitle}
+              systemPermissionsStatus={systemPermissionsStatus}
+              systemPermissionsPending={systemPermissionsPending}
+              onRequestSystemPermission={onRequestSystemPermission}
+              onOpenSystemPermissionSettings={onOpenSystemPermissionSettings}
             />
           ) : null}
 

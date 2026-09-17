@@ -2,7 +2,9 @@ import { useT } from "./i18n";
 import { useEffect, useState } from "react";
 import type { RuntimeSnapshot } from "@pi-gui/session-driver/runtime-types";
 import type { ModelSettingsScopeMode } from "./desktop-state";
+import type { DesktopSystemPermissionsState } from "./ipc";
 import { SettingsGroup, SettingsInfoRow, SettingsRow } from "./settings-utils";
+import { SettingsSystemPermissionsSection } from "./settings-system-permissions-section";
 
 interface SettingsGeneralSectionProps {
   readonly runtime?: RuntimeSnapshot;
@@ -13,6 +15,10 @@ interface SettingsGeneralSectionProps {
   readonly onToggleSkillCommands: (enabled: boolean) => void;
   readonly skipAutoTitle: boolean;
   readonly onSetSkipAutoTitle: (skip: boolean) => void;
+  readonly systemPermissionsStatus?: DesktopSystemPermissionsState;
+  readonly systemPermissionsPending?: boolean;
+  readonly onRequestSystemPermission?: (type?: "accessibility" | "screenRecording" | "all") => void;
+  readonly onOpenSystemPermissionSettings?: (type: "accessibility" | "screenRecording") => void;
 }
 
 export function SettingsGeneralSection({
@@ -24,6 +30,10 @@ export function SettingsGeneralSection({
   onToggleSkillCommands,
   skipAutoTitle,
   onSetSkipAutoTitle,
+  systemPermissionsStatus,
+  systemPermissionsPending,
+  onRequestSystemPermission,
+  onOpenSystemPermissionSettings,
 }: SettingsGeneralSectionProps) {
   const t = useT();
   const connectedCount = runtime?.providers.filter((p) => p.hasAuth).length ?? 0;
@@ -97,6 +107,15 @@ export function SettingsGeneralSection({
             onChange={(e) => onSetSkipAutoTitle(e.target.checked)} />
         </SettingsRow>
       </SettingsGroup>
+
+      {systemPermissionsStatus && onRequestSystemPermission && onOpenSystemPermissionSettings ? (
+        <SettingsSystemPermissionsSection
+          systemPermissionsStatus={systemPermissionsStatus}
+          systemPermissionsPending={Boolean(systemPermissionsPending)}
+          onRequestSystemPermission={onRequestSystemPermission}
+          onOpenSystemPermissionSettings={onOpenSystemPermissionSettings}
+        />
+      ) : null}
 
       <SettingsGroup title={t("settings.general.shortcuts")}>
         <SettingsInfoRow label={t("settings.general.newThread")} value="Cmd+Shift+O" />

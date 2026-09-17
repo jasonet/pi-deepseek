@@ -20,38 +20,37 @@ const EXTENSIONS = [
   { id: "pi-mcp-higgsfield", sentinel: "@modelcontextprotocol/sdk" },
   { id: "pi-understand", sentinel: "@understand-anything/core" },
   { id: "pi-treg", sentinel: "@modelcontextprotocol/sdk" },
+  { id: "pi-computer-use", skipInstall: true },
 ];
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const extRoot = path.resolve(scriptDir, "..", "resources", "extensions");
 
-for (const { id, sentinel } of EXTENSIONS) {
+for (const { id, sentinel, skipInstall } of EXTENSIONS) {
   const extDir = path.join(extRoot, id);
   if (!existsSync(path.join(extDir, "package.json"))) {
     console.error(`[stage-mcp-bridge] vendored extension not found at ${extDir}`);
     process.exit(1);
   }
 
-  // 1. Ensure node_modules exists (reproducible on a fresh checkout).
-  if (!existsSync(path.join(extDir, "node_modules", ...sentinel.split("/")))) {
-    const hasLock = existsSync(path.join(extDir, "package-lock.json"));
-    const args = hasLock ? ["ci", "--omit=dev"] : ["install", "--omit=dev"];
-    console.log(`[stage-mcp-bridge] npm ${args.join(" ")} in ${extDir}`);
-    // `shell: true` is required on Windows: npm is `npm.cmd`, and Node refuses
-    // to spawn `.cmd`/`.bat` without a shell (CVE-2024-27980 hardening), so a
-    // plain spawnSync("npm") fails with ENOENT before npm ever runs.
-    const install = spawnSync("npm", args, { cwd: extDir, stdio: "inherit", shell: true });
-    if (install.error) {
-      console.error(`[stage-mcp-bridge] failed to launch npm: ${install.error.message}`);
-      process.exit(1);
+  // 1. Ensure node_modules exists if needed
+  if (!skipInstall && sentinel) {
+    if (!existsSync(path.join(extDir, "node_modules", ...sentinel.split("/")))) {
+      const hasLock = existsSync(path.join(extDir, "package-lock.json"));
+      const args = hasLock ? ["ci", "--omit=dev"] : ["install", "--omit=dev"];
+      console.log(`[stage-mcp-bridge] npm ${args.join(" ")} in ${extDir}`);
+      const install = spawnSync("npm", args, { cwd: extDir, stdio: "inherit", shell: true });
+      if (install.error) {
+        console.error(`[stage-mcp-bridge] failed to launch npm: ${install.error.message}`);
+        process.exit(1);
+      }
+      if ((install.status ?? 1) !== 0) process.exit(install.status ?? 1);
+    } else {
+      console.log(`[stage-mcp-bridge] ${id}: node_modules already present.`);
     }
-    if ((install.status ?? 1) !== 0) process.exit(install.status ?? 1);
-  } else {
-    console.log(`[stage-mcp-bridge] ${id}: node_modules already present.`);
   }
 
-  // 2. Pack the extension (incl. node_modules) into a tarball shipped as an
-  //    extraResource. Top-level entry is `<id>/`.
+  // 2. Pack the extension into a tarball shipped as an extraResource
   const tarball = path.join(extRoot, `${id}.tgz`);
   console.log(`[stage-mcp-bridge] creating ${tarball}`);
   const pack = spawnSync("tar", ["-czf", tarball, "-C", extRoot, id], { stdio: "inherit" });

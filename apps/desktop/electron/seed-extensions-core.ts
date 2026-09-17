@@ -8,8 +8,9 @@ export const BUNDLED_EXTENSIONS = [
   "pi-mcp-higgsfield",
   "pi-understand",
   "pi-treg",
+  "pi-computer-use",
 ] as const;
-const APP_MANAGED_EXTENSIONS = new Set<string>(["pi-treg"]);
+const APP_MANAGED_EXTENSIONS = new Set<string>(["pi-treg", "pi-computer-use"]);
 
 export function seedBundledExtensionsFromPath(
   bundledRoot: string,

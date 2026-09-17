@@ -29,6 +29,7 @@ import { NotificationManager } from "./notification-manager";
 import {
   NotificationPermissionService,
 } from "./notification-permission";
+import { SystemPermissionService } from "./system-permission";
 import { ThemeManager } from "./theme-manager";
 import { TerminalService } from "./terminal-service";
 import {
@@ -114,6 +115,7 @@ const themeManager = new ThemeManager();
 let mainWindow: BrowserWindow | null = null;
 let notificationManager: NotificationManager | undefined;
 let notificationPermissionService: NotificationPermissionService | undefined;
+let systemPermissionService: SystemPermissionService | undefined;
 let terminalService: TerminalService | undefined;
 let integratedTerminalShell = "";
 let stopPublishingState: (() => void) | undefined;
@@ -1382,6 +1384,12 @@ app.whenReady().then(async () => {
       mainWindow.webContents.send(desktopIpc.notificationPermissionStatusChanged, status);
     }
   });
+  systemPermissionService = new SystemPermissionService(() => mainWindow);
+  systemPermissionService.subscribe((status) => {
+    if (mainWindow && canPublishToWindow(mainWindow)) {
+      mainWindow.webContents.send(desktopIpc.systemPermissionsStatusChanged, status);
+    }
+  });
   notificationManager = new NotificationManager(store, () => mainWindow, notificationPermissionService);
   stopNotifications = notificationManager.start();
   ipcMain.handle(desktopIpc.ping, () =>
@@ -1705,6 +1713,17 @@ app.whenReady().then(async () => {
   ipcMain.handle(desktopIpc.openSystemNotificationSettings, () =>
     notificationPermissionService?.openSystemSettings() ?? Promise.resolve(),
   );
+  ipcMain.handle(desktopIpc.getSystemPermissionsStatus, () =>
+    systemPermissionService?.getCurrentStatus() ??
+    Promise.resolve({ accessibility: "unknown", screenRecording: "unknown" }),
+  );
+  ipcMain.handle(desktopIpc.requestSystemPermission, (_event, type?: "accessibility" | "screenRecording" | "all") =>
+    systemPermissionService?.requestPermission(type) ??
+    Promise.resolve({ accessibility: "unknown", screenRecording: "unknown" }),
+  );
+  ipcMain.handle(desktopIpc.openSystemPermissionSettings, (_event, type: "accessibility" | "screenRecording") =>
+    systemPermissionService?.openSystemSettings(type) ?? Promise.resolve(),
+  );
   ipcMain.handle(desktopIpc.createSession, (_event, input: CreateSessionInput) =>
     store.createSession(input),
   );
@@ -1858,20 +1877,24 @@ app.whenReady().then(async () => {
   mainWindow = createWindow();
   notificationManager.trackWindow(mainWindow);
   notificationPermissionService.trackWindow(mainWindow);
+  systemPermissionService.trackWindow(mainWindow);
   themeManager.setWindow(mainWindow);
   attachStatePublisher(mainWindow);
   attachViewedSessionTracking(mainWindow);
   void notificationPermissionService.getCurrentStatus();
+  void systemPermissionService.getCurrentStatus();
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       mainWindow = createWindow();
       notificationManager?.trackWindow(mainWindow);
       notificationPermissionService?.trackWindow(mainWindow);
+      systemPermissionService?.trackWindow(mainWindow);
       themeManager.setWindow(mainWindow);
       attachStatePublisher(mainWindow);
       attachViewedSessionTracking(mainWindow);
       void notificationPermissionService?.getCurrentStatus();
+      void systemPermissionService?.getCurrentStatus();
     }
   });
 });
@@ -1883,6 +1906,8 @@ app.on("window-all-closed", () => {
     notificationManager = undefined;
     notificationPermissionService?.dispose();
     notificationPermissionService = undefined;
+    systemPermissionService?.dispose();
+    systemPermissionService = undefined;
     stopAutoUpdateChecker();
     stopPruningTerminals?.();
     stopPruningTerminals = undefined;

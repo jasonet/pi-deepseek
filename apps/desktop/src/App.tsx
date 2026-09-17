@@ -27,6 +27,7 @@ import {
   getDesktopCommandFromShortcut,
   getDesktopShortcutLabel,
   type DesktopNotificationPermissionStatus,
+  type DesktopSystemPermissionsState,
   type DesktopUpdateStatus,
   type PiDesktopCommand,
 } from "./ipc";
@@ -213,6 +214,12 @@ export default function App() {
   const [notificationPermissionStatus, setNotificationPermissionStatus] =
     useState<DesktopNotificationPermissionStatus>("unknown");
   const [notificationPermissionPending, setNotificationPermissionPending] = useState(false);
+  const [systemPermissionsStatus, setSystemPermissionsStatus] =
+    useState<DesktopSystemPermissionsState>({
+      accessibility: "unknown",
+      screenRecording: "unknown",
+    });
+  const [systemPermissionsPending, setSystemPermissionsPending] = useState(false);
   const [updateStatus, setUpdateStatus] = useState<DesktopUpdateStatus>({
     phase: "idle",
     currentVersion: "",
@@ -326,6 +333,17 @@ export default function App() {
     });
   }, []);
 
+  useEffect(() => {
+    const piApi = window.piApp;
+    if (!piApi?.onSystemPermissionsStatusChanged) {
+      return;
+    }
+
+    return piApi.onSystemPermissionsStatusChanged((status) => {
+      setSystemPermissionsStatus(status);
+    });
+  }, []);
+
   const refreshNotificationPermissionStatus = useCallback(() => {
     if (!api?.getNotificationPermissionStatus) {
       return Promise.resolve("unknown" as DesktopNotificationPermissionStatus);
@@ -337,14 +355,28 @@ export default function App() {
     });
   }, [api]);
 
+  const refreshSystemPermissionsStatus = useCallback(() => {
+    if (!api?.getSystemPermissionsStatus) {
+      return Promise.resolve({ accessibility: "unknown", screenRecording: "unknown" } as DesktopSystemPermissionsState);
+    }
+
+    return api.getSystemPermissionsStatus().then((status) => {
+      setSystemPermissionsStatus(status);
+      return status;
+    });
+  }, [api]);
+
   useEffect(() => {
-    if (snapshot?.activeView !== "settings" || settingsSection !== "notifications") {
+    if (snapshot?.activeView !== "settings") {
       return undefined;
     }
 
-    void refreshNotificationPermissionStatus();
+    void refreshSystemPermissionsStatus();
+    if (settingsSection === "notifications") {
+      void refreshNotificationPermissionStatus();
+    }
     return undefined;
-  }, [refreshNotificationPermissionStatus, settingsSection, snapshot?.activeView]);
+  }, [refreshNotificationPermissionStatus, refreshSystemPermissionsStatus, settingsSection, snapshot?.activeView]);
 
   const selectedWorkspace = snapshot ? (getSelectedWorkspace(snapshot) ?? snapshot.workspaces[0]) : undefined;
   const selectedSession = snapshot
@@ -2398,6 +2430,31 @@ export default function App() {
       });
   };
 
+  const handleRequestSystemPermission = (type?: "accessibility" | "screenRecording" | "all") => {
+    if (!api?.requestSystemPermission) {
+      return;
+    }
+    setSystemPermissionsPending(true);
+    void api
+      .requestSystemPermission(type)
+      .then((status) => {
+        setSystemPermissionsStatus(status);
+      })
+      .finally(() => {
+        setSystemPermissionsPending(false);
+      });
+  };
+
+  const handleOpenSystemPermissionSettings = (type: "accessibility" | "screenRecording") => {
+    if (!api?.openSystemPermissionSettings) {
+      return;
+    }
+    setSystemPermissionsPending(true);
+    void api.openSystemPermissionSettings(type).finally(() => {
+      setSystemPermissionsPending(false);
+    });
+  };
+
   const handleArchiveSession = (target: { workspaceId: string; sessionId: string }) => {
     console.log("[Archive] Click: workspaceId=", target.workspaceId, "sessionId=", target.sessionId);
     void updateSnapshot(api, setSnapshot, () => api.archiveSession(target));
@@ -2731,6 +2788,10 @@ export default function App() {
           imChannels={snapshot.imChannels}
           notificationPermissionStatus={notificationPermissionStatus}
           notificationPermissionPending={notificationPermissionPending}
+          systemPermissionsStatus={systemPermissionsStatus}
+          systemPermissionsPending={systemPermissionsPending}
+          onRequestSystemPermission={handleRequestSystemPermission}
+          onOpenSystemPermissionSettings={handleOpenSystemPermissionSettings}
           modelSettingsScopeMode={snapshot.modelSettingsScopeMode}
           integratedTerminalShell={snapshot.integratedTerminalShell}
           themeMode={themeMode}

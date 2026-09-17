@@ -37,6 +37,8 @@ extraResources:
     to: extensions/pi-understand.tgz
   - from: resources/extensions/pi-treg.tgz
     to: extensions/pi-treg.tgz
+  - from: resources/extensions/pi-computer-use.tgz
+    to: extensions/pi-computer-use.tgz
 
 asar:
   smartUnpack: false
@@ -80,6 +82,8 @@ mac:
   extraFiles:
     - from: build/native/pi-deepseek-notification-status-helper
       to: MacOS/pi-deepseek-notification-status-helper
+    - from: build/native/pi-deepseek-permission-helper
+      to: MacOS/pi-deepseek-permission-helper
 
 win:
   target:

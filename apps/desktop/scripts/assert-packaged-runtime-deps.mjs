@@ -49,7 +49,7 @@ const notificationHelperPath =
   packagePlatform === "darwin"
     ? resolveMacAppPath(desktopDir, "Contents", "MacOS", "pi-deepseek-notification-status-helper")
     : undefined;
-const pnpmBinary = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
+const asarBinary = path.resolve(desktopDir, "../../node_modules/.bin/asar");
 const piCodingAgentPackageName = "@earendil-works/pi-coding-agent";
 const requiredPiCodingAgentVersion = "0.74.0";
 const packagedRuntimeImportChecks = [
@@ -70,12 +70,9 @@ if (notificationHelperPath && !existsSync(notificationHelperPath)) {
 
 const extractedDir = mkdtempSync(path.join(tmpdir(), "pi-gui-packaged-runtime-"));
 try {
-  execFileSync(pnpmBinary, ["exec", "asar", "extract", asarPath, extractedDir], {
+  execFileSync(process.execPath, [asarBinary, "extract", asarPath, extractedDir], {
     cwd: desktopDir,
     stdio: "pipe",
-    // On Windows, .cmd shims must be launched through cmd.exe — execFileSync
-    // with CreateProcess alone fails with EINVAL.
-    shell: process.platform === "win32",
   });
 
   verifyRequiredPackages(extractedDir);

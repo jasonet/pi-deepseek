@@ -20,7 +20,7 @@
 
 | 平台 | 架构 | 引擎 | 版本 | 格式 | 大小 | 下载 |
 |------|------|------|------|------|------|------|
-| **macOS** | Apple Silicon (M1–M5) | Electron | v3.0.4 | DMG | 待发布 | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.4/Taosi-3.0.4-mac-arm64.dmg) |
+| **macOS** | Apple Silicon (M1–M5) | Electron | v3.0.5 | DMG | 待发布 | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.5/Taosi-3.0.5-mac-arm64.dmg) |
 | **macOS** | Intel (x64) | Electron | v3.0.1 | DMG | 157 MB | [![Download](https://img.shields.io/badge/Download-x64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.1/Taosi-3.0.1-mac-x64.dmg) |
 | **macOS** | Apple Silicon (M1–M5) | Tauri | v3.0.1 | DMG | 147 MB | [![Download](https://img.shields.io/badge/Download-arm64-%237C6BF5?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.1/Taosi-3.0.1-tauri-mac-arm64.dmg) |
 | **Windows** | x64 | Electron | v3.0.1 | 安装版 | 125 MB | [![Download](https://img.shields.io/badge/Download-Setup-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.1/Taosi-3.0.1-win-x64-setup.exe) |
@@ -29,9 +29,15 @@
 | **Linux** | x64 | Electron | v3.0.1 | AppImage | 161 MB | [![Download](https://img.shields.io/badge/Download-AppImage-%234D6BFE?logo=linux)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.1/Taosi-3.0.1-linux-x86_64.AppImage) |
 
 > 🧭 **双引擎版本矩阵 / Dual-engine version matrix:**
-> **Electron `v3.0.4`** 当前发布 macOS arm64；其他平台沿用各自已发布版本，待对应构建完成后再更新下载链接。
+> **Electron `v3.0.5`** 当前发布 macOS arm64；其他平台沿用各自已发布版本，待对应构建完成后再更新下载链接。
 > **Electron `v3.0.1`**（macOS / Windows / Linux）与 **Tauri `v3.0.1`**（macOS arm64）。macOS / Linux Electron 为完整双 harness 体验的推荐版本；Windows 因上游暂未提供 fx binary，当前为 Pi harness。
 > **Electron `v3.0.1`** (macOS / Windows / Linux) and **Tauri `v3.0.1`** (macOS arm64). Electron is recommended for the complete dual-harness experience; About identifies the Electron / Tauri build.
+
+> 🛠️ **v3.0.5 更新 / What’s new:**
+> **Computer Use 桌面控制扩展集成**：内置集成 `@injaneity/pi-computer-use` 扩展，赋能 AI 智能体直接观察与操控操作系统桌面应用，支持屏幕截屏、UI 辅助功能树提取与键鼠精准交互。
+> **系统权限智能一键自动引导**：支持 macOS 辅助功能（Accessibility）与屏幕录制（Screen Recording）权限的实时双向检测与一键智能自动弹窗引导，用户切换系统设置后自动感知生效。
+> **上下文压缩挂起修复**：为全量模型提供 90s 超时防护并修正结束状态流转，彻底解决长时间停留于 `Compacting conversation context... Working…` 不结束的问题。
+> *Bundles `@injaneity/pi-computer-use` for OS-level GUI observation and automation, adds intelligent one-click system permission auto-guidance (Accessibility & Screen Recording) with focus reconciliation, and fixes context compaction hangs.*
 
 > 🛠️ **v3.0.4 更新 / What’s new:**
 > **任务执行单行滚屏**：多步工具调用折叠为单行实时滚屏，参考 Claude 体验，只展示最新指令与执行状态，避免冗长刷屏，支持点击展开查看详情。

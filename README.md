@@ -20,7 +20,7 @@
 
 | 平台 | 架构 | 引擎 | 版本 | 格式 | 大小 | 下载 |
 |------|------|------|------|------|------|------|
-| **macOS** | Apple Silicon (M1–M5) | Electron | v3.0.5 | DMG | 待发布 | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.5/Taosi-3.0.5-mac-arm64.dmg) |
+| **macOS** | Apple Silicon (M1–M5) | Electron | v3.0.5 | ZIP | 163 MB | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.5/Taosi-3.0.5-mac-arm64.zip) |
 | **macOS** | Intel (x64) | Electron | v3.0.1 | DMG | 157 MB | [![Download](https://img.shields.io/badge/Download-x64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.1/Taosi-3.0.1-mac-x64.dmg) |
 | **macOS** | Apple Silicon (M1–M5) | Tauri | v3.0.1 | DMG | 147 MB | [![Download](https://img.shields.io/badge/Download-arm64-%237C6BF5?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.1/Taosi-3.0.1-tauri-mac-arm64.dmg) |
 | **Windows** | x64 | Electron | v3.0.1 | 安装版 | 125 MB | [![Download](https://img.shields.io/badge/Download-Setup-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.1/Taosi-3.0.1-win-x64-setup.exe) |
@@ -203,6 +203,7 @@ pnpm --filter @pi-gui/desktop run package:linux
 - fx 引擎：[`vercel-labs/fx`](https://github.com/vercel-labs/fx) — Vercel 官方 AI coding agent，通过 ACP 接入双 harness 工作流
 - DeepSeek Harness：[`deepseek-ai/deepseek-harness`](https://github.com/deepseek-ai/deepseek-harness) — DeepSeek 官方开发环境，支持扩展 / 插件体系与 Harness Web UI
 - 编程智能体包：[`@earendil-works/pi-coding-agent`](https://www.npmjs.com/package/@earendil-works/pi-coding-agent)
+- 桌面控制扩展：[`injaneity/pi-computer-use`](https://github.com/injaneity/pi-computer-use) — Pi 扩展，赋能 AI 智能体跨平台观察与操控操作系统桌面应用
 
 ## 许可证
 

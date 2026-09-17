@@ -3,7 +3,7 @@
   "private": true,
   "version": "3.0.5",
   "license": "MIT",
-  "packageManager": "traversal",
+  "packageManager": "pnpm@10.25.0",
   "scripts": {
     "dev": "pnpm --filter @pi-gui/desktop dev",
     "bun:dev": "cd apps/desktop && bun run dev",

@@ -34,6 +34,7 @@ import {
 import { deriveModelOnboardingState } from "./model-onboarding";
 import { NewThreadView } from "./new-thread-view";
 import { buildThreadGroups, getVisibleThreadNavigationEntries } from "./thread-groups";
+import { computeDualPanePartner } from "./dual-pane-rotation";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 import { LocaleProvider, useT } from "./i18n";
@@ -401,8 +402,15 @@ export default function App() {
   const secondarySession = secondarySessionId && secondaryWorkspace
     ? secondaryWorkspace.sessions.find((s) => s.id === secondarySessionId && !s.archivedAt)
     : undefined;
-  // A valid dual-pane is any secondary session distinct from the primary.
-  const isInDualPane = Boolean(secondarySession && selectedSession && secondarySession.id !== selectedSession.id);
+  // A valid dual-pane requires dual pane enabled, active non-archived primary and secondary sessions.
+  const isInDualPane = Boolean(
+    dualPaneEnabled &&
+    selectedSession &&
+    !selectedSession.archivedAt &&
+    secondarySession &&
+    !secondarySession.archivedAt &&
+    secondarySession.id !== selectedSession.id
+  );
   const previousDualPaneLayoutRef = useRef(isInDualPane);
   const selectedSessionKey = selectedWorkspace && selectedSession ? `${selectedWorkspace.id}:${selectedSession.id}` : "";
   const secondarySessionKey = secondaryWorkspace && secondarySession ? `${secondaryWorkspace.id}:${secondarySession.id}` : "";
@@ -429,36 +437,26 @@ export default function App() {
     setActivePaneIndex(0);
   }, []);
 
-  // Auto-pair the secondary pane with the OTHER most-recent non-archived session
-  // in the selected project. Runs on every snapshot tick: it only writes state
-  // when the chosen partner actually changes, so a stable 2-session project never
-  // jitters. Clears the secondary when the toggle is off, there's no selection, or
-  // the project has no second session — which also serves as the validity guard.
+  // In dual-pane mode, maintain rotation between the 2 latest active (non-archived) sessions.
+  // Never allow archived sessions into dual-pane mode; when an archived session is selected,
+  // clear secondary and view strictly in single-pane mode.
   useEffect(() => {
-    if (!dualPaneEnabled || !selectedWorkspace || !selectedSession) {
+    if (!dualPaneEnabled || !selectedWorkspace || !selectedSession || Boolean(selectedSession.archivedAt)) {
       if (secondarySessionId) clearSecondary();
       return;
     }
-    const candidates = [...selectedWorkspace.sessions]
-      .filter((session) => !session.archivedAt
-        && session.id !== selectedSession.id
-        && (snapshot?.fxAvailable || session.backendId !== "fx"))
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-    const pairedCandidate =
-      selectedSession.backendId === "pi"
-        ? candidates.find(
-            (candidate) => candidate.backendId === "fx" && candidate.companionSessionId === selectedSession.id,
-          )
-        : candidates.find((candidate) => candidate.id === selectedSession.companionSessionId);
-    const hasFxSessions = selectedSession.backendId === "fx" || candidates.some((candidate) => candidate.backendId === "fx");
-    // Once a workspace contains fx sessions, only show the fx session explicitly
-    // linked to this Pi task. This avoids briefly pairing a new Pi task with an
-    // older task's fx session while its own companion is still starting.
-    const partner = pairedCandidate ?? (hasFxSessions ? undefined : candidates[0]);
+
+    const partner = computeDualPanePartner(
+      selectedSession,
+      selectedWorkspace.sessions,
+      { fxAvailable: snapshot?.fxAvailable },
+    );
+
     if (!partner) {
       if (secondarySessionId) clearSecondary();
       return;
     }
+
     if (secondarySessionId !== partner.id || secondaryWorkspaceId !== selectedWorkspace.id) {
       setSecondaryWorkspaceId(selectedWorkspace.id);
       setSecondarySessionId(partner.id);
@@ -2457,22 +2455,28 @@ export default function App() {
 
   const handleArchiveSession = (target: { workspaceId: string; sessionId: string }) => {
     console.log("[Archive] Click: workspaceId=", target.workspaceId, "sessionId=", target.sessionId);
+    if (target.sessionId === secondarySessionId) {
+      clearSecondary();
+    }
     void updateSnapshot(api, setSnapshot, () => api.archiveSession(target));
   };
 
   const handleSelectSession = (target: { workspaceId: string; sessionId: string }) => {
-    // Clicking the session already visible in the companion pane focuses it.
-    // Any other sidebar row selects a new task and lets its pair replace both panes.
-    if (
+    // Check if the target is an archived session
+    const targetWs = snapshot?.workspaces.find((w) => w.id === target.workspaceId);
+    const targetSession = targetWs?.sessions.find((s) => s.id === target.sessionId);
+    if (targetSession?.archivedAt) {
+      // Archived sessions must strictly be viewed in single-pane mode, never in dual-pane mode
+      clearSecondary();
+    } else if (
       isInDualPane &&
       selectedWorkspace &&
       selectedSession &&
       secondarySession &&
       target.workspaceId === selectedWorkspace.id &&
-      target.sessionId === secondarySession.id &&
-      (selectedSession.companionSessionId === secondarySession.id ||
-        secondarySession.companionSessionId === selectedSession.id)
+      target.sessionId === secondarySession.id
     ) {
+      // Clicking the session already visible in the companion pane focuses it
       setActivePaneIndex(1);
       window.requestAnimationFrame(() => secondaryComposerRef.current?.focus());
       return;

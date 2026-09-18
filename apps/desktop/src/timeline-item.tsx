@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import type { SessionTranscriptMessage } from "@pi-gui/pi-sdk-driver";
 import type { TimelineActivity, TimelineToolCall, TimelineToolGroup, TimelineSummary, TranscriptMessage } from "./timeline-types";
 import { MessageMarkdown } from "./message-markdown";
@@ -95,6 +95,31 @@ function TimelineMessage({
 
   return (
     <article className="timeline-item timeline-item--assistant">
+      {item.attachments?.length ? (
+        <div className="timeline-item__attachments">
+          {item.attachments.map((attachment, index) =>
+            attachment.kind === "image" ? (
+              <img
+                alt={attachment.name ?? `Image ${index + 1}`}
+                className="timeline-item__attachment timeline-item__attachment--image"
+                key={`${item.id}:${index}`}
+                src={`data:${attachment.mimeType};base64,${attachment.data}`}
+              />
+            ) : (
+              <div
+                className="timeline-item__attachment timeline-item__attachment--file"
+                key={`${item.id}:${index}`}
+                title={attachment.fsPath}
+              >
+                <span className="timeline-item__attachment-icon" aria-hidden="true">
+                  <FileIcon />
+                </span>
+                <span className="timeline-item__attachment-name">{attachment.name}</span>
+              </div>
+            ),
+          )}
+        </div>
+      ) : null}
       <MessageMarkdown text={item.text} onPreviewFile={onPreviewFile} />
     </article>
   );
@@ -127,6 +152,7 @@ function TimelineToolCallItem({
   const compactLabel = buildCompactLabel(item, diffStats);
   const filePath = isWriteTool(item.toolName) ? extractFilename(item.input) || undefined : undefined;
   const diffLanguage = diffText && filePath ? extensionToLanguage(filePath) : undefined;
+  const toolImages = useMemo(() => extractImagesFromToolOutput(item.output), [item.output]);
 
   const handleCopy = () => {
     const text = diffText ?? formatToolContent(item.input, item.output);
@@ -195,6 +221,20 @@ function TimelineToolCallItem({
             </>
           ) : (
             <>
+              {toolImages.length > 0 ? (
+                <div className="timeline-tool__images">
+                  {toolImages.map((img, index) => (
+                    <div className="timeline-tool__image-wrap" key={index}>
+                      <img
+                        src={`data:${img.mimeType};base64,${img.data}`}
+                        alt={img.name || `Tool image ${index + 1}`}
+                        className="timeline-tool__image"
+                        loading="lazy"
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : null}
               <div className="timeline-tool__body-actions">
                 <button className="icon-button timeline-tool__copy" type="button" onClick={handleCopy} aria-label="Copy">
                   <CopyIcon />
@@ -256,13 +296,82 @@ function countDiffStats(diff: string): { added: number; removed: number } {
   return { added, removed };
 }
 
+interface ToolImage {
+  readonly data: string;
+  readonly mimeType: string;
+  readonly name?: string;
+}
+
+function extractImagesFromToolOutput(output: unknown): ToolImage[] {
+  if (!output || typeof output !== "object") return [];
+  const record = output as Record<string, unknown>;
+  const results: ToolImage[] = [];
+
+  if (record.type === "image" && typeof record.data === "string") {
+    results.push({
+      data: record.data,
+      mimeType: typeof record.mimeType === "string" ? record.mimeType : "image/png",
+      ...(typeof record.name === "string" ? { name: record.name } : {}),
+    });
+  }
+
+  if (Array.isArray(record.content)) {
+    for (const part of record.content) {
+      if (part && typeof part === "object") {
+        const p = part as Record<string, unknown>;
+        if (p.type === "image" && typeof p.data === "string") {
+          results.push({
+            data: p.data,
+            mimeType: typeof p.mimeType === "string" ? p.mimeType : "image/png",
+            ...(typeof p.name === "string" ? { name: p.name } : {}),
+          });
+        }
+      }
+    }
+  }
+
+  return results;
+}
+
+function formatToolValue(value: unknown): string {
+  if (value === undefined || value === null) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    // If output is envelope with text content, extract text directly
+    if (Array.isArray(record.content)) {
+      const textParts = record.content
+        .filter((p): p is Record<string, unknown> => typeof p === "object" && p !== null && p.type === "text" && typeof p.text === "string")
+        .map((p) => p.text as string);
+      if (textParts.length > 0) {
+        return textParts.join("\n\n");
+      }
+    }
+    try {
+      return JSON.stringify(
+        value,
+        (key, val) => {
+          if (key === "data" && typeof val === "string" && val.length > 120) {
+            return `<base64 image: ${val.length} bytes>`;
+          }
+          return val;
+        },
+        2,
+      );
+    } catch {
+      return String(value);
+    }
+  }
+  return String(value);
+}
+
 function formatToolContent(input: unknown, output: unknown): string {
   const parts: string[] = [];
   if (input !== undefined) {
-    parts.push(typeof input === "string" ? input : JSON.stringify(input, null, 2));
+    parts.push(formatToolValue(input));
   }
   if (output !== undefined) {
-    parts.push(typeof output === "string" ? output : JSON.stringify(output, null, 2));
+    parts.push(formatToolValue(output));
   }
   return parts.join("\n\n");
 }

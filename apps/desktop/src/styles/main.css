@@ -5158,3 +5158,229 @@ mark.thread-find-active {
 .main--dual-pane > .composer {
   display: none;
 }
+
+/* ── Markdown Images ── */
+
+.markdown-image-wrap {
+  display: block;
+  margin: 10px 0;
+  max-width: 100%;
+}
+
+.markdown-image {
+  display: block;
+  max-width: 100%;
+  max-height: 520px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-sm);
+  object-fit: contain;
+  background: var(--surface);
+  cursor: zoom-in;
+}
+
+.markdown-image-caption {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* ── Mermaid Flowchart / Diagram ── */
+
+.mermaid-diagram {
+  margin: 12px 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.mermaid-diagram__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-muted);
+  font-size: 12px;
+  gap: 10px;
+}
+
+.mermaid-diagram__header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mermaid-diagram__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.mermaid-diagram__tabs {
+  display: inline-flex;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 2px;
+}
+
+.mermaid-diagram__tab {
+  padding: 2px 8px;
+  font-size: 11px;
+  border-radius: 4px;
+  color: var(--muted-strong);
+  cursor: pointer;
+  background: transparent;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.mermaid-diagram__tab--active {
+  background: var(--surface-muted);
+  color: var(--text-strong);
+  font-weight: 600;
+}
+
+.mermaid-diagram__copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 5px;
+  font-size: 11px;
+  color: var(--muted-strong);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.mermaid-diagram__copy:hover {
+  background: var(--surface-muted);
+  color: var(--text-strong);
+}
+
+.mermaid-diagram__copy--copied {
+  color: #15803d;
+  border-color: rgba(16, 185, 129, 0.35);
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.mermaid-diagram__body {
+  padding: 16px;
+  overflow: auto;
+  max-height: 600px;
+}
+
+.mermaid-diagram__render {
+  display: flex;
+  justify-content: center;
+  min-height: 80px;
+}
+
+.mermaid-diagram__svg-wrapper {
+  max-width: 100%;
+  overflow: auto;
+  display: flex;
+  justify-content: center;
+}
+
+.mermaid-diagram__svg-wrapper svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.mermaid-diagram__loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 12px;
+  padding: 20px;
+}
+
+.mermaid-diagram__spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--line);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.mermaid-diagram__fallback {
+  width: 100%;
+}
+
+.mermaid-diagram__fallback-msg {
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.mermaid-diagram__fallback-error {
+  display: block;
+  color: var(--error);
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+.mermaid-diagram__code,
+.mermaid-diagram__fallback-code {
+  margin: 0;
+  padding: 12px;
+  background: var(--surface-muted);
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  overflow: auto;
+}
+
+/* ── Tool Output Images ── */
+
+.timeline-tool__images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.timeline-tool__image-wrap {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  max-width: 100%;
+}
+
+.timeline-tool__image {
+  display: block;
+  max-width: 100%;
+  max-height: 400px;
+  object-fit: contain;
+}
+
+:root.dark .mermaid-diagram__tab--active {
+  background: var(--surface-glass);
+}
+
+:root.dark .mermaid-diagram__copy--copied {
+  color: #4ade80;
+  border-color: rgba(52, 211, 153, 0.35);
+  background: rgba(52, 211, 153, 0.12);
+}
+

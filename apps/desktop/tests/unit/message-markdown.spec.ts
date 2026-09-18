@@ -1,6 +1,11 @@
 import { expect, test } from "@playwright/test";
 import { isCommandLanguage } from "../../src/markdown-code-block";
-import { extractNumbersFromText, isPreviewableFileLink, NUMBER_REGEX } from "../../src/message-markdown";
+import {
+  extractNumbersFromText,
+  isPreviewableFileLink,
+  normalizeMarkdownText,
+  NUMBER_REGEX,
+} from "../../src/message-markdown";
 import { extensionToLanguage, resolveHighlightLanguage } from "../../src/syntax-highlight";
 
 test.describe("Markdown formatting utilities", () => {
@@ -89,6 +94,50 @@ test.describe("Markdown formatting utilities", () => {
       expect(isPreviewableFileLink("src/app.tsx")).toBe(true);
       expect(isPreviewableFileLink("package.json")).toBe(true);
       expect(isPreviewableFileLink("/Users/user/code/file.ts")).toBe(true);
+    });
+  });
+
+  test.describe("normalizeMarkdownText", () => {
+    test("normalizes plain text without alteration", () => {
+      expect(normalizeMarkdownText("Hello world")).toBe("Hello world");
+    });
+
+    test("filters out literal [object Object] strings", () => {
+      expect(normalizeMarkdownText("[object Object]")).toBe("");
+      expect(normalizeMarkdownText("  [object Object]  ")).toBe("");
+    });
+
+    test("converts image object payloads into renderable markdown images", () => {
+      const imagePayload = {
+        type: "image",
+        mimeType: "image/png",
+        data: "iVBORw0KGgoAAAANSUhEUg==",
+        name: "diagram.png",
+      };
+      const result = normalizeMarkdownText(imagePayload);
+      expect(result).toBe("![diagram.png](data:image/png;base64,iVBORw0KGgoAAAANSUhEUg==)");
+    });
+
+    test("extracts text and images from multipart content arrays", () => {
+      const multiPart = {
+        content: [
+          { type: "text", text: "Here is the flowchart:" },
+          { type: "image", mimeType: "image/jpeg", data: "/9j/4AAQSkZJRg==" },
+        ],
+      };
+      const result = normalizeMarkdownText(multiPart);
+      expect(result).toContain("Here is the flowchart:");
+      expect(result).toContain("![image](data:image/jpeg;base64,/9j/4AAQSkZJRg==)");
+    });
+
+    test("parses JSON-stringified objects with image payloads", () => {
+      const jsonStr = JSON.stringify({
+        type: "image",
+        mimeType: "image/png",
+        data: "abc123==",
+      });
+      const result = normalizeMarkdownText(jsonStr);
+      expect(result).toBe("![image](data:image/png;base64,abc123==)");
     });
   });
 });

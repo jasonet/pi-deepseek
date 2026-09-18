@@ -469,9 +469,9 @@ export default function App() {
     setPanesSwapped(false);
   }, [selectedSession?.id, secondarySession?.id]);
 
-  // Keep the secondary pane's transcript fresh without reloading it for unrelated
-  // primary-session state ticks. Its per-session revision covers assistant and
-  // tool events, so the pane stays live without resetting its scroll needlessly.
+  // Keep the secondary pane's transcript fresh and accurate. Fetches whenever
+  // the secondary session changes, receives new events (transcriptRevision),
+  // updates status, or changes updatedAt timestamp.
   useEffect(() => {
     if (!api || !secondarySessionId || !secondaryWorkspaceId) {
       secondaryTranscriptMarkerRef.current = "";
@@ -479,27 +479,41 @@ export default function App() {
       return;
     }
     let cancelled = false;
-    void api
-      .getTranscriptFor({ workspaceId: secondaryWorkspaceId, sessionId: secondarySessionId })
-      .then((record) => {
-        if (cancelled) return;
-        const marker = buildTranscriptChangeMarker(
-          `${secondaryWorkspaceId}:${secondarySessionId}`,
-          record?.transcript ?? [],
-        );
-        if (marker === secondaryTranscriptMarkerRef.current) return;
-        secondaryTranscriptMarkerRef.current = marker;
-        setSecondaryTranscript(record);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        secondaryTranscriptMarkerRef.current = "";
-        setSecondaryTranscript(null);
-      });
-    return () => { cancelled = true; };
-  }, [api,
+
+    const fetchSecondaryTranscript = () => {
+      void api
+        .getTranscriptFor({ workspaceId: secondaryWorkspaceId, sessionId: secondarySessionId })
+        .then((record) => {
+          if (cancelled) return;
+          setSecondaryTranscript(record);
+        })
+        .catch(() => {
+          if (cancelled) return;
+          secondaryTranscriptMarkerRef.current = "";
+          setSecondaryTranscript(null);
+        });
+    };
+
+    fetchSecondaryTranscript();
+
+    // If secondary session is currently running, poll at interval to follow streaming output
+    let pollTimer: ReturnType<typeof setInterval> | undefined;
+    if (secondarySession?.status === "running") {
+      pollTimer = setInterval(fetchSecondaryTranscript, 600);
+    }
+
+    return () => {
+      cancelled = true;
+      if (pollTimer) clearInterval(pollTimer);
+    };
+  }, [
+    api,
     secondaryWorkspaceId,
-    secondarySessionId, secondarySession?.transcriptRevision]);
+    secondarySessionId,
+    secondarySession?.transcriptRevision,
+    secondarySession?.updatedAt,
+    secondarySession?.status,
+  ]);
 
   // Stick the secondary (right) pane to the latest message, mirroring the primary
   // pane. Stays pinned to the bottom as new text streams in unless the user

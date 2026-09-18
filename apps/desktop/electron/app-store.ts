@@ -233,18 +233,19 @@ export class DesktopAppStore implements AppStoreInternals {
     await this.ensureTranscriptLoaded(sessionRef);
     const record = this.buildSelectedTranscriptRecord(sessionRef);
     if (!record) return null;
-    // Limit transcript size to avoid IPC deserialization crash
-    const MAX_TRANSCRIPT_SIZE = 500 * 1024; // 500KB
+    // Limit transcript size to avoid IPC deserialization crash, preserving most recent items
+    const MAX_TRANSCRIPT_BYTES = 2 * 1024 * 1024; // 2MB
+    const allItems = record.transcript;
     let size = 0;
-    const truncated = [];
-    for (const item of record.transcript) {
+    const truncated: TranscriptMessage[] = [];
+    for (let i = allItems.length - 1; i >= 0; i--) {
+      const item = allItems[i]!;
       const itemSize = JSON.stringify(item).length;
-      if (size + itemSize > MAX_TRANSCRIPT_SIZE) break;
-      truncated.push(item);
+      if (size + itemSize > MAX_TRANSCRIPT_BYTES && truncated.length > 0) {
+        break;
+      }
+      truncated.unshift(item);
       size += itemSize;
-    }
-    if (truncated.length < record.transcript.length) {
-      // Transcript truncated — silently cap to avoid renderer crash
     }
     return { ...record, transcript: truncated };
   }
@@ -262,17 +263,45 @@ export class DesktopAppStore implements AppStoreInternals {
       return null;
     }
     const sessionRef = toSessionRef(target);
-    await this.ensureTranscriptLoaded(sessionRef);
+    await this.ensureSessionSubscribed(sessionRef);
+
+    // Sync live transcript from driver to guarantee latest conversation content
+    const key = sessionKey(sessionRef);
+    try {
+      const driverTranscript = await this.driver.getTranscript(sessionRef);
+      if (driverTranscript && driverTranscript.length > 0) {
+        await this.ensureTranscriptLoaded(sessionRef);
+        const cached = this.sessionState.transcriptCache.get(key) ?? [];
+        const nonMessages = cached.filter((item) => item.kind !== "message");
+        const driverIds = new Set(driverTranscript.map((m) => m.id));
+        const merged = [
+          ...driverTranscript,
+          ...nonMessages.filter((item) => !driverIds.has(item.id)),
+        ].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        this.sessionState.transcriptCache.set(key, merged);
+        this.sessionState.loadedTranscriptKeys.add(key);
+      } else {
+        await this.ensureTranscriptLoaded(sessionRef);
+      }
+    } catch {
+      await this.ensureTranscriptLoaded(sessionRef);
+    }
+
     const record = this.buildSelectedTranscriptRecord(sessionRef);
     if (!record) return null;
-    // Limit transcript size to avoid IPC deserialization crash (mirror getSelectedTranscript).
-    const MAX_TRANSCRIPT_SIZE = 500 * 1024; // 500KB
+
+    // Limit transcript size to avoid IPC crash, preserving most recent items
+    const MAX_TRANSCRIPT_BYTES = 2 * 1024 * 1024; // 2MB
+    const allItems = record.transcript;
     let size = 0;
-    const truncated = [];
-    for (const item of record.transcript) {
+    const truncated: TranscriptMessage[] = [];
+    for (let i = allItems.length - 1; i >= 0; i--) {
+      const item = allItems[i]!;
       const itemSize = JSON.stringify(item).length;
-      if (size + itemSize > MAX_TRANSCRIPT_SIZE) break;
-      truncated.push(item);
+      if (size + itemSize > MAX_TRANSCRIPT_BYTES && truncated.length > 0) {
+        break;
+      }
+      truncated.unshift(item);
       size += itemSize;
     }
     return { ...record, transcript: truncated };

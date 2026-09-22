@@ -68,6 +68,7 @@ import {
   appendAssistantDelta,
   appendUserMessage,
   clearActiveAssistantMessage,
+  TRANSIENT_WORKING_LABELS,
 } from "./app-store-timeline";
 import { applySessionEventState, updateSessionRecord } from "./app-store-session-state";
 import type { AppStoreInternals, RefreshStateOptions } from "./app-store-internals";
@@ -2313,17 +2314,22 @@ export class DesktopAppStore implements AppStoreInternals {
       return null;
     }
 
+    const filterTransient = (items: unknown[]) =>
+      items
+        .map((item) => cloneTranscriptMessage(item as TranscriptMessage))
+        .filter((item) => !(item.kind === "activity" && TRANSIENT_WORKING_LABELS.has(item.label)));
+
     if (isPersistedTranscriptRecord(persisted)) {
       return {
         format: "versioned",
-        transcript: persisted.transcript.map((item) => cloneTranscriptMessage(item as TranscriptMessage)),
+        transcript: filterTransient(persisted.transcript as unknown[]),
       };
     }
 
     if (Array.isArray(persisted)) {
       return {
         format: "legacy",
-        transcript: persisted.map((item) => cloneTranscriptMessage(item as TranscriptMessage)),
+        transcript: filterTransient(persisted as unknown[]),
       };
     }
 
@@ -2350,9 +2356,12 @@ export class DesktopAppStore implements AppStoreInternals {
   }
 
   private async writePersistedTranscript(key: string, transcript: readonly TranscriptMessage[]): Promise<void> {
+    const cleanTranscript = transcript
+      .filter((item) => !(item.kind === "activity" && TRANSIENT_WORKING_LABELS.has(item.label)))
+      .map(cloneTranscriptMessage);
     await this.transcriptStore.write(key, {
       version: 1,
-      transcript: transcript.map(cloneTranscriptMessage),
+      transcript: cleanTranscript,
     });
   }
 

@@ -1,4 +1,4 @@
-import { createServer, type Server } from "node:http";
+import { createServer, type Server, type ServerResponse } from "node:http";
 import { join } from "node:path";
 import { writeFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
@@ -9,6 +9,7 @@ import {
   makeUserDataDir,
   makeWorkspace,
   seedAgentDir,
+  writeProjectExtension,
 } from "../helpers/electron-app";
 
 const providerId = "custom-local-test";
@@ -192,6 +193,116 @@ test("custom provider compaction timeout clears Working and restores the compose
     await close(server);
   }
 });
+
+for (const action of ["timeout", "stop", "queue"] as const) {
+  test(`compaction ${action} handles an extension that delays cancellation`, async ({}, testInfo) => {
+    let requestCount = 0;
+    let compactionCount = 0;
+    let released = false;
+    const gates: ServerResponse[] = [];
+    const release = () => {
+      released = true;
+      for (const response of gates.splice(0)) response.end("ready");
+    };
+    const server = createServer((request, response) => {
+      request.resume();
+      if (request.url === "/compaction-gate") {
+        compactionCount += 1;
+        if (released) response.end("ready");
+        else gates.push(response);
+        return;
+      }
+      if (request.url !== "/v1/chat/completions") {
+        response.writeHead(404).end();
+        return;
+      }
+      requestCount += 1;
+      response.writeHead(200, { "content-type": "text/event-stream" });
+      const content = requestCount === 1 ? "ANSWER_BEFORE_COMPACTION" : "ANSWER_AFTER_COMPACTION";
+      response.write(`data: ${JSON.stringify({
+        id: `compaction-${requestCount}`, object: "chat.completion.chunk", model: modelId,
+        choices: [{ index: 0, delta: { content }, finish_reason: null }],
+      })}\n\n`);
+      response.write(`data: ${JSON.stringify({
+        id: `compaction-${requestCount}`, object: "chat.completion.chunk", model: modelId,
+        choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
+        usage: { prompt_tokens: requestCount === 1 ? 5_000 : 100, completion_tokens: 1 },
+      })}\n\n`);
+      response.end("data: [DONE]\n\n");
+    });
+    const port = await listen(server);
+    const { agentDir, userDataDir, workspacePath } = await prepareCustomProvider(port, {
+      contextWindow: 4_096,
+      compaction: { reserveTokens: 512, keepRecentTokens: 512 },
+    });
+    await writeProjectExtension(workspacePath, "compaction-gate.ts", `
+      export default function(pi) {
+        pi.on("session_before_compact", async (event) => {
+          // Intentionally ignore the abort signal until the test releases the gate.
+          await fetch("http://127.0.0.1:${port}/compaction-gate");
+          return { compaction: {
+            summary: "Earlier context summarized for the test.",
+            firstKeptEntryId: event.preparation.firstKeptEntryId,
+            tokensBefore: event.preparation.tokensBefore,
+          } };
+        });
+      }
+    `);
+    const harness = await launchDesktop(userDataDir, {
+      agentDir, initialWorkspaces: [workspacePath], scrubProviderEnv: true, testMode: "background",
+      envOverrides: {
+        PI_APP_CUSTOM_MODEL_TIMEOUT_MS: "30000",
+        PI_APP_COMPACTION_TIMEOUT_MS: action === "timeout" ? "1000" : "15000",
+      },
+    });
+    try {
+      const window = await harness.firstWindow();
+      await createNamedThread(window, `Compaction ${action}`);
+      const composer = window.getByTestId("composer");
+      const transcript = window.getByTestId("transcript");
+      const status = async () => (await getDesktopState(window)).workspaces[0]?.sessions[0]?.status;
+      await composer.fill(`Remember this context: ${"x".repeat(24_000)}`);
+      await composer.press("Enter");
+      await expect(transcript).toContainText("ANSWER_BEFORE_COMPACTION");
+      await expect.poll(() => compactionCount).toBe(1);
+      await expect(transcript).toContainText("Compacting conversation context...");
+
+      if (action === "timeout") {
+        // Terminal UI must not depend on the extension returning compaction_end.
+        await expect.poll(status, { timeout: 5_000 }).toBe("failed");
+        await expect(transcript).toContainText("Conversation compaction timed out");
+      } else if (action === "stop") {
+        await window.getByRole("button", { name: "Stop run", exact: true }).click();
+        await expect.poll(status).toBe("idle");
+      } else {
+        await composer.fill("Continue with a short answer.");
+        await composer.press("Enter");
+        await expect.poll(async () => (await getDesktopState(window)).workspaces[0]?.sessions[0]?.queuedMessages?.length).toBe(1);
+        expect(requestCount).toBe(1);
+        expect(compactionCount).toBe(1);
+      }
+      await window.screenshot({ path: testInfo.outputPath(`compaction-${action}.png`) });
+      release();
+      if (action !== "queue") {
+        // Let the late SDK event arrive: Stop must stay idle, timeout must stay failed.
+        await window.waitForTimeout(500);
+        await expect.poll(status).toBe(action === "timeout" ? "failed" : "idle");
+        await expect(window.locator(".timeline-activity--error")).toHaveCount(action === "timeout" ? 1 : 0);
+        await composer.fill("Continue after the stopped compaction.");
+        await composer.press("Enter");
+      }
+      await expect(transcript).toContainText("ANSWER_AFTER_COMPACTION");
+      await expect.poll(status).toBe("idle");
+      await expect(transcript).not.toContainText("Compacting conversation context...");
+      await expect(composer).toBeEnabled();
+      expect(requestCount).toBe(2);
+    } finally {
+      release();
+      await harness.close();
+      await close(server);
+    }
+  });
+}
 
 async function prepareCustomProvider(
   port: number,

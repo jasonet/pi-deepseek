@@ -169,7 +169,8 @@ export class SessionSupervisor {
   private readonly records = new Map<string, ManagedSessionRecord>();
   private readonly configuredAgents = new WeakSet<object>();
   private readonly compactionTimeouts = new WeakMap<ManagedSessionRecord, ReturnType<typeof setTimeout>>();
-  private readonly timedOutCompactions = new WeakSet<ManagedSessionRecord>();
+  private readonly stoppedCompactions = new WeakMap<ManagedSessionRecord, "timeout" | "cancelled">();
+  private readonly pendingPrompts = new WeakMap<ManagedSessionRecord, { cancelled: boolean }>();
 
   constructor(options: PiSdkDriverOptions = {}) {
     this.catalogs = options.catalogStorage ?? (options.catalogFilePath
@@ -416,11 +417,26 @@ export class SessionSupervisor {
     const record = await this.ensureRecord(sessionRef);
     const session = this.requireSession(record);
     const isExtensionCommand = this.isExtensionCommand(session, input.text);
-    if (session.isStreaming && !isExtensionCommand && !input.deliverAs) {
-      throw new Error("Session is already streaming. Specify deliverAs ('steer' or 'followUp') to queue the message.");
+    // If background compaction is in progress and agent is not streaming text,
+    // abort compaction immediately so direct user input is never blocked.
+    if ((session.isCompacting || this.compactionTimeouts.has(record)) && !session.isStreaming && !isExtensionCommand && !input.deliverAs) {
+      this.clearCompactionTimeout(record);
+      this.stoppedCompactions.set(record, "cancelled");
+      try {
+        session.abortCompaction();
+      } catch {
+        // Best effort
+      }
     }
 
-    const isQueuedMessage = session.isStreaming && !isExtensionCommand && Boolean(input.deliverAs);
+    const isBusy = session.isStreaming || session.isCompacting || this.compactionTimeouts.has(record);
+    if (isBusy && !isExtensionCommand && !input.deliverAs) {
+      throw new Error("Session is busy. Specify deliverAs ('steer' or 'followUp') to queue the message.");
+    }
+
+    const isQueuedMessage = isBusy && !isExtensionCommand && Boolean(input.deliverAs);
+    const pendingPrompt = !isQueuedMessage && !isExtensionCommand ? { cancelled: false } : undefined;
+    if (pendingPrompt) this.pendingPrompts.set(record, pendingPrompt);
     const runId = isQueuedMessage || isExtensionCommand ? undefined : crypto.randomUUID();
     record.runningRunId = runId ?? record.runningRunId;
     record.status = isQueuedMessage || isExtensionCommand ? record.status : "running";
@@ -433,10 +449,9 @@ export class SessionSupervisor {
         queuedMessageFromInput(input, record.updatedAt),
       ];
     }
-    await this.persistSnapshot(record);
-    await this.emit(record, sessionUpdatedEvent(record));
-
     try {
+      await this.persistSnapshot(record);
+      await this.emit(record, sessionUpdatedEvent(record));
       const images = input.attachments?.flatMap((attachment: NonNullable<SessionMessageInput["attachments"]>[number]) =>
         attachment.kind === "image"
           ? [{
@@ -458,6 +473,10 @@ export class SessionSupervisor {
           await session.prompt(promptText, {
             ...(images && images.length > 0 ? { images } : {}),
             source: "interactive",
+            preflightResult: () => {
+              // The SDK can finish pre-prompt compaction after Stop was pressed.
+              if (pendingPrompt?.cancelled) throw new Error("Prompt cancelled before generation.");
+            },
           });
         } finally {
           if (restoreAutoRetry) {
@@ -470,6 +489,7 @@ export class SessionSupervisor {
         await this.syncRecordAfterSessionMutation(record, { emitUpdate: true });
       }
     } catch (error) {
+      if (pendingPrompt?.cancelled) return;
       if (isQueuedMessage) {
         record.queuedMessages = record.queuedMessages.slice(0, -1);
       }
@@ -490,6 +510,10 @@ export class SessionSupervisor {
       });
       await this.emit(record, sessionUpdatedEvent(record));
       throw error;
+    } finally {
+      if (pendingPrompt && this.pendingPrompts.get(record) === pendingPrompt) {
+        this.pendingPrompts.delete(record);
+      }
     }
   }
 
@@ -524,9 +548,14 @@ export class SessionSupervisor {
       return;
     }
 
+    const pendingPrompt = this.pendingPrompts.get(record);
+    if (pendingPrompt) pendingPrompt.cancelled = true;
+    const wasCompacting = record.session.isCompacting || this.compactionTimeouts.has(record);
     this.clearCompactionTimeout(record);
+    if (wasCompacting) this.stoppedCompactions.set(record, "cancelled");
     record.session.abortCompaction();
     await record.session.abort();
+    await record.eventQueue.catch(() => {});
     record.runningRunId = undefined;
     record.status = "idle";
     await this.persistSnapshot(record);
@@ -669,6 +698,9 @@ export class SessionSupervisor {
     }
 
     record.closed = true;
+    this.clearCompactionTimeout(record);
+    const pendingPrompt = this.pendingPrompts.get(record);
+    if (pendingPrompt) pendingPrompt.cancelled = true;
     record.runningRunId = undefined;
     record.status = "idle";
     this.clearExtensionUiState(record);
@@ -676,6 +708,7 @@ export class SessionSupervisor {
 
     if (record.session) {
       try {
+        record.session.abortCompaction();
         await record.session.abort();
       } catch {
         // Best effort.
@@ -814,6 +847,7 @@ export class SessionSupervisor {
   }
 
   private async rebindRuntimeSession(record: ManagedSessionRecord, session: AgentSession): Promise<void> {
+    this.clearCompactionTimeout(record);
     const previousKey = sessionKey(record.ref);
     const nextRef = {
       workspaceId: record.workspace.workspaceId,
@@ -840,6 +874,7 @@ export class SessionSupervisor {
     record.session = session;
     record.sessionFile = session.sessionFile ?? session.sessionManager.getSessionFile();
     this.configureCustomProviderStream(record, session);
+    this.configureSessionCompaction(session);
     record.unsubscribeAgent?.();
     record.unsubscribeAgent = session.subscribe((event) => {
       void this.handleAgentEvent(record, event);
@@ -909,38 +944,79 @@ export class SessionSupervisor {
     };
   }
 
+  private configureSessionCompaction(session: AgentSession): void {
+    const rawGlobal = (session.settingsManager.getGlobalSettings() as Record<string, unknown> | undefined)?.compaction;
+    const rawProject = (session.settingsManager.getProjectSettings() as Record<string, unknown> | undefined)?.compaction;
+    const explicitlyEnabled =
+      (isRecord(rawGlobal) && rawGlobal.enabled === true) ||
+      (isRecord(rawProject) && rawProject.enabled === true);
+
+    // Unless explicitly enabled in global or project settings, disable auto-compaction
+    // so background summarization doesn't hang or freeze desktop conversation turns.
+    // Manual /compact slash command remains fully available.
+    if (!explicitlyEnabled) {
+      session.settingsManager.applyOverrides({ compaction: { enabled: false } });
+    }
+  }
+
   private startCompactionTimeout(record: ManagedSessionRecord): void {
     this.clearCompactionTimeout(record);
     if (!record.session) {
       return;
     }
 
-    const timeoutMs = isCustomProvider(record.session.agent.state.model.provider)
-      ? customModelTimeoutMs()
-      : (Number(process.env.PI_APP_COMPACTION_TIMEOUT_MS) || 90_000);
+    const configuredTimeout = Number(process.env.PI_APP_COMPACTION_TIMEOUT_MS);
+    // Compaction is a short background summary call, not a full agent execution loop.
+    // Cap default timeout at 25 seconds so models/proxies never freeze the app for 5 minutes.
+    const defaultTimeout = Math.min(
+      isCustomProvider(record.session.agent.state.model.provider) ? customModelTimeoutMs() : 25_000,
+      25_000,
+    );
+    const timeoutMs = Number.isFinite(configuredTimeout) && configuredTimeout > 0
+      ? Math.min(configuredTimeout, 2_147_483_647)
+      : defaultTimeout;
 
-    this.timedOutCompactions.delete(record);
     const timeout = setTimeout(() => {
-      this.timedOutCompactions.add(record);
+      this.stoppedCompactions.set(record, "timeout");
+      const pendingPrompt = this.pendingPrompts.get(record);
+      if (pendingPrompt) pendingPrompt.cancelled = true;
+      const runId = record.runningRunId;
+      record.runningRunId = undefined;
+      record.updatedAt = nowIso();
       try {
         record.session?.abortCompaction();
       } catch {
         // Best effort
+      }
+      if (runId) {
+        record.status = "failed";
+        record.preview = "Conversation compaction timed out. Start a new thread or reduce the current context.";
+        // Abort is cooperative: an extension may never emit compaction_end.
+        this.queueDriverEvents(record, toDriverEvents({
+          type: "runFailed",
+          sessionRef: record.ref,
+          timestamp: record.updatedAt,
+          error: { message: record.preview, code: "COMPACTION_TIMEOUT" },
+        }, record, runId));
+      } else {
+        // Background auto-compaction after turn completion: recover cleanly to idle without failing the session
+        record.status = "idle";
+        this.queueDriverEvents(record, [sessionUpdatedEvent(record)]);
       }
     }, timeoutMs);
     timeout.unref?.();
     this.compactionTimeouts.set(record, timeout);
   }
 
-  private clearCompactionTimeout(record: ManagedSessionRecord): boolean {
+  private clearCompactionTimeout(record: ManagedSessionRecord): "timeout" | "cancelled" | undefined {
     const timeout = this.compactionTimeouts.get(record);
     if (timeout) {
       clearTimeout(timeout);
       this.compactionTimeouts.delete(record);
     }
-    const timedOut = this.timedOutCompactions.has(record);
-    this.timedOutCompactions.delete(record);
-    return timedOut;
+    const stopped = this.stoppedCompactions.get(record);
+    this.stoppedCompactions.delete(record);
+    return stopped;
   }
 
   private async bindSessionRuntime(record: ManagedSessionRecord): Promise<void> {
@@ -1417,18 +1493,24 @@ export class SessionSupervisor {
       return;
     }
 
-    record.eventQueue = record.eventQueue.then(async () => {
+    const deliver = async () => {
       if (options?.persistSnapshot !== false) {
-        await this.persistSnapshot(record);
+        try {
+          await this.persistSnapshot(record);
+        } catch {
+          console.warn("[session-driver] Could not persist session snapshot; continuing event delivery.");
+        }
       }
       for (const event of events) {
         await this.emit(record, event);
       }
-    });
+    };
+    record.eventQueue = record.eventQueue.then(deliver, deliver);
     record.eventQueue.catch(() => {});
   }
 
   private async handleAgentEvent(record: ManagedSessionRecord, event: AgentSessionEvent): Promise<void> {
+    if (record.closed) return;
     const mapped = this.mapAgentEvent(record, event);
     if (mapped.length === 0) {
       return;
@@ -1444,7 +1526,14 @@ export class SessionSupervisor {
       case "agent_start":
         record.runningRunId ??= crypto.randomUUID();
         record.status = "running";
-        return [sessionUpdatedEvent(record)];
+        return [{
+          type: "runProgress",
+          sessionRef: record.ref,
+          timestamp,
+          message: "Generating response...",
+          phase: "generating",
+          runId: record.runningRunId,
+        }, sessionUpdatedEvent(record)];
       case "turn_start":
         record.status = "running";
         return [sessionUpdatedEvent(record)];
@@ -1517,62 +1606,53 @@ export class SessionSupervisor {
           ...(record.runningRunId ? { runId: record.runningRunId } : {}),
         }, sessionUpdatedEvent(record)];
       case "compaction_end": {
-        const timedOut = this.clearCompactionTimeout(record);
+        const stopped = this.clearCompactionTimeout(record);
+        if (stopped) {
+          record.runningRunId = undefined;
+          return [sessionUpdatedEvent(record)];
+        }
         const activeRunId = record.runningRunId;
-        const errorMessage = timedOut
-          ? "Conversation compaction timed out. Start a new thread or reduce the current context."
-          : (event.aborted ? "Conversation compaction was aborted." : event.errorMessage);
+        const errorMessage = event.aborted ? "Conversation compaction was aborted." : event.errorMessage;
 
-        // If compaction failed or was aborted and cannot retry, fail the run cleanly
+        // If compaction failed or was aborted and cannot retry, fail the run cleanly if an active prompt was running
         if (errorMessage && !event.willRetry) {
           record.updatedAt = timestamp;
           record.runningRunId = undefined;
-          record.status = "failed";
-          record.preview = errorMessage;
-          return toDriverEvents({
-            type: "runFailed" as const,
-            sessionRef: record.ref,
-            timestamp,
-            error: {
-              message: errorMessage,
-              code: timedOut ? "COMPACTION_TIMEOUT" : (event.aborted ? "COMPACTION_ABORTED" : "COMPACTION_FAILED"),
-            },
-            ...(activeRunId ? { runId: activeRunId } : {}),
-          }, record);
+          if (activeRunId) {
+            record.status = "failed";
+            record.preview = errorMessage;
+            return toDriverEvents({
+              type: "runFailed" as const,
+              sessionRef: record.ref,
+              timestamp,
+              error: {
+                message: errorMessage,
+                code: event.aborted ? "COMPACTION_ABORTED" : "COMPACTION_FAILED",
+              },
+              runId: activeRunId,
+            }, record);
+          }
+          // Background auto-compaction after turn completion failed: recover cleanly to idle
+          record.status = "idle";
+          return [sessionUpdatedEvent(record)];
         }
 
         // If auto-retry is queued or an active prompt is in progress
-        if (event.willRetry || (activeRunId && record.session?.isStreaming)) {
+        if (event.willRetry || (activeRunId && record.session?.isStreaming) || record.queuedMessages.length > 0) {
           record.status = "running";
           record.runningRunId ??= crypto.randomUUID();
-          return errorMessage
-            ? [{
-                type: "runProgress" as const,
-                sessionRef: record.ref,
-                timestamp,
-                message: errorMessage,
-                phase: "compacting" as const,
-                runId: record.runningRunId,
-              }, sessionUpdatedEvent(record)]
-            : [sessionUpdatedEvent(record)];
+          return [{
+            type: "runProgress" as const,
+            sessionRef: record.ref,
+            timestamp,
+            message: "Generating response...",
+            phase: "generating" as const,
+            runId: record.runningRunId,
+          }, sessionUpdatedEvent(record)];
         }
 
         record.updatedAt = timestamp;
         record.runningRunId = undefined;
-        if (errorMessage) {
-          record.status = "failed";
-          record.preview = errorMessage;
-          return toDriverEvents({
-            type: "runFailed" as const,
-            sessionRef: record.ref,
-            timestamp,
-            error: {
-              message: errorMessage,
-              code: timedOut ? "COMPACTION_TIMEOUT" : "COMPACTION_FAILED",
-            },
-          }, record);
-        }
-
         record.status = "idle";
         return [sessionUpdatedEvent(record)];
       }
@@ -1621,7 +1701,11 @@ export class SessionSupervisor {
 
   private async emit(record: ManagedSessionRecord, event: SessionDriverEvent): Promise<void> {
     for (const listener of [...record.listeners]) {
-      await listener(event);
+      try {
+        await listener(event);
+      } catch {
+        console.warn("[session-driver] Session listener failed; continuing event delivery.");
+      }
     }
   }
 
@@ -2217,4 +2301,8 @@ function toDriverEvents(
   const id = runId ?? record.runningRunId;
   const event = id ? { ...base, runId: id } : base;
   return [event, sessionUpdatedEvent(record)];
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

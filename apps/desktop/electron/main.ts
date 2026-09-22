@@ -870,6 +870,19 @@ function createWindow(): BrowserWindow {
     },
   });
 
+  window.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith("http:") || url.startsWith("https:")) {
+      void shell.openExternal(url);
+    }
+    return { action: "deny" };
+  });
+  window.webContents.on("will-navigate", (event, url) => {
+    if (url !== window.webContents.getURL() && (url.startsWith("http:") || url.startsWith("https:"))) {
+      event.preventDefault();
+      void shell.openExternal(url);
+    }
+  });
+
   window.once("ready-to-show", () => {
     if (!backgroundTestMode) {
       window.show();

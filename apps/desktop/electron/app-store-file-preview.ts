@@ -136,7 +136,7 @@ function normalizeRequestedPath(requestedPath: string): string {
 }
 
 function stripLinkSuffix(filePath: string): string {
-  return filePath.replace(/[?#].*$/, "");
+  return filePath.replace(/[?#].*$/, "").replace(/:\d+(?::\d+)?$/, "");
 }
 
 function unsupportedResult(filePath: string, name: string, sizeBytes: number, message: string): FilePreviewResult {

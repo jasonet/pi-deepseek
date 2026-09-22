@@ -62,14 +62,13 @@ const DeepSeekHarnessView = lazy(() => import("./deepseek-harness-view").then((m
   })),
 );
 const DiffPanel = lazy(() => import("./diff-panel").then((m) => ({ default: m.DiffPanel })));
-const FilePreviewPanel = lazy(() => import("./file-preview-panel").then((m) => ({ default: m.FilePreviewPanel })));
+const FilePreviewModal = lazy(() => import("./file-preview-modal").then((m) => ({ default: m.FilePreviewModal })));
 const TerminalPanel = lazy(() => import("./terminal-panel").then((m) => ({ default: m.TerminalPanel })));
 const TreeModal = lazy(() => import("./tree-modal").then((m) => ({ default: m.TreeModal })));
 import { SecondarySurface } from "./secondary-surface";
 import { HarnessEngineSwitch } from "./harness-engine-switch";
 import type { SettingsSection } from "./settings-view";
 import type { DiffPanelFileRequest } from "./diff-panel";
-import type { FilePreviewRequest } from "./file-preview-panel";
 import { UpdateStatusBanner } from "./update-status-banner";
 import {
   isFxRuntimeProvider,
@@ -258,7 +257,11 @@ export default function App() {
   const handledComposerSyncNonceRef = useRef(0);
   const [showJumpToLatest, setShowJumpToLatest] = useState(false);
   const [showDiffPanel, setShowDiffPanel] = useState(false);
-  const [filePreviewRequest, setFilePreviewRequest] = useState<FilePreviewRequest | null>(null);
+  const [filePreviewModal, setFilePreviewModal] = useState<{
+    readonly workspaceId: string;
+    readonly path: string;
+    readonly line?: number;
+  } | null>(null);
   const [openTerminalSessionKey, setOpenTerminalSessionKey] = useState("");
   const [takeoverTerminalSessionKey, setTakeoverTerminalSessionKey] = useState("");
   const [terminalHeight, setTerminalHeight] = useState(340);
@@ -1051,14 +1054,20 @@ export default function App() {
   );
 
   const handleViewFileInDiff = useCallback((path: string) => {
-    setFilePreviewRequest(null);
     setShowDiffPanel(true);
     setDiffFileRequest({ path, nonce: Date.now() });
   }, []);
 
-  const handlePreviewFile = useCallback((workspaceId: string, path: string) => {
-    setShowDiffPanel(true);
-    setFilePreviewRequest({ workspaceId, path, nonce: Date.now() });
+  const handlePreviewFile = useCallback((workspaceId: string, rawPath: string) => {
+    // Parse optional line anchor e.g. "docs/plan.md:42" -> path: "docs/plan.md", line: 42
+    const match = rawPath.match(/^(.+?):(\d+)(?::\d+)?$/);
+    const path = match ? match[1]! : rawPath;
+    const line = match ? parseInt(match[2]!, 10) : undefined;
+    setFilePreviewModal({
+      workspaceId,
+      path,
+      line,
+    });
   }, []);
 
   const toggleDiffPanel = useCallback(() => {
@@ -1070,9 +1079,6 @@ export default function App() {
 
     const nextVisible = !showDiffPanel;
     setShowDiffPanel(nextVisible);
-    if (nextVisible) {
-      setFilePreviewRequest(null);
-    }
 
     if (!shouldPreserveBottom) {
       return;
@@ -3471,28 +3477,28 @@ export default function App() {
         {terminalPanel}
           </>
         )}
-        {diffVisibleInCurrentView && (selectedWorkspace && selectedSession || filePreviewRequest) ? (
+        {diffVisibleInCurrentView && selectedWorkspace && selectedSession ? (
           <Suspense fallback={<ViewFallback />}>
-            {filePreviewRequest ? (
-              <FilePreviewPanel
-                api={api}
-                request={filePreviewRequest}
-                onClose={() => {
-                  setFilePreviewRequest(null);
-                  setShowDiffPanel(false);
-                }}
-                onPreviewFile={(path) => handlePreviewFile(filePreviewRequest.workspaceId, path)}
-              />
-            ) : selectedWorkspace && selectedSession ? (
-              <DiffPanel
-                workspaceId={selectedWorkspace.id}
-                sessionId={selectedSession.id}
-                api={api}
-                sessionStatus={selectedSession.status}
-                fileRequest={diffFileRequest}
-              />
-            ) : null}
-            </Suspense>
+            <DiffPanel
+              workspaceId={selectedWorkspace.id}
+              sessionId={selectedSession.id}
+              api={api}
+              sessionStatus={selectedSession.status}
+              fileRequest={diffFileRequest}
+            />
+          </Suspense>
+        ) : null}
+        {filePreviewModal && api ? (
+          <Suspense fallback={null}>
+            <FilePreviewModal
+              api={api}
+              workspaceId={filePreviewModal.workspaceId}
+              filePath={filePreviewModal.path}
+              initialLine={filePreviewModal.line}
+              onClose={() => setFilePreviewModal(null)}
+              onPreviewFile={(nextPath) => handlePreviewFile(filePreviewModal.workspaceId, nextPath)}
+            />
+          </Suspense>
         ) : null}
       </main>
     </div>

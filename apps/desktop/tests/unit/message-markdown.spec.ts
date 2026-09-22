@@ -2,6 +2,8 @@ import { expect, test } from "@playwright/test";
 import { isCommandLanguage } from "../../src/markdown-code-block";
 import {
   extractNumbersFromText,
+  FILE_PATH_PROSE_REGEX,
+  isFilePathString,
   isPreviewableFileLink,
   normalizeMarkdownText,
   NUMBER_REGEX,
@@ -138,6 +140,60 @@ test.describe("Markdown formatting utilities", () => {
       });
       const result = normalizeMarkdownText(jsonStr);
       expect(result).toBe("![image](data:image/png;base64,abc123==)");
+    });
+  });
+
+  test.describe("isFilePathString", () => {
+    test("identifies project relative file paths accurately", () => {
+      expect(isFilePathString("docs/site-hkez-to-qdaa-migration-plan.md")).toBe(true);
+      expect(isFilePathString("docs/site-hkez-to-qdaa-migration-plan.md:42")).toBe(true);
+      expect(isFilePathString("apps/desktop/src/App.tsx")).toBe(true);
+      expect(isFilePathString("packages/pi-sdk-driver/src/session-supervisor.ts")).toBe(true);
+      expect(isFilePathString("package.json")).toBe(true);
+      expect(isFilePathString("README.md")).toBe(true);
+      expect(isFilePathString("tsconfig.json")).toBe(true);
+    });
+
+    test("returns false for non-file commands, numbers and URLs", () => {
+      expect(isFilePathString("npm install")).toBe(false);
+      expect(isFilePathString("git status")).toBe(false);
+      expect(isFilePathString("v3.0.5")).toBe(false);
+      expect(isFilePathString("123.456")).toBe(false);
+      expect(isFilePathString("https://example.com/docs/file.md")).toBe(false);
+      expect(isFilePathString("")).toBe(false);
+    });
+  });
+
+  test.describe("FILE_PATH_PROSE_REGEX", () => {
+    test("extracts file paths from prose text including Chinese prefixes", () => {
+      const text = "已沉淀至 docs/site-hkez-to-qdaa-migration-plan.md，共更新 3 个文件。";
+      FILE_PATH_PROSE_REGEX.lastIndex = 0;
+      const matches: string[] = [];
+      let m: RegExpExecArray | null;
+      while ((m = FILE_PATH_PROSE_REGEX.exec(text)) !== null) {
+        matches.push(m[1]!);
+      }
+      expect(matches).toEqual(["docs/site-hkez-to-qdaa-migration-plan.md"]);
+    });
+
+    test("extracts file paths with line number anchors", () => {
+      const text = "详见 apps/desktop/src/App.tsx:1059 行代码说明。";
+      FILE_PATH_PROSE_REGEX.lastIndex = 0;
+      const m = FILE_PATH_PROSE_REGEX.exec(text);
+      expect(m).not.toBeNull();
+      expect(m?.[1]).toBe("apps/desktop/src/App.tsx");
+      expect(m?.[2]).toBe("1059");
+    });
+
+    test("extracts multiple files from a single sentence", () => {
+      const text = "修改了 package.json 和 README.md 文件配置。";
+      FILE_PATH_PROSE_REGEX.lastIndex = 0;
+      const matches: string[] = [];
+      let m: RegExpExecArray | null;
+      while ((m = FILE_PATH_PROSE_REGEX.exec(text)) !== null) {
+        matches.push(m[1]!);
+      }
+      expect(matches).toEqual(["package.json", "README.md"]);
     });
   });
 });

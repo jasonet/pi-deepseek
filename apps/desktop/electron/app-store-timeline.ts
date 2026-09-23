@@ -10,7 +10,8 @@ import {
   makeTranscriptMessageWithAttachments,
 } from "./app-store-utils";
 
-export { TRANSIENT_WORKING_LABELS } from "./transient-labels";
+import { TRANSIENT_WORKING_LABELS } from "./transient-labels";
+export { TRANSIENT_WORKING_LABELS };
 
 export interface RunMetrics {
   readonly startedAt: string;

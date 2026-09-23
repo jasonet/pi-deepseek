@@ -76,6 +76,7 @@ import {
 } from "./npm-package-fallback.js";
 import { SystemPromptComposer, type PromptComposeContext } from "./system-prompt-composer.js";
 import { PI_BACKEND_ID } from "./backend-contract.js";
+import { compactionResourceOptions, compactionTimeoutMs } from "./compaction-policy.js";
 
 export interface PiSdkDriverOptions {
   readonly catalogFilePath?: string;
@@ -87,8 +88,7 @@ export interface PiSdkDriverOptions {
   /**
    * Optional composer for harness-contributed system-prompt sections. When
    * omitted, a fresh (empty) composer is used and prompt assembly is unchanged:
-   * with no registered sections the supervisor passes no `resourceLoaderOptions`
-   * to the SDK at all, so session prompts are byte-identical to the SDK default.
+   * with no registered sections session prompts are byte-identical to the SDK default.
    * Hosts opt in by registering sections via {@link SessionSupervisor.systemPromptComposer}.
    */
   readonly systemPromptComposer?: SystemPromptComposer;
@@ -192,21 +192,19 @@ export class SessionSupervisor {
 
   /**
    * Build the SDK `resourceLoaderOptions` for a session in {@link workspace}.
-   * Returns `undefined` when the composer has no registered sections, so the
-   * inert path passes nothing to the SDK and prompt assembly is unchanged.
+   * Summary request policy is independent of optional system-prompt contributions.
    */
   private buildResourceLoaderOptions(
     workspace: WorkspaceRef,
   ): CreateAgentSessionOptionsWithResourceLoader["resourceLoaderOptions"] | undefined {
-    if (this.composer.size === 0) {
-      return undefined;
-    }
+    const compaction = compactionResourceOptions();
+    if (this.composer.size === 0) return compaction;
     const context: PromptComposeContext = {
       cwd: workspace.path,
       now: new Date(),
       ...(workspace.displayName ? { workspaceName: workspace.displayName } : {}),
     };
-    return { appendSystemPromptOverride: this.composer.toAppendSystemPromptOverride(context) };
+    return { ...compaction, appendSystemPromptOverride: this.composer.toAppendSystemPromptOverride(context) };
   }
 
   listWorkspaces(): Promise<WorkspaceCatalogSnapshot> {
@@ -417,16 +415,8 @@ export class SessionSupervisor {
     const record = await this.ensureRecord(sessionRef);
     const session = this.requireSession(record);
     const isExtensionCommand = this.isExtensionCommand(session, input.text);
-    // If background compaction is in progress and agent is not streaming text,
-    // abort compaction immediately so direct user input is never blocked.
-    if ((session.isCompacting || this.compactionTimeouts.has(record)) && !session.isStreaming && !isExtensionCommand && !input.deliverAs) {
-      this.clearCompactionTimeout(record);
-      this.stoppedCompactions.set(record, "cancelled");
-      try {
-        session.abortCompaction();
-      } catch {
-        // Best effort
-      }
+    if (this.stoppedCompactions.has(record) && session.isCompacting && !isExtensionCommand) {
+      throw new Error("Conversation compaction is still stopping. Try again shortly or start a new thread.");
     }
 
     const isBusy = session.isStreaming || session.isCompacting || this.compactionTimeouts.has(record);
@@ -874,7 +864,6 @@ export class SessionSupervisor {
     record.session = session;
     record.sessionFile = session.sessionFile ?? session.sessionManager.getSessionFile();
     this.configureCustomProviderStream(record, session);
-    this.configureSessionCompaction(session);
     record.unsubscribeAgent?.();
     record.unsubscribeAgent = session.subscribe((event) => {
       void this.handleAgentEvent(record, event);
@@ -944,37 +933,13 @@ export class SessionSupervisor {
     };
   }
 
-  private configureSessionCompaction(session: AgentSession): void {
-    const rawGlobal = (session.settingsManager.getGlobalSettings() as Record<string, unknown> | undefined)?.compaction;
-    const rawProject = (session.settingsManager.getProjectSettings() as Record<string, unknown> | undefined)?.compaction;
-    const explicitlyEnabled =
-      (isRecord(rawGlobal) && rawGlobal.enabled === true) ||
-      (isRecord(rawProject) && rawProject.enabled === true);
-
-    // Unless explicitly enabled in global or project settings, disable auto-compaction
-    // so background summarization doesn't hang or freeze desktop conversation turns.
-    // Manual /compact slash command remains fully available.
-    if (!explicitlyEnabled) {
-      session.settingsManager.applyOverrides({ compaction: { enabled: false } });
-    }
-  }
-
   private startCompactionTimeout(record: ManagedSessionRecord): void {
     this.clearCompactionTimeout(record);
     if (!record.session) {
       return;
     }
 
-    const configuredTimeout = Number(process.env.PI_APP_COMPACTION_TIMEOUT_MS);
-    // Compaction is a short background summary call, not a full agent execution loop.
-    // Cap default timeout at 25 seconds so models/proxies never freeze the app for 5 minutes.
-    const defaultTimeout = Math.min(
-      isCustomProvider(record.session.agent.state.model.provider) ? customModelTimeoutMs() : 25_000,
-      25_000,
-    );
-    const timeoutMs = Number.isFinite(configuredTimeout) && configuredTimeout > 0
-      ? Math.min(configuredTimeout, 2_147_483_647)
-      : defaultTimeout;
+    const timeoutMs = compactionTimeoutMs();
 
     const timeout = setTimeout(() => {
       this.stoppedCompactions.set(record, "timeout");
@@ -988,21 +953,15 @@ export class SessionSupervisor {
       } catch {
         // Best effort
       }
-      if (runId) {
-        record.status = "failed";
-        record.preview = "Conversation compaction timed out. Start a new thread or reduce the current context.";
-        // Abort is cooperative: an extension may never emit compaction_end.
-        this.queueDriverEvents(record, toDriverEvents({
-          type: "runFailed",
-          sessionRef: record.ref,
-          timestamp: record.updatedAt,
-          error: { message: record.preview, code: "COMPACTION_TIMEOUT" },
-        }, record, runId));
-      } else {
-        // Background auto-compaction after turn completion: recover cleanly to idle without failing the session
-        record.status = "idle";
-        this.queueDriverEvents(record, [sessionUpdatedEvent(record)]);
-      }
+      record.status = "failed";
+      record.preview = "Conversation compaction timed out. Your conversation has been preserved; retry compaction or start a new thread.";
+      // Abort is cooperative: an extension may never emit compaction_end.
+      this.queueDriverEvents(record, toDriverEvents({
+        type: "runFailed",
+        sessionRef: record.ref,
+        timestamp: record.updatedAt,
+        error: { message: record.preview, code: "COMPACTION_TIMEOUT" },
+      }, record, runId));
     }, timeoutMs);
     timeout.unref?.();
     this.compactionTimeouts.set(record, timeout);
@@ -1526,14 +1485,16 @@ export class SessionSupervisor {
       case "agent_start":
         record.runningRunId ??= crypto.randomUUID();
         record.status = "running";
-        return [{
+        if (record.session && isCustomProvider(record.session.agent.state.model.provider)) {
+          return [sessionUpdatedEvent(record)];
+        }
+        return toDriverEvents({
           type: "runProgress",
           sessionRef: record.ref,
           timestamp,
           message: "Generating response...",
           phase: "generating",
-          runId: record.runningRunId,
-        }, sessionUpdatedEvent(record)];
+        }, record);
       case "turn_start":
         record.status = "running";
         return [sessionUpdatedEvent(record)];
@@ -1607,18 +1568,18 @@ export class SessionSupervisor {
         }, sessionUpdatedEvent(record)];
       case "compaction_end": {
         const stopped = this.clearCompactionTimeout(record);
-        if (stopped) {
-          record.runningRunId = undefined;
-          return [sessionUpdatedEvent(record)];
-        }
+        if (stopped) return [];
         const activeRunId = record.runningRunId;
-        const errorMessage = event.aborted ? "Conversation compaction was aborted." : event.errorMessage;
+        const compactionError = event.aborted ? "Conversation compaction was aborted." : event.errorMessage;
+        const errorMessage = compactionError && record.queuedMessages.length > 0
+          ? `${compactionError} Queued messages are preserved; retry compaction before continuing.`
+          : compactionError;
 
         // If compaction failed or was aborted and cannot retry, fail the run cleanly if an active prompt was running
         if (errorMessage && !event.willRetry) {
           record.updatedAt = timestamp;
           record.runningRunId = undefined;
-          if (activeRunId) {
+          if (activeRunId || record.queuedMessages.length > 0) {
             record.status = "failed";
             record.preview = errorMessage;
             return toDriverEvents({
@@ -1629,7 +1590,7 @@ export class SessionSupervisor {
                 message: errorMessage,
                 code: event.aborted ? "COMPACTION_ABORTED" : "COMPACTION_FAILED",
               },
-              runId: activeRunId,
+              ...(activeRunId ? { runId: activeRunId } : {}),
             }, record);
           }
           // Background auto-compaction after turn completion failed: recover cleanly to idle
@@ -1638,7 +1599,7 @@ export class SessionSupervisor {
         }
 
         // If auto-retry is queued or an active prompt is in progress
-        if (event.willRetry || (activeRunId && record.session?.isStreaming) || record.queuedMessages.length > 0) {
+        if (event.willRetry || activeRunId || record.queuedMessages.length > 0) {
           record.status = "running";
           record.runningRunId ??= crypto.randomUUID();
           return [{

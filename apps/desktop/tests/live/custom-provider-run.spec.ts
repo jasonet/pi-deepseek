@@ -26,6 +26,8 @@ test("custom provider shows request progress and streams the final answer", asyn
   test.setTimeout(60_000);
   let requestCount = 0;
   let requestPayload: Record<string, unknown> | undefined;
+  let beginResponse: (() => void) | undefined;
+  let finishResponse: (() => void) | undefined;
   const server = createServer((request, response) => {
     if (request.url !== "/v1/chat/completions" || request.method !== "POST") {
       response.writeHead(404).end();
@@ -40,10 +42,10 @@ test("custom provider shows request progress and streams the final answer", asyn
     request.on("end", () => {
       requestCount += 1;
       requestPayload = JSON.parse(body) as Record<string, unknown>;
-      setTimeout(() => {
+      beginResponse = () => {
         response.writeHead(200, { "content-type": "text/event-stream" });
         response.flushHeaders();
-        setTimeout(() => {
+        finishResponse = () => {
           response.write(`data: ${JSON.stringify({
             id: "local-success",
             object: "chat.completion.chunk",
@@ -57,8 +59,8 @@ test("custom provider shows request progress and streams the final answer", asyn
             choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
           })}\n\n`);
           response.end("data: [DONE]\n\n");
-        }, 400);
-      }, 300);
+        };
+      };
     });
   });
   const port = await listen(server);
@@ -75,11 +77,13 @@ test("custom provider shows request progress and streams the final answer", asyn
     await createNamedThread(window, "Custom provider progress");
     await window.getByTestId("composer").fill("Reply with exactly LOCAL_OK.");
     await window.getByTestId("composer").press("Enter");
-    await window.screenshot({ path: testInfo.outputPath("submitted.png") });
 
     const transcript = window.getByTestId("transcript");
     await expect(transcript).toContainText("Connecting to custom model...");
+    await expect.poll(() => typeof beginResponse).toBe("function");
+    beginResponse!();
     await expect(transcript).toContainText("Generating response...");
+    finishResponse!();
     await expect(transcript).toContainText("LOCAL_OK");
     await expect.poll(async () => (await getDesktopState(window)).workspaces[0]?.sessions[0]?.status).toBe("idle");
 
@@ -92,6 +96,7 @@ test("custom provider shows request progress and streams the final answer", asyn
     // request cannot slip through after the visible answer has completed.
     await new Promise((resolve) => setTimeout(resolve, 2_000));
     expect(requestCount).toBe(1);
+    await window.screenshot({ path: testInfo.outputPath("completed.png") });
   } finally {
     await harness.close();
     await close(server);

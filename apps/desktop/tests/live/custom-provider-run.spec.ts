@@ -5,7 +5,8 @@ import { expect, test } from "@playwright/test";
 import {
   createNamedThread,
   getDesktopState,
-  launchDesktop,
+  launchDesktop as launchSourceDesktop,
+  launchDesktopByExecutable,
   makeUserDataDir,
   makeWorkspace,
   seedAgentDir,
@@ -14,6 +15,12 @@ import {
 
 const providerId = "custom-local-test";
 const modelId = "gemma-local.gguf";
+const launchDesktop: typeof launchSourceDesktop = (userDataDir, options) => {
+  const executable = process.env.PI_APP_TEST_COMPACTION_EXECUTABLE;
+  return executable
+    ? launchDesktopByExecutable(executable, userDataDir, options)
+    : launchSourceDesktop(userDataDir, options);
+};
 
 test("custom provider shows request progress and streams the final answer", async ({}, testInfo) => {
   test.setTimeout(60_000);

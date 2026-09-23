@@ -20,7 +20,7 @@
 
 | 平台 | 架构 | 引擎 | 版本 | 格式 | 大小 | 下载 |
 |------|------|------|------|------|------|------|
-| **macOS** | Apple Silicon (M1–M5) | Electron | v3.0.6 | ZIP | 163 MB | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.6/Taosi-3.0.6-mac-arm64.zip) |
+| **macOS** | Apple Silicon (M1–M5) | Electron | v3.0.7 | ZIP | 147 MiB | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.7/Taosi-3.0.7-mac-arm64.zip) |
 | **macOS** | Intel (x64) | Electron | v3.0.1 | DMG | 157 MB | [![Download](https://img.shields.io/badge/Download-x64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.1/Taosi-3.0.1-mac-x64.dmg) |
 | **macOS** | Apple Silicon (M1–M5) | Tauri | v3.0.1 | DMG | 147 MB | [![Download](https://img.shields.io/badge/Download-arm64-%237C6BF5?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.1/Taosi-3.0.1-tauri-mac-arm64.dmg) |
 | **Windows** | x64 | Electron | v3.0.5 | 安装版 | 133 MB | [![Download](https://img.shields.io/badge/Download-Setup-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.5/Taosi-3.0.5-win-x64-setup.exe) |
@@ -29,16 +29,18 @@
 | **Linux** | x64 | Electron | v3.0.1 | AppImage | 161 MB | [![Download](https://img.shields.io/badge/Download-AppImage-%234D6BFE?logo=linux)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.1/Taosi-3.0.1-linux-x86_64.AppImage) |
 
 > 🧭 **双引擎版本矩阵 / Dual-engine version matrix:**
-> **Electron `v3.0.6`** 发布 macOS arm64；Windows x64 保持 v3.0.5；Linux 与 Tauri 待对应构建完成后再更新下载链接。
+> **Electron `v3.0.7`** 发布 macOS arm64；Windows x64 保持 v3.0.5；Linux 与 Tauri 待对应构建完成后再更新下载链接。
 > **Electron `v3.0.1`**（Linux）与 **Tauri `v3.0.1`**（macOS arm64）。macOS / Linux Electron 为完整双 harness 体验的推荐版本；Windows 因上游暂未提供 fx binary，当前为 Pi harness。
 > **Electron `v3.0.1`** (macOS / Windows / Linux) and **Tauri `v3.0.1`** (macOS arm64). Electron is recommended for the complete dual-harness experience; About identifies the Electron / Tauri build.
 
-> 🚀 **v3.0.6 更新 / What’s new:**
-> - **会话上下文压缩挂起根治**：默认关闭非必要的自动压缩避免后端模型卡死；压缩超时上限从 90s 优化为 25s；后台压缩遇阻时自动降级恢复空闲态；用户输入即刻中断后台压缩并优先响应；过滤持久化瞬态工作提示标签。
+> 🚀 **v3.0.7 更新 / What’s new:**
+> - **保留并优化自动上下文压缩**：恢复 SDK 默认自动压缩；汇总请求单独关闭推理并限制输出预算，不改变对话模型和推理设置。单次汇总最多等待 60 秒，失败后重试一次，总流程有 150 秒兜底。摘要成功后落盘并供下一轮使用，失败时保留原会话及排队消息。
+> - **压缩状态与资源清理**：修复停止后的迟到事件、遗留进度提示、并行摘要请求未取消及跨次压缩文件记录丢失；压缩期间可排队续聊。
+> - **浮动文件预览**：支持可调整大小的浮动预览窗口和外部链接。
 > - **Claude Desktop 级 Markdown 输出美化**：指令绿色强调、代码块默认隐藏折叠（可点击展开与复制）、链接紫色高亮、引用块蓝调微衬、数字文本加粗，大幅提升主文本段的可阅读性。
 > - **流程图与图表原生渲染**：内置 Mermaid 支持流程图直接解析与图表展示，杜绝 `[object Object]` 异常字符输出。
 > - **双面板多会话智能轮替与数据保真**：双面板模式下固定维持最新的两个会话轮替显示，归档会话只在单面板中查看隔离，彻底解决次面板不显示最新内容的问题。
-> *Completely resolves conversation compaction hangs with 25s timeouts and auto-recovery to idle; brings Claude Desktop-style markdown typography (green commands, collapsible code blocks, purple links, blue quotes, bold numbers); adds native Mermaid flowchart rendering; and guarantees dual-pane latest 2-session rotation with fresh secondary pane sync.*
+> *Automatic compaction stays enabled. Summary-only reasoning and output budgets, bounded retries, cancellation cleanup, and persisted summaries keep long conversations usable without changing chat inference settings. Includes floating file previews and the previous Markdown, Mermaid, and dual-pane improvements.*
 
 > 🚀 **v3.x / v3.0.5 重大版本汇总 / Taosi 3.x Consolidated Highlights:**
 > - **全新品牌与全平台重构（v3.0.0）**：正式升级更名为 **Taosi**；新增右侧**文件实时预览面板（File Preview Panel）**；原生支持 EasyCLIProxyAPI（OAuth with Claude, Antigravity, Codex, Kimi, xAI）及各类 OpenAI 兼容网关；全新顶栏折叠与长标题自适应交互。
@@ -143,7 +145,7 @@ In 2.9.2, Settings → Harnesses shows fx connection state for Vercel AI Gateway
   - **包管理与系统提示词补充**：在「扩展」面板为工作区安装/更新/移除 npm/git 包，支持项目级 `.pi/APPEND_SYSTEM.md` 系统提示词动态注入。
   - **Cmd+Enter 重试快捷键**：对话输入框及会话中新增 `Cmd+Enter`（Windows/Linux 为 `Ctrl+Enter`）一键重试上一条失败或历史消息。
 
-- **v3.0.0 – v3.0.6 阶段（Taosi 3.x）**：
+- **v3.0.0 – v3.0.7 阶段（Taosi 3.x）**：
   - **全新品牌 Taosi 重构（v3.0.0）**：应用品牌全面升级为 **Taosi**；重构侧边栏长标题自适应、顶栏折叠与全球化界面。
   - **文件实时预览面板（v3.0.0）**：会话中提及的代码文件、Markdown 及多格式文档可在右侧独立分栏中即时预览与高亮。
   - **Computer Use 跨平台桌面自动化控制（v3.0.5）**：内置集成 `@injaneity/pi-computer-use`，AI 智能体可直接读取系统前台 UI 元素树、截屏与执行精准键鼠操控（点击、文本输入、按键、等待、浏览器观测）。
@@ -151,7 +153,7 @@ In 2.9.2, Settings → Harnesses shows fx connection state for Vercel AI Gateway
   - **多步工具调用单行实时滚屏（v3.0.4）**：多步工具执行折叠为单行实时滚屏（参考 Claude 体验），仅展示最新指令，支持点击展开详情，避免冗长刷屏。
   - **输入框草稿保护（v3.0.4）**：在输入框内切换模型或思考等级时，完整保留已输入的提示词文本与图片/文件草稿，杜绝误清空。
   - **代码块折叠与语法高亮（v3.0.5）**：时间线代码块默认折叠行数并展示语言标签与首行预览，展开显示行号与语法高亮，支持一键复制代码。
-  - **上下文压缩挂起根治（v3.0.6）**：默认关闭非必要的自动压缩，设置 25s 超时收敛与后台空闲态降级恢复，用户输入即时打断压缩，过滤瞬态工作提示。
+  - **自动上下文压缩优化（v3.0.7）**：保留自动压缩，汇总独立关闭推理、限制输出预算并支持一次有界重试；保留历史、排队输入及累计文件记录，清理超时请求和进度状态。
   - **Claude Desktop 级 Markdown 输出美化（v3.0.6）**：指令绿调强调、代码块默认隐藏、链接紫化、引用块蓝调微衬、数字加粗增强视觉穿透度。
   - **图表流程图渲染与双面板数据保真（v3.0.6）**：内置 Mermaid 原生图表渲染，双面板维持最新活跃会话轮替与实时同步。
 

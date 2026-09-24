@@ -1,4 +1,5 @@
 import type { BrowserWindow } from "electron";
+import { rendererTranscript } from "./renderer-transcript";
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -111,7 +112,7 @@ import * as composer from "./app-store-composer";
 import { isSessionActivelyViewed } from "./session-visibility";
 
 type StateListener = (state: DesktopAppState) => void;
-type SelectedTranscriptListener = (payload: SelectedTranscriptRecord | null) => void;
+type SelectedTranscriptListener = () => void;
 type SessionEventListener = (event: SessionDriverEvent, state: DesktopAppState) => void | Promise<void>;
 type TranscriptMessageRow = Extract<TranscriptMessage, { kind: "message" }>;
 
@@ -232,23 +233,7 @@ export class DesktopAppStore implements AppStoreInternals {
       return null;
     }
     await this.ensureTranscriptLoaded(sessionRef);
-    const record = this.buildSelectedTranscriptRecord(sessionRef);
-    if (!record) return null;
-    // Limit transcript size to avoid IPC deserialization crash, preserving most recent items
-    const MAX_TRANSCRIPT_BYTES = 2 * 1024 * 1024; // 2MB
-    const allItems = record.transcript;
-    let size = 0;
-    const truncated: TranscriptMessage[] = [];
-    for (let i = allItems.length - 1; i >= 0; i--) {
-      const item = allItems[i]!;
-      const itemSize = JSON.stringify(item).length;
-      if (size + itemSize > MAX_TRANSCRIPT_BYTES && truncated.length > 0) {
-        break;
-      }
-      truncated.unshift(item);
-      size += itemSize;
-    }
-    return { ...record, transcript: truncated };
+    return this.buildSelectedTranscriptRecord(sessionRef);
   }
 
   /**
@@ -288,24 +273,7 @@ export class DesktopAppStore implements AppStoreInternals {
       await this.ensureTranscriptLoaded(sessionRef);
     }
 
-    const record = this.buildSelectedTranscriptRecord(sessionRef);
-    if (!record) return null;
-
-    // Limit transcript size to avoid IPC crash, preserving most recent items
-    const MAX_TRANSCRIPT_BYTES = 2 * 1024 * 1024; // 2MB
-    const allItems = record.transcript;
-    let size = 0;
-    const truncated: TranscriptMessage[] = [];
-    for (let i = allItems.length - 1; i >= 0; i--) {
-      const item = allItems[i]!;
-      const itemSize = JSON.stringify(item).length;
-      if (size + itemSize > MAX_TRANSCRIPT_BYTES && truncated.length > 0) {
-        break;
-      }
-      truncated.unshift(item);
-      size += itemSize;
-    }
-    return { ...record, transcript: truncated };
+    return this.buildSelectedTranscriptRecord(sessionRef);
   }
 
   async flushPersistence(): Promise<void> {
@@ -2398,7 +2366,7 @@ export class DesktopAppStore implements AppStoreInternals {
     return {
       workspaceId: sessionRef.workspaceId,
       sessionId: sessionRef.sessionId,
-      transcript: (this.sessionState.transcriptCache.get(sessionKey(sessionRef)) ?? []).map(cloneTranscriptMessage),
+      transcript: rendererTranscript(this.sessionState.transcriptCache.get(sessionKey(sessionRef)) ?? []).map(cloneTranscriptMessage),
     };
   }
 
@@ -2414,11 +2382,14 @@ export class DesktopAppStore implements AppStoreInternals {
   }
 
   publishSelectedTranscript(): void {
-    const sessionRef = this.selectedSessionRef();
-    const payload = sessionRef ? this.buildSelectedTranscriptRecord(sessionRef) : null;
     for (const listener of this.selectedTranscriptListeners) {
-      listener(payload);
+      listener();
     }
+  }
+
+  getSelectedTranscriptSnapshot(): SelectedTranscriptRecord | null {
+    const sessionRef = this.selectedSessionRef();
+    return sessionRef ? this.buildSelectedTranscriptRecord(sessionRef) : null;
   }
 
   publishSelectedTranscriptFor(sessionRef: SessionRef): void {

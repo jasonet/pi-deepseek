@@ -21,6 +21,7 @@ import { readFile, writeFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { DesktopAppStore } from "./app-store";
+import { RendererPublisher } from "./renderer-publisher";
 import { getChangedFiles, getFileDiff, stageFile } from "./app-store-diff";
 import { listWorkspaceFiles } from "./app-store-files";
 import { previewWorkspaceFile, saveWorkspaceFileAs } from "./app-store-file-preview";
@@ -943,22 +944,54 @@ function createWindow(): BrowserWindow {
   return window;
 }
 
+const windowPublishers = new WeakMap<BrowserWindow, {
+  state: RendererPublisher<DesktopAppState>;
+  transcript: RendererPublisher<SelectedTranscriptRecord | null>;
+}>();
+
 function attachStatePublisher(window: BrowserWindow): void {
   const windowWebContents = window.webContents;
   const webContentsId = windowWebContents.id;
   let rendererRecoveryTimer: ReturnType<typeof setTimeout> | undefined;
   let windowClosing = false;
+  const statePublisher = new RendererPublisher<DesktopAppState>((payload, sequence) => {
+    if (canPublishToWindow(window)) windowWebContents.send(desktopIpc.stateChanged, payload, sequence);
+  });
+  const transcriptPublisher = new RendererPublisher<SelectedTranscriptRecord | null>((payload, sequence) => {
+    if (canPublishToWindow(window)) windowWebContents.send(desktopIpc.selectedTranscriptChanged, payload, sequence);
+  });
+  windowPublishers.set(window, { state: statePublisher, transcript: transcriptPublisher });
+  const resetPublishers = () => {
+    statePublisher.reset();
+    transcriptPublisher.reset();
+  };
+  const handleLoaded = () => {
+    // Messages sent to the old/preload-less document cannot acknowledge.
+    resetPublishers();
+    void publishCurrentWindowState(window).catch((error) => logError("renderer", "Could not restore window state", error));
+  };
+  const acknowledge = (event: Electron.IpcMainEvent, channel: string, sequence: number) => {
+    if (event.sender !== windowWebContents || !Number.isSafeInteger(sequence)) return;
+    if (channel === desktopIpc.stateChanged) statePublisher.acknowledge(sequence);
+    if (channel === desktopIpc.selectedTranscriptChanged) transcriptPublisher.acknowledge(sequence);
+  };
+  ipcMain.on(desktopIpc.rendererSnapshotAcknowledged, acknowledge);
+  windowWebContents.on("did-start-loading", resetPublishers);
+  windowWebContents.on("did-finish-load", handleLoaded);
   stopPublishingState?.();
   stopPublishingSelectedTranscript?.();
-  stopPublishingState = store.subscribe((state) => {
-    if (canPublishToWindow(window)) {
-      window.webContents.send(desktopIpc.stateChanged, state);
+  stopPublishingState = store.subscribe(() => {
+    if (canPublishToWindow(window) && !windowWebContents.isLoadingMainFrame()) {
+      statePublisher.push(() => store.state);
     }
   });
-  stopPublishingSelectedTranscript = store.subscribeToSelectedTranscript((payload) => {
-    publishSelectedTranscript(window, payload);
+  stopPublishingSelectedTranscript = store.subscribeToSelectedTranscript(() => {
+    if (canPublishToWindow(window) && !windowWebContents.isLoadingMainFrame()) {
+      transcriptPublisher.push(() => store.getSelectedTranscriptSnapshot());
+    }
   });
   const handleRendererGone = (_event: Event, details: RenderProcessGoneDetails) => {
+    resetPublishers();
     logError("renderer", "Renderer process exited", {
       reason: details.reason,
       exitCode: details.exitCode,
@@ -981,14 +1014,9 @@ function attachStatePublisher(window: BrowserWindow): void {
         return;
       }
       logInfo("renderer", "Reloading the renderer after an unexpected exit");
-      const handleRecoveryLoaded = () => {
-        void publishCurrentWindowState(window);
-      };
-      windowWebContents.once("did-finish-load", handleRecoveryLoaded);
       try {
         windowWebContents.reload();
       } catch (error) {
-        windowWebContents.removeListener("did-finish-load", handleRecoveryLoaded);
         logError("renderer", "Could not reload the renderer", error);
       }
     }, 150);
@@ -998,6 +1026,11 @@ function attachStatePublisher(window: BrowserWindow): void {
     windowClosing = true;
   });
   window.once("closed", () => {
+    resetPublishers();
+    windowPublishers.delete(window);
+    ipcMain.removeListener(desktopIpc.rendererSnapshotAcknowledged, acknowledge);
+    windowWebContents.removeListener("did-start-loading", resetPublishers);
+    windowWebContents.removeListener("did-finish-load", handleLoaded);
     if (rendererRecoveryTimer) {
       clearTimeout(rendererRecoveryTimer);
       rendererRecoveryTimer = undefined;
@@ -1016,30 +1049,13 @@ function attachStatePublisher(window: BrowserWindow): void {
 }
 
 async function publishCurrentWindowState(window: BrowserWindow): Promise<void> {
-  const [state, selectedTranscript] = await Promise.all([
-    store.getState(),
-    store.getSelectedTranscript(),
-  ]);
+  await store.getSelectedTranscript();
   if (!canPublishToWindow(window)) {
     return;
   }
-  window.webContents.send(desktopIpc.stateChanged, state);
-  publishSelectedTranscript(window, selectedTranscript);
-}
-
-function publishSelectedTranscript(
-  window: BrowserWindow,
-  payload: SelectedTranscriptRecord | null,
-): void {
-  if (!payload || !canPublishToWindow(window)) {
-    return;
-  }
-  window.webContents.send(
-    desktopIpc.selectedTranscriptChanged,
-    payload.transcript.length > 150
-      ? { ...payload, transcript: payload.transcript.slice(-150) }
-      : payload,
-  );
+  const publishers = windowPublishers.get(window);
+  publishers?.state.push(() => store.state);
+  publishers?.transcript.push(() => store.getSelectedTranscriptSnapshot());
 }
 
 function attachViewedSessionTracking(window: BrowserWindow): void {

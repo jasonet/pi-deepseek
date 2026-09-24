@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import ReactMarkdown from "react-markdown";
+import { RenderErrorBoundary } from "./render-error-boundary";
 import remarkGfm from "remark-gfm";
 import { FileIcon } from "./icons";
 import { MarkdownCodeBlock } from "./markdown-code-block";
@@ -321,15 +322,22 @@ const BASE_MARKDOWN_COMPONENTS = {
   },
 } as const;
 
-export function MessageMarkdown({
+export function MessageMarkdown(props: { readonly text: string; readonly onPreviewFile?: (path: string) => void }) {
+  const normalizedText = useMemo(() => normalizeMarkdownText(props.text), [props.text]);
+  return (
+    <RenderErrorBoundary fallback={<div className="message__content"><pre className="markdown-error-fallback">{normalizedText}</pre></div>}>
+      <RenderedMarkdown {...props} text={normalizedText} />
+    </RenderErrorBoundary>
+  );
+}
+
+function RenderedMarkdown({
   text,
   onPreviewFile,
 }: {
   readonly text: string;
   readonly onPreviewFile?: (path: string) => void;
 }) {
-  const normalizedText = useMemo(() => normalizeMarkdownText(text), [text]);
-
   const components = useMemo(
     () => ({
       ...BASE_MARKDOWN_COMPONENTS,
@@ -417,7 +425,7 @@ export function MessageMarkdown({
   return (
     <div className="message__content">
       <ReactMarkdown remarkPlugins={REMARK_PLUGINS} components={components}>
-        {normalizedText}
+        {text}
       </ReactMarkdown>
     </div>
   );

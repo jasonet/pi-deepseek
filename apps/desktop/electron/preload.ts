@@ -80,6 +80,14 @@ function subscribeIpc<T>(channel: string, listener: (payload: T) => void): () =>
   };
 }
 
+// Acknowledge even before React subscribes (and between StrictMode mounts).
+// Queue after all listeners so the current bridge delivery has completed.
+for (const channel of [desktopIpc.stateChanged, desktopIpc.selectedTranscriptChanged]) {
+  ipcRenderer.on(channel, (_event, _payload, sequence: number) => {
+    queueMicrotask(() => ipcRenderer.send(desktopIpc.rendererSnapshotAcknowledged, channel, sequence));
+  });
+}
+
 contextBridge.exposeInMainWorld("piApp", {
   platform: process.platform,
   versions: process.versions,

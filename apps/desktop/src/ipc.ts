@@ -90,6 +90,7 @@ export interface DesktopUpdateStatus {
 export const desktopIpc = {
   stateRequest: "pi-gui:state-request",
   stateChanged: "pi-gui:state-changed",
+  rendererSnapshotAcknowledged: "pi-gui:renderer-snapshot-acknowledged",
   selectedTranscriptRequest: "pi-gui:selected-transcript-request",
   selectedTranscriptChanged: "pi-gui:selected-transcript-changed",
   transcriptForRequest: "pi-gui:transcript-for-request",

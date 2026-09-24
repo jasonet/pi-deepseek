@@ -2,3 +2,14 @@
 @import "./styles/sidebar.css";
 @import "./styles/main.css";
 @import "./styles/syntax-highlight.css";
+.renderer-recovery {
+  padding: 48px 24px;
+  overflow-wrap: anywhere;
+}
+
+.markdown-error-fallback {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+  overflow: auto;
+}

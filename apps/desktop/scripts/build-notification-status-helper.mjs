@@ -32,11 +32,33 @@ const helpers = [
 
 for (const { source, output } of helpers) {
   try {
-    await execFileAsync("swiftc", [source, "-module-cache-path", moduleCacheDir, "-O", "-o", output], {
+    const arm64Out = `${output}-arm64`;
+    const x64Out = `${output}-x64`;
+    await execFileAsync("swiftc", ["-target", "arm64-apple-macos12.0", source, "-module-cache-path", moduleCacheDir, "-O", "-o", arm64Out], {
       cwd: desktopDir,
     });
-    console.log(`Built native helper at ${output}`);
+    await execFileAsync("swiftc", ["-target", "x86_64-apple-macos12.0", source, "-module-cache-path", moduleCacheDir, "-O", "-o", x64Out], {
+      cwd: desktopDir,
+    });
+    await execFileAsync("lipo", ["-create", "-output", output, arm64Out, x64Out], {
+      cwd: desktopDir,
+    });
+    await execFileAsync("codesign", ["--force", "--sign", "-", output], {
+      cwd: desktopDir,
+    });
+    console.log(`Built universal native helper at ${output}`);
   } catch (error) {
-    console.warn(`Failed to build native helper ${source}:`, error);
+    console.warn(`Failed to build universal native helper, falling back to host arch ${source}:`, error);
+    try {
+      await execFileAsync("swiftc", [source, "-module-cache-path", moduleCacheDir, "-O", "-o", output], {
+        cwd: desktopDir,
+      });
+      await execFileAsync("codesign", ["--force", "--sign", "-", output], {
+        cwd: desktopDir,
+      });
+      console.log(`Built native helper at ${output}`);
+    } catch (fallbackError) {
+      console.warn(`Failed to build native helper ${source}:`, fallbackError);
+    }
   }
 }

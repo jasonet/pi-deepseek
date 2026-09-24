@@ -20,27 +20,24 @@
 
 | 平台 | 架构 | 引擎 | 版本 | 格式 | 大小 | 下载 |
 |------|------|------|------|------|------|------|
-| **macOS** | Apple Silicon (M1–M5) | Electron | v3.0.7 | ZIP | 147 MiB | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.7/Taosi-3.0.7-mac-arm64.zip) |
-| **macOS** | Intel (x64) | Electron | v3.0.1 | DMG | 157 MB | [![Download](https://img.shields.io/badge/Download-x64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.1/Taosi-3.0.1-mac-x64.dmg) |
-| **macOS** | Apple Silicon (M1–M5) | Tauri | v3.0.1 | DMG | 147 MB | [![Download](https://img.shields.io/badge/Download-arm64-%237C6BF5?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.1/Taosi-3.0.1-tauri-mac-arm64.dmg) |
+| **macOS** | Apple Silicon (M1–M5) | Electron | v3.0.8 | ZIP / DMG | 147 MiB | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.8/Taosi-3.0.8-mac-arm64.dmg) |
+| **macOS** | Intel (x64) | Electron | v3.0.8 | DMG / ZIP | 165 MiB | [![Download](https://img.shields.io/badge/Download-x64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.8/Taosi-3.0.8-mac-x64.dmg) |
+| **macOS** | Apple Silicon (M1–M5) | Tauri | v3.0.8 | DMG | 157 MiB | [![Download](https://img.shields.io/badge/Download-arm64-%237C6BF5?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.8/Taosi-3.0.8-tauri-mac-arm64.dmg) |
 | **Windows** | x64 | Electron | v3.0.5 | 安装版 | 133 MB | [![Download](https://img.shields.io/badge/Download-Setup-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.5/Taosi-3.0.5-win-x64-setup.exe) |
 | **Windows** | x64 | Electron | v3.0.5 | 便携版 | 132 MB | [![Download](https://img.shields.io/badge/Download-Portable-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.5/Taosi-3.0.5-win-x64-portable.exe) |
 | **Linux** | x64 | Electron | v3.0.1 | deb | 157 MB | [![Download](https://img.shields.io/badge/Download-.deb-%234D6BFE?logo=ubuntu)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.1/Taosi-3.0.1-linux-amd64.deb) |
 | **Linux** | x64 | Electron | v3.0.1 | AppImage | 161 MB | [![Download](https://img.shields.io/badge/Download-AppImage-%234D6BFE?logo=linux)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.1/Taosi-3.0.1-linux-x86_64.AppImage) |
 
 > 🧭 **双引擎版本矩阵 / Dual-engine version matrix:**
-> **Electron `v3.0.7`** 发布 macOS arm64；Windows x64 保持 v3.0.5；Linux 与 Tauri 待对应构建完成后再更新下载链接。
-> **Electron `v3.0.1`**（Linux）与 **Tauri `v3.0.1`**（macOS arm64）。macOS / Linux Electron 为完整双 harness 体验的推荐版本；Windows 因上游暂未提供 fx binary，当前为 Pi harness。
-> **Electron `v3.0.1`** (macOS / Windows / Linux) and **Tauri `v3.0.1`** (macOS arm64). Electron is recommended for the complete dual-harness experience; About identifies the Electron / Tauri build.
+> **Electron `v3.0.8`** 发布 macOS arm64 与 Intel x64（DMG / ZIP）；**Tauri `v3.0.8`** 发布 macOS arm64（DMG）。Windows x64 保持 v3.0.5；Linux 待对应构建完成后再更新下载链接。
+> Electron 为完整双 harness 体验的推荐版本；Tauri 为轻量原生 Rust + Tauri 2 体验；About 面板可明确识别 Electron / Tauri 构建。
 
-> 🚀 **v3.0.7 更新 / What’s new:**
-> - **保留并优化自动上下文压缩**：恢复 SDK 默认自动压缩；汇总请求单独关闭推理并限制输出预算，不改变对话模型和推理设置。单次汇总最多等待 60 秒，失败后重试一次，总流程有 150 秒兜底。摘要成功后落盘并供下一轮使用，失败时保留原会话及排队消息。
-> - **压缩状态与资源清理**：修复停止后的迟到事件、遗留进度提示、并行摘要请求未取消及跨次压缩文件记录丢失；压缩期间可排队续聊。
-> - **浮动文件预览**：支持可调整大小的浮动预览窗口和外部链接。
-> - **Claude Desktop 级 Markdown 输出美化**：指令绿色强调、代码块默认隐藏折叠（可点击展开与复制）、链接紫色高亮、引用块蓝调微衬、数字文本加粗，大幅提升主文本段的可阅读性。
-> - **流程图与图表原生渲染**：内置 Mermaid 支持流程图直接解析与图表展示，杜绝 `[object Object]` 异常字符输出。
-> - **双面板多会话智能轮替与数据保真**：双面板模式下固定维持最新的两个会话轮替显示，归档会话只在单面板中查看隔离，彻底解决次面板不显示最新内容的问题。
-> *Automatic compaction stays enabled. Summary-only reasoning and output budgets, bounded retries, cancellation cleanup, and persisted summaries keep long conversations usable without changing chat inference settings. Includes floating file previews and the previous Markdown, Mermaid, and dual-pane improvements.*
+> 🚀 **v3.0.8 更新 / What’s new:**
+> - **渲染器快照交付吞吐与故障自动恢复**：优化渲染器快照分发机制，杜绝并行任务与高频日志下的渲染阻塞与事件积压；加入渲染层全局 ErrorBoundary 兜底恢复，UI 渲染异常自动静默重置恢复，保证会话继续平稳推进。
+> - **macOS 双架构与双引擎同步发版**：Electron 引擎同步打包发布 Apple Silicon (arm64) 与 Intel (x64) 双架构；Tauri 引擎同步打包发布 Apple Silicon (arm64) 原生版本。
+> - **原生权限与通知组件 Universal 架构支持**：将 macOS 系统通知状态检测与系统权限引导辅助程序升级为通用二进制（Universal Binary），跨架构无缝执行与自动签名。
+> - **自动上下文压缩与浮动文件预览延续**：保留 3.0.7 优化的上下文自动压缩兜底机制、浮动多格式文件预览器、Claude Desktop 级 Markdown 排版与 Mermaid 流程图原生渲染。
+> *Optimizes renderer snapshot delivery and adds render error boundary recovery; releases dual-engine macOS updates (Electron arm64 & x64, Tauri arm64) with universal native helpers.*
 
 > 🚀 **v3.x / v3.0.5 重大版本汇总 / Taosi 3.x Consolidated Highlights:**
 > - **全新品牌与全平台重构（v3.0.0）**：正式升级更名为 **Taosi**；新增右侧**文件实时预览面板（File Preview Panel）**；原生支持 EasyCLIProxyAPI（OAuth with Claude, Antigravity, Codex, Kimi, xAI）及各类 OpenAI 兼容网关；全新顶栏折叠与长标题自适应交互。

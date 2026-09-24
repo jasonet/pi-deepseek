@@ -17,18 +17,28 @@ echo "Generating and verifying macOS update feed for v${VERSION}..."
 PI_APP_RELEASE_VERSION="$VERSION" node scripts/generate-mac-update-feed.mjs
 PI_APP_RELEASE_VERSION="$VERSION" node apps/desktop/scripts/assert-mac-update-assets.mjs
 
-echo "Creating / updating GitHub release v${VERSION} with ${ZIP} and ${FEED}..."
+ASSETS=()
+for f in apps/desktop/release/Taosi-${VERSION}* apps/desktop/release/latest-mac.yml; do
+  if [ -f "$f" ]; then
+    ASSETS+=("$f")
+  fi
+done
+
+echo "Creating / updating GitHub release v${VERSION} with ${#ASSETS[@]} assets..."
 if gh release view "v${VERSION}" -R jasonet/pi-deepseek >/dev/null 2>&1; then
   echo "Release v${VERSION} exists, uploading assets..."
-  gh release upload "v${VERSION}" "$ZIP" "$FEED" -R jasonet/pi-deepseek --clobber
+  gh release upload "v${VERSION}" "${ASSETS[@]}" -R jasonet/pi-deepseek --clobber
 else
-  gh release create "v${VERSION}" "$ZIP" "$FEED" \
+  NOTES_ARGS=()
+  if [ -f "apps/desktop/release/notes-${VERSION}.md" ]; then
+    NOTES_ARGS=(--notes-file "apps/desktop/release/notes-${VERSION}.md")
+  else
+    NOTES_ARGS=(--generate-notes)
+  fi
+
+  gh release create "v${VERSION}" "${ASSETS[@]}" \
     -R jasonet/pi-deepseek \
     --title "Taosi ${VERSION}" \
-    --notes-file "apps/desktop/release/notes-${VERSION}.md" 2>/dev/null || \
-  gh release create "v${VERSION}" "$ZIP" "$FEED" \
-    -R jasonet/pi-deepseek \
-    --title "Taosi ${VERSION}" \
-    --generate-notes
+    "${NOTES_ARGS[@]}"
 fi
 echo "Release v${VERSION} ready with macOS assets."

@@ -56,7 +56,9 @@
 
 ## 简介
 
-`Taosi` 利用 Pi/fx coding agent 充分发挥 DeepSeek V4 Pro/Flash（DeepSeek已经失去性价比，目前首推codex订阅，fx可以无缝login openai codex/grok），同时内置了DeepSeek Harness Web UI（npx @deepseek-ai/dsh web），一个面向本地 AI 编程工作流的桌面客户端。现已支持 macOS / Windows / Linux 三平台，为 pi和fx 会话提供深推理、无提示词的 Agent 级工程自动交互体验。
+`Taosi` 利用 Pi(pi-computer-use)/fx coding agent 充分发挥私密Agent优势（远离A社监控，撰写能力来自盗版书籍，模型升级来自监控分析优质用户对话），订阅目前首推codex，fx和CLIProxyAPI也可无缝login openai codex/grok；
+
+内置了DeepSeek Harness Web UI（npx @deepseek-ai/dsh web），一个面向本地 AI 编程工作流的桌面客户端。现已支持 macOS / Windows / Linux 三平台，为 pi和fx 会话提供深推理、无提示词的 Agent 级工程自动交互体验。
 
 ![dual-pane](./docs/readme/dual-pane.jpg)
 

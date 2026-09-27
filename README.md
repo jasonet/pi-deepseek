@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <strong>Taosi 3.0 pi/fx elegant harness GUI with DeepSeek Harness(Official) local LLM and CLIProxyAPI/EasyCLIProxyAPI OAuth</strong>
+  <strong>Taosi 3.0 pi(pi-computer-use)/fx elegant harness GUI with DeepSeek Harness(Official) local LLM and CLIProxyAPI/EasyCLIProxyAPI OAuth</strong>
 </p>
 
 <p align="center">
@@ -28,27 +28,11 @@
 | **Linux** | x64 | Electron | v3.0.1 | deb | 157 MB | [![Download](https://img.shields.io/badge/Download-.deb-%234D6BFE?logo=ubuntu)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.1/Taosi-3.0.1-linux-amd64.deb) |
 | **Linux** | x64 | Electron | v3.0.1 | AppImage | 161 MB | [![Download](https://img.shields.io/badge/Download-AppImage-%234D6BFE?logo=linux)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.1/Taosi-3.0.1-linux-x86_64.AppImage) |
 
-> 🧭 **双引擎版本矩阵 / Dual-engine version matrix:**
-> **Electron `v3.0.8`** 发布 macOS（arm64 / x64 DMG & ZIP）与 Windows（x64 安装版 & 便携版）；**Tauri `v3.0.8`** 发布 macOS arm64（DMG）。Linux 待对应构建完成后再更新下载链接。
-> Electron 为完整双 harness 体验的推荐版本；Tauri 为轻量原生 Rust + Tauri 2 体验；About 面板可明确识别 Electron / Tauri 构建。
-
-> 🚀 **v3.0.8 更新 / What’s new:**
-> - **渲染器快照交付吞吐与故障自动恢复**：优化渲染器快照分发机制，杜绝并行任务与高频日志下的渲染阻塞与事件积压；加入渲染层全局 ErrorBoundary 兜底恢复，UI 渲染异常自动静默重置恢复，保证会话继续平稳推进。
-> - **macOS 双架构与双引擎同步发版**：Electron 引擎同步打包发布 Apple Silicon (arm64) 与 Intel (x64) 双架构；Tauri 引擎同步打包发布 Apple Silicon (arm64) 原生版本。
-> - **原生权限与通知组件 Universal 架构支持**：将 macOS 系统通知状态检测与系统权限引导辅助程序升级为通用二进制（Universal Binary），跨架构无缝执行与自动签名。
-> - **自动上下文压缩与浮动文件预览延续**：保留 3.0.7 优化的上下文自动压缩兜底机制、浮动多格式文件预览器、Claude Desktop 级 Markdown 排版与 Mermaid 流程图原生渲染。
-> *Optimizes renderer snapshot delivery and adds render error boundary recovery; releases dual-engine macOS updates (Electron arm64 & x64, Tauri arm64) with universal native helpers.*
-
-> 🚀 **v3.x / v3.0.5 重大版本汇总 / Taosi 3.x Consolidated Highlights:**
+> 🚀 **v3.x / v3.0.8 重大版本汇总 / Taosi 3.x Consolidated Highlights:**
 > - **全新品牌与全平台重构（v3.0.0）**：正式升级更名为 **Taosi**；新增右侧**文件实时预览面板（File Preview Panel）**；原生支持 EasyCLIProxyAPI（OAuth with Claude, Antigravity, Codex, Kimi, xAI）及各类 OpenAI 兼容网关；全新顶栏折叠与长标题自适应交互。
 > - **桌面自动化控制扩展（v3.0.5）**：内置集成 `@injaneity/pi-computer-use`，赋能 AI 智能体直接观察与操控操作系统桌面应用，支持屏幕截屏、UI 辅助功能树提取与精准键鼠交互。
-> - **系统权限智能一键引导（v3.0.5）**：支持 macOS 辅助功能（Accessibility）与屏幕录制（Screen Recording）权限的实时双向检测与一键智能自动引导弹窗，切换系统设置后自动感知刷新，支持 Esc 紧急打断。
-> - **多步工具调用单行实时滚屏（v3.0.4）**：多步工具执行折叠为单行实时滚屏（参考 Claude 体验），仅展示最新指令与状态，避免冗长刷屏，支持点击展开详情。
-> - **输入框草稿保护与体验优化（v3.0.4）**：在输入框内切换模型或思考等级时，完整保留已输入的提示词草稿与文件/图片附件，不再清空。
 > - **代码块折叠与语法高亮（v3.0.5）**：时间线代码块默认折叠显示语言标签、行数与首行预览，展开显示行号与语法高亮，支持一键复制代码。
-> - **上下文压缩防挂起修复（v3.0.5）**：为全量模型提供 90s 超时防护与状态收敛流转，彻底解决长时间停留于 `Compacting conversation context... Working…` 不结束的问题。
 > - **提供商与通知体验优化（v3.0.1 / v3.0.2）**：自定义供应商 API Key 安全遮罩并支持探测自动复用；长模型列表支持滚动；macOS 通知先显示状态类型标记，会话快捷键 Cmd+Tab 作用域隔离。
-> *Consolidates the Taosi 3.x series: complete Taosi rebrand & file preview panel; @injaneity/pi-computer-use desktop automation; intelligent one-click macOS Accessibility & Screen Recording guidance; Claude-style rolling single-row tool execution; composer draft & attachment preservation across model switches; collapsible syntax-highlighted code blocks; and 90s timeout guard against conversation compaction hangs.*
 
 > **v2.9.5 更新 / What's new:**
 > **OpenAI 兼容供应商（CLIProxyAPI）**：提供商设置升级支持 EasyCLIProxyAPI（OAuth with Claude, Antigravity, Codex, Kimi, xAI）、llama.cpp、Ollama、LM Studio、vLLM 等兼容网关。
@@ -65,19 +49,6 @@
 > **v2.8.0 更新 / What's new:**
 > **DeepSeek Harness**：新增内置 Harness Web 页签；本机服务未启动时，明确提示运行 `npx @deepseek-ai/dsh web`。
 > **本地模型**：支持自定义 OpenAI 兼容供应商和本地 LLM 端点。
-> **Tauri 稳定性**：修复 sidecar IPC 参数、Node runtime 打包及 `yaml` 运行时依赖。
-> *Adds the embedded DeepSeek Harness tab and offline startup guidance, custom OpenAI-compatible local LLM providers, and Tauri sidecar/runtime packaging fixes.*
-
-> 🆕 **v2.7.0 更新 / What's new:**
-> ⚡ **性能优化**：代码分割（首屏 JS ↓49%）、8 个视图懒加载（Settings/Skills/Extensions/ConnectPhone/Terminal/Diff/Tree）、SessionRecord 快取跳过重建
-> 🧠 **内存优化**：Transcript 缓存 LRU（上限 12 session）、Session data Maps 上限（64 + running）、移除 structuredClone 深拷贝、定期 GC
-> 🛡️ **稳定性**：30 天 × 20 workspace 长期运行零洩漏验证通过
-> *Performance & memory overhaul: code splitting (-49% initial JS), 8 lazy-loaded views, SessionRecord cache skipping, transcript LRU, bounded session data maps, periodic GC.*
-
-> 💡 **macOS**：下载 `.dmg` 双击挂载，将 `Taosi.app` 拖入 `/Applications`。
-> **Windows**：`Setup.exe` 为安装版（推荐），`Portable.exe` 为绿色免安装版。
-> **Linux**：Ubuntu/Debian/Deepin/UOS 用 `sudo dpkg -i xxx.deb` 安装；其他发行版用 `chmod +x xxx.AppImage && ./xxx.AppImage` 运行。
-> 首次启动自动弹出设置引导，填入 DeepSeek API Key 即可开始。
 
 📦 [查看全部 Release & 校验文件 →](https://github.com/jasonet/pi-deepseek/releases/latest)
 

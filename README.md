@@ -60,9 +60,9 @@
 
 利用 Pi(pi-computer-use)/fx coding agent 充分发挥私密Agent优势（远离A社监控，撰写能力来自盗版书籍，模型升级来自监控分析优质用户对话），订阅目前首推codex，fx和CLIProxyAPI也可无缝login openai codex/grok；
 
-内置了DeepSeek Harness Web UI（npx @deepseek-ai/dsh web）和computer-use；
+内置了DeepSeek Harness Web UI（npx @deepseek-ai/dsh web）和computer-use；支持 macOS / Windows / Linux 三平台，为 pi和fx 会话提供深推理、无提示词的 Agent 级工程自动交互体验。
 
-支持 macOS / Windows / Linux 三平台，为 pi和fx 会话提供深推理、无提示词的 Agent 级工程自动交互体验。
+如果需要更全面的研究级Harness的本地模型管理Agent工程客户端，建议关注[`Playa`](https://github.com/jasonet/playa)，模型的下载，配置，调优，Beta阶段；
 
 ![dual-pane](./docs/readme/dual-pane.jpg)
 

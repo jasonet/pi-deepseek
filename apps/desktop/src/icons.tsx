@@ -392,3 +392,19 @@ export function CheckSmallIcon() {
   );
 }
 
+export function TrashIcon() {
+  return (
+    <Icon>
+      <path d="M4.5 7h11M8 7V5h4v2M14.5 7l-.7 8.5a1 1 0 0 1-1 .9H7.2a1 1 0 0 1-1-.9L5.5 7" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.3" fill="none" />
+    </Icon>
+  );
+}
+
+export function PencilIcon() {
+  return (
+    <Icon>
+      <path d="M13.5 4.5 15.5 6.5l-8.5 8.5H5v-2l8.5-8.5ZM12 6l2 2" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.3" fill="none" />
+    </Icon>
+  );
+}
+

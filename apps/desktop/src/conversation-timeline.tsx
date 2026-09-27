@@ -88,6 +88,10 @@ interface ConversationTimelineProps {
   readonly onContentHeightChange: () => void;
   readonly onViewFileInDiff?: (path: string) => void;
   readonly onPreviewFile?: (path: string) => void;
+  readonly onCopyMessage?: (text: string) => void;
+  readonly onRerunMessage?: (text: string) => void;
+  readonly onEditMessage?: (text: string) => void;
+  readonly onEnhanceMessage?: (text: string) => void;
 }
 
 export function ConversationTimeline({
@@ -104,6 +108,10 @@ export function ConversationTimeline({
   onContentHeightChange,
   onViewFileInDiff,
   onPreviewFile,
+  onCopyMessage,
+  onRerunMessage,
+  onEditMessage,
+  onEnhanceMessage,
 }: ConversationTimelineProps) {
   const entries = useMemo(() => groupTranscript(transcript), [transcript]);
 
@@ -275,6 +283,10 @@ export function ConversationTimeline({
           onToggleToolGroup={toggleToolGroup}
           onViewFileInDiff={onViewFileInDiff}
           onPreviewFile={onPreviewFile}
+          onCopyMessage={onCopyMessage}
+          onRerunMessage={onRerunMessage}
+          onEditMessage={onEditMessage}
+          onEnhanceMessage={onEnhanceMessage}
         />
       )}
       {showJumpToLatest ? (
@@ -300,6 +312,10 @@ function TranscriptList({
   onToggleToolGroup,
   onViewFileInDiff,
   onPreviewFile,
+  onCopyMessage,
+  onRerunMessage,
+  onEditMessage,
+  onEnhanceMessage,
 }: {
   readonly entries: readonly TimelineEntry[];
   readonly virtualize: boolean;
@@ -314,6 +330,10 @@ function TranscriptList({
   readonly onToggleToolGroup: (groupId: string) => void;
   readonly onViewFileInDiff?: (path: string) => void;
   readonly onPreviewFile?: (path: string) => void;
+  readonly onCopyMessage?: (text: string) => void;
+  readonly onRerunMessage?: (text: string) => void;
+  readonly onEditMessage?: (text: string) => void;
+  readonly onEnhanceMessage?: (text: string) => void;
 }) {
   const [viewport, setViewport] = useState({ scrollTop: 0, height: 0 });
   const previousTotalHeightRef = useRef(0);
@@ -407,6 +427,10 @@ function TranscriptList({
             onToggleToolGroup={onToggleToolGroup}
             onViewFileInDiff={onViewFileInDiff}
             onPreviewFile={onPreviewFile}
+            onCopyMessage={onCopyMessage}
+            onRerunMessage={onRerunMessage}
+            onEditMessage={onEditMessage}
+            onEnhanceMessage={onEnhanceMessage}
           />
         );
       })}
@@ -425,6 +449,10 @@ function MeasuredTimelineItem({
   onToggleToolGroup,
   onViewFileInDiff,
   onPreviewFile,
+  onCopyMessage,
+  onRerunMessage,
+  onEditMessage,
+  onEnhanceMessage,
 }: {
   readonly entry: TimelineEntry;
   readonly className?: string;
@@ -436,6 +464,10 @@ function MeasuredTimelineItem({
   readonly onToggleToolGroup: (groupId: string) => void;
   readonly onViewFileInDiff?: (path: string) => void;
   readonly onPreviewFile?: (path: string) => void;
+  readonly onCopyMessage?: (text: string) => void;
+  readonly onRerunMessage?: (text: string) => void;
+  readonly onEditMessage?: (text: string) => void;
+  readonly onEnhanceMessage?: (text: string) => void;
 }) {
   const rowRef = useRef<HTMLDivElement | null>(null);
 
@@ -482,6 +514,10 @@ function MeasuredTimelineItem({
           onToggleToolCall={onToggleToolCall}
           onViewFileInDiff={onViewFileInDiff}
           onPreviewFile={onPreviewFile}
+          onCopyMessage={onCopyMessage}
+          onRerunMessage={onRerunMessage}
+          onEditMessage={onEditMessage}
+          onEnhanceMessage={onEnhanceMessage}
         />
       )}
     </div>

@@ -1,9 +1,9 @@
-import { memo, useMemo } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import type { SessionTranscriptMessage } from "@pi-gui/pi-sdk-driver";
 import type { TimelineActivity, TimelineToolCall, TimelineToolGroup, TimelineSummary, TranscriptMessage } from "./timeline-types";
 import { MessageMarkdown } from "./message-markdown";
 import { InlineDiff, extractDiffFromOutput } from "./diff-inline";
-import { ChevronRightIcon, CopyIcon, DiffIcon, FileIcon } from "./icons";
+import { ChevronRightIcon, CopyIcon, DiffIcon, FileIcon, PencilIcon, RefreshIcon, SparkIcon, TrashIcon } from "./icons";
 import { extensionToLanguage } from "./syntax-highlight";
 
 export const TimelineItem = memo(function TimelineItem({
@@ -12,16 +12,33 @@ export const TimelineItem = memo(function TimelineItem({
   onToggleToolCall,
   onViewFileInDiff,
   onPreviewFile,
+  onCopyMessage,
+  onRerunMessage,
+  onEditMessage,
+  onEnhanceMessage,
 }: {
   readonly item: TranscriptMessage;
   readonly expandedToolCallIds?: ReadonlySet<string>;
   readonly onToggleToolCall?: (callId: string) => void;
   readonly onViewFileInDiff?: (path: string) => void;
   readonly onPreviewFile?: (path: string) => void;
+  readonly onCopyMessage?: (text: string) => void;
+  readonly onRerunMessage?: (text: string) => void;
+  readonly onEditMessage?: (text: string) => void;
+  readonly onEnhanceMessage?: (text: string) => void;
 }) {
   switch (item.kind) {
     case "message":
-      return <TimelineMessage item={item} onPreviewFile={onPreviewFile} />;
+      return (
+        <TimelineMessage
+          item={item}
+          onPreviewFile={onPreviewFile}
+          onCopyMessage={onCopyMessage}
+          onRerunMessage={onRerunMessage}
+          onEditMessage={onEditMessage}
+          onEnhanceMessage={onEnhanceMessage}
+        />
+      );
     case "activity":
       return <TimelineActivityItem item={item} />;
     case "tool":
@@ -43,10 +60,28 @@ export const TimelineItem = memo(function TimelineItem({
 function TimelineMessage({
   item,
   onPreviewFile,
+  onCopyMessage,
+  onRerunMessage,
+  onEditMessage,
+  onEnhanceMessage,
 }: {
   readonly item: SessionTranscriptMessage;
   readonly onPreviewFile?: (path: string) => void;
+  readonly onCopyMessage?: (text: string) => void;
+  readonly onRerunMessage?: (text: string) => void;
+  readonly onEditMessage?: (text: string) => void;
+  readonly onEnhanceMessage?: (text: string) => void;
 }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(() => {
+    void navigator.clipboard.writeText(item.text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+    onCopyMessage?.(item.text);
+  }, [item.text, onCopyMessage]);
+
   if (item.role === "user") {
     return (
       <article className="timeline-item timeline-item--user">
@@ -77,6 +112,46 @@ function TimelineMessage({
             </div>
           ) : null}
           <MessageMarkdown text={item.text} onPreviewFile={onPreviewFile} />
+        </div>
+        <div className="timeline-item__user-actions">
+          <button
+            className="timeline-item__action-btn"
+            onClick={handleCopy}
+            title={copied ? "已複製" : "複製"}
+            type="button"
+          >
+            <CopyIcon />
+          </button>
+          {onEditMessage && (
+            <button
+              className="timeline-item__action-btn"
+              onClick={() => onEditMessage(item.text)}
+              title="編輯並重送"
+              type="button"
+            >
+              <PencilIcon />
+            </button>
+          )}
+          {onRerunMessage && (
+            <button
+              className="timeline-item__action-btn"
+              onClick={() => onRerunMessage(item.text)}
+              title="重新執行"
+              type="button"
+            >
+              <RefreshIcon />
+            </button>
+          )}
+          {onEnhanceMessage && (
+            <button
+              className="timeline-item__action-btn timeline-item__action-btn--enhance"
+              onClick={() => onEnhanceMessage(item.text)}
+              title="智能推理增強"
+              type="button"
+            >
+              <SparkIcon />
+            </button>
+          )}
         </div>
       </article>
     );

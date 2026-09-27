@@ -1974,6 +1974,31 @@ export default function App() {
     void updateSnapshot(api, setSnapshot, () => api.submitComposer(lastUserMessage.text));
   };
 
+  const handleRerunMessage = useCallback(
+    (text: string) => {
+      if (!selectedSession || selectedSession.status === "running" || !text.trim()) return;
+      void updateSnapshot(api, setSnapshot, () => api.submitComposer(text));
+    },
+    [api, selectedSession],
+  );
+
+  const handleEditMessage = useCallback(
+    (text: string) => {
+      setComposerDraft(text);
+      setTimeout(() => composerRef.current?.focus(), 0);
+    },
+    [setComposerDraft],
+  );
+
+  const handleEnhanceMessage = useCallback(
+    (text: string) => {
+      const enhanced = `請優化以下 prompt，使其更清晰、具體、便於 AI 深度推理，保留原意但補充必要背景和預期輸出格式：\n\n${text}`;
+      setComposerDraft(enhanced);
+      setTimeout(() => composerRef.current?.focus(), 0);
+    },
+    [setComposerDraft],
+  );
+
   const handleSecondarySubmit = (options: { readonly deliverAs?: "steer" | "followUp" } = {}) => {
     if (!secondarySession || !secondaryWorkspaceId || !api || !secondaryDraft.trim()) return;
     if (secondarySession.backendId === "fx" && secondarySession.status === "running") return;
@@ -3162,6 +3187,9 @@ export default function App() {
                   onContentHeightChange={handleTimelineContentHeightChange}
                   onViewFileInDiff={handleViewFileInDiff}
                   onPreviewFile={(path) => handlePreviewFile(selectedWorkspace.id, path)}
+                  onRerunMessage={handleRerunMessage}
+                  onEditMessage={handleEditMessage}
+                  onEnhanceMessage={handleEnhanceMessage}
                 />
               </div>
             </section>
@@ -3364,6 +3392,9 @@ export default function App() {
                   onContentHeightChange={handleTimelineContentHeightChange}
                   onViewFileInDiff={handleViewFileInDiff}
                   onPreviewFile={(path) => handlePreviewFile(selectedWorkspace.id, path)}
+                  onRerunMessage={handleRerunMessage}
+                  onEditMessage={handleEditMessage}
+                  onEnhanceMessage={handleEnhanceMessage}
                 />
               </div>
             </section>

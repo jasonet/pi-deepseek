@@ -64,6 +64,14 @@ Package a Linux AppImage locally:
 pnpm --filter @pi-gui/desktop run package:linux
 ```
 
+## Pi Response Deadlines
+
+Pi model streams have a content-silence watchdog in addition to the provider's HTTP timeout. Response headers and SSE keepalives alone do not count as model progress. By default, the first non-empty text, thinking, or tool-argument delta must arrive within five minutes; subsequent deltas refresh a two-minute idle deadline. There is no total-duration limit while content continues arriving. Tool execution and context compaction use their own lifecycle, outside this watchdog.
+
+A stalled request is cancelled without automatic resubmission. Already received content remains in session history, and the user can retry in the same thread. Cancellation excludes internal streaming argument buffers from persisted messages.
+
+For unusually slow local models, set `PI_APP_MODEL_FIRST_RESPONSE_TIMEOUT_MS` and/or `PI_APP_MODEL_IDLE_TIMEOUT_MS` in the app process environment before launch. Positive finite values are clamped to 250 ms through 30 minutes; invalid values use the defaults. `PI_APP_CUSTOM_MODEL_TIMEOUT_MS` still controls the separate custom-provider HTTP connection timeout. These settings do not apply to the independent fx ACP runtime.
+
 ## Windows Updates
 
 The installed NSIS build checks the published GitHub Release feed every four hours. An available version is shown inside the running app; the user starts the download, sees byte and percentage progress, and chooses whether to restart immediately after the update is ready. Session persistence is flushed before `quitAndInstall` runs.

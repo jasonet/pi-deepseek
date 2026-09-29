@@ -106,6 +106,7 @@
       "name": "@pi-gui/pi-sdk-driver",
       "version": "0.0.0",
       "dependencies": {
+        "@earendil-works/pi-ai": "^0.74.0",
         "@earendil-works/pi-coding-agent": "^0.74.0",
         "@pi-gui/catalogs": "workspace:*",
         "@pi-gui/session-driver": "workspace:*",

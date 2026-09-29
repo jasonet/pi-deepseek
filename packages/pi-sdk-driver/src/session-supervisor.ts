@@ -77,6 +77,7 @@ import {
 import { SystemPromptComposer, type PromptComposeContext } from "./system-prompt-composer.js";
 import { PI_BACKEND_ID } from "./backend-contract.js";
 import { compactionResourceOptions, compactionTimeoutMs } from "./compaction-policy.js";
+import { withResponseWatchdog } from "./response-watchdog.js";
 
 export interface PiSdkDriverOptions {
   readonly catalogFilePath?: string;
@@ -863,7 +864,7 @@ export class SessionSupervisor {
 
     record.session = session;
     record.sessionFile = session.sessionFile ?? session.sessionManager.getSessionFile();
-    this.configureCustomProviderStream(record, session);
+    this.configureModelStream(record, session);
     record.unsubscribeAgent?.();
     record.unsubscribeAgent = session.subscribe((event) => {
       void this.handleAgentEvent(record, event);
@@ -892,13 +893,13 @@ export class SessionSupervisor {
     record.sessionCommands = this.collectSessionCommands(session);
   }
 
-  private configureCustomProviderStream(record: ManagedSessionRecord, session: AgentSession): void {
+  private configureModelStream(record: ManagedSessionRecord, session: AgentSession): void {
     if (this.configuredAgents.has(session.agent)) {
       return;
     }
     this.configuredAgents.add(session.agent);
 
-    const upstreamStream = session.agent.streamFn;
+    const upstreamStream = withResponseWatchdog(session.agent.streamFn);
     session.agent.streamFn = async (model, context, options) => {
       if (!isCustomProvider(model.provider)) {
         return upstreamStream(model, context, options);

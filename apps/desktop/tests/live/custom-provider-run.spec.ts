@@ -140,6 +140,118 @@ test("custom provider timeout fails once instead of staying in Working", async (
   }
 });
 
+for (const { partial, provider } of [
+  { partial: false, provider: providerId },
+  { partial: true, provider: providerId },
+  { partial: false, provider: "deepseek" },
+]) {
+  test(`${provider} silent SSE ${partial ? "after partial content" : "after headers"} fails and the next prompt works`, async ({}, testInfo) => {
+    test.setTimeout(30_000);
+    let requestCount = 0;
+    let disconnected = false;
+    const server = createServer((request, response) => {
+      request.resume();
+      requestCount += 1;
+      if (requestCount > 1) { writeCompletion(response, "RECOVERED_RESPONSE", 100); return; }
+      response.writeHead(200, { "content-type": "text/event-stream" });
+      response.flushHeaders();
+      if (partial) response.write(`data: ${JSON.stringify({
+        id: "partial-stall", object: "chat.completion.chunk", model: modelId,
+        choices: [{ index: 0, delta: { content: "PRESERVED_PARTIAL" }, finish_reason: null }],
+      })}\n\n`);
+      const heartbeat = setInterval(() => response.write(": keepalive\n\n"), 100);
+      response.on("close", () => { disconnected = true; clearInterval(heartbeat); });
+    });
+    const port = await listen(server);
+    const { agentDir, userDataDir, workspacePath } = await prepareCustomProvider(port, { provider });
+    const harness = await launchDesktop(userDataDir, {
+      agentDir, initialWorkspaces: [workspacePath], scrubProviderEnv: true, testMode: "background",
+      envOverrides: { PI_APP_MODEL_FIRST_RESPONSE_TIMEOUT_MS: "1500", PI_APP_MODEL_IDLE_TIMEOUT_MS: "1500" },
+    });
+    try {
+      const window = await harness.firstWindow();
+      await createNamedThread(window, "Silent response recovery");
+      const composer = window.getByTestId("composer");
+      const transcript = window.getByTestId("transcript");
+      await composer.fill("Exercise silent stream recovery.");
+      await composer.press("Enter");
+      await expect(transcript).toContainText(partial ? "PRESERVED_PARTIAL" : "Generating response...");
+      await expect.poll(async () => (await getDesktopState(window)).workspaces[0]?.sessions[0]?.status).toBe("failed");
+      await expect(transcript).toContainText("Model response stalled");
+      await expect(window.locator(".timeline-activity--error")).toBeVisible();
+      await expect.poll(() => disconnected).toBe(true);
+      expect(requestCount).toBe(1);
+      if (partial) await expect(transcript).toContainText("PRESERVED_PARTIAL");
+      await window.screenshot({ path: testInfo.outputPath("stalled-response.png") });
+      await composer.fill("Try a fresh request.");
+      await composer.press("Enter");
+      await expect(transcript).toContainText("RECOVERED_RESPONSE");
+      await expect.poll(async () => (await getDesktopState(window)).workspaces[0]?.sessions[0]?.status).toBe("idle");
+      expect(requestCount).toBe(2);
+    } finally {
+      await harness.close();
+      await close(server);
+    }
+  });
+}
+
+for (const stop of [false, true]) {
+  test(`model stream ${stop ? "can be stopped before first content" : "can outlast the first-response deadline while making progress"}`, async () => {
+    test.setTimeout(30_000);
+    let disconnected = false;
+    const server = createServer((request, response) => {
+      request.resume();
+      response.writeHead(200, { "content-type": "text/event-stream" });
+      response.flushHeaders();
+      let count = 0;
+      const interval = setInterval(() => {
+        if (stop) { response.write(": keepalive\n\n"); return; }
+        count += 1;
+        response.write(`data: ${JSON.stringify({
+          id: "steady", object: "chat.completion.chunk", model: modelId,
+          choices: [{ index: 0, delta: count < 8 ? { reasoning_content: "thinking " } : { content: "STEADY_RESPONSE" }, finish_reason: null }],
+        })}\n\n`);
+        if (count === 8) {
+          clearInterval(interval);
+          response.write(`data: ${JSON.stringify({
+            id: "steady", object: "chat.completion.chunk", model: modelId,
+            choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
+          })}\n\n`);
+          response.end("data: [DONE]\n\n");
+        }
+      }, 250);
+      response.on("close", () => { disconnected = true; clearInterval(interval); });
+    });
+    const port = await listen(server);
+    const { agentDir, userDataDir, workspacePath } = await prepareCustomProvider(port);
+    const harness = await launchDesktop(userDataDir, {
+      agentDir, initialWorkspaces: [workspacePath], scrubProviderEnv: true, testMode: "background",
+      envOverrides: { PI_APP_MODEL_FIRST_RESPONSE_TIMEOUT_MS: "1500", PI_APP_MODEL_IDLE_TIMEOUT_MS: "1000" },
+    });
+    try {
+      const window = await harness.firstWindow();
+      await createNamedThread(window, "Stream activity protection");
+      await window.getByTestId("composer").fill("Exercise stream activity protection.");
+      await window.getByTestId("composer").press("Enter");
+      if (stop) {
+        await expect(window.getByTestId("transcript")).toContainText("Generating response...");
+        await window.getByRole("button", { name: "Stop run", exact: true }).click();
+      } else {
+        await expect(window.getByTestId("transcript")).toContainText("STEADY_RESPONSE");
+      }
+      await expect.poll(async () => (await getDesktopState(window)).workspaces[0]?.sessions[0]?.status).toBe("idle");
+      await expect.poll(() => disconnected).toBe(true);
+      // A leftover watchdog must not later turn a completed or stopped run into a failure.
+      await new Promise((resolve) => setTimeout(resolve, 1700));
+      expect((await getDesktopState(window)).workspaces[0]?.sessions[0]?.status).toBe("idle");
+      await expect(window.getByTestId("transcript")).not.toContainText("Model response stalled");
+    } finally {
+      await harness.close();
+      await close(server);
+    }
+  });
+}
+
 test("failed compaction attempts preserve the answer and restore the composer", async () => {
   test.setTimeout(30_000);
   let requestCount = 0;
@@ -414,31 +526,33 @@ for (const action of ["timeout", "stop", "queue"] as const) {
 async function prepareCustomProvider(
   port: number,
   options: {
+    readonly provider?: string;
     readonly contextWindow?: number;
     readonly compaction?: { readonly enabled?: boolean; readonly reserveTokens: number; readonly keepRecentTokens: number };
     readonly thinkingLevel?: string;
   } = {},
 ) {
+  const testProvider = options.provider ?? providerId;
   const userDataDir = await makeUserDataDir();
   const agentDir = join(userDataDir, "agent");
   const workspacePath = await makeWorkspace("custom-provider-run-workspace");
   await seedAgentDir(agentDir, {
     withOpenAiAuth: false,
-    enabledModels: [`${providerId}/${modelId}`],
+    enabledModels: [`${testProvider}/${modelId}`],
   });
   await writeFile(join(agentDir, "auth.json"), `${JSON.stringify({
-    [providerId]: { type: "api_key", key: "test-custom-key" },
+    [testProvider]: { type: "api_key", key: "test-custom-key" },
   }, null, 2)}\n`, "utf8");
   await writeFile(join(agentDir, "settings.json"), `${JSON.stringify({
-    defaultProvider: providerId,
+    defaultProvider: testProvider,
     defaultModel: modelId,
     defaultThinkingLevel: options.thinkingLevel ?? "off",
-    enabledModels: [`${providerId}/${modelId}`],
+    enabledModels: [`${testProvider}/${modelId}`],
     ...(options.compaction ? { compaction: options.compaction } : {}),
   }, null, 2)}\n`, "utf8");
   await writeFile(join(agentDir, "models.json"), `${JSON.stringify({
     providers: {
-      [providerId]: {
+      [testProvider]: {
         name: "Local test",
         baseUrl: `http://127.0.0.1:${port}/v1`,
         api: "openai-completions",

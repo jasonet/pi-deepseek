@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useMemo, useRef, useState, type MutableRefObject, type RefCallback, type RefObject } from "react";
+import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState, type MutableRefObject, type RefCallback, type RefObject } from "react";
 import type { TimelineEntry, TimelineToolCall, TimelineToolGroup, TranscriptMessage } from "./desktop-state";
 import { ThreadSearchBar } from "./thread-search";
 import { TimelineItem, TimelineToolGroupItem } from "./timeline-item";
@@ -94,7 +94,7 @@ interface ConversationTimelineProps {
   readonly onEnhanceMessage?: (text: string) => void;
 }
 
-export function ConversationTimeline({
+export const ConversationTimeline = memo(function ConversationTimeline({
   transcript,
   isTranscriptLoading,
   timelinePaneRef,
@@ -126,7 +126,9 @@ export function ConversationTimeline({
     !disableVirtualization &&
     !hasUnreliableVirtualizedHeights;
   const [expandedToolCallIds, setExpandedToolCallIds] = useState<Set<string>>(() => new Set());
-  const [expandedGroupIds, setExpandedGroupIds] = useState<Set<string>>(() => new Set());
+  const [expandedGroupIds, setExpandedGroupIds] = useState<Set<string>>(
+    () => new Set(entries.filter((e): e is TimelineToolGroup => e.kind === "tool-group").map((g) => g.id)),
+  );
   const measuredHeightsRef = useRef(new Map<string, number>());
   const [measurementVersion, setMeasurementVersion] = useState(0);
 
@@ -168,17 +170,15 @@ export function ConversationTimeline({
       entries.filter((entry): entry is TimelineToolGroup => entry.kind === "tool-group").map((g) => g.id),
     );
     setExpandedGroupIds((current) => {
-      if (current.size === 0) {
-        return current;
-      }
+      // Auto-expand newly appearing groups; prune groups that no longer exist.
       let changed = false;
       const next = new Set<string>();
-      for (const id of current) {
-        if (!availableGroupIds.has(id)) {
-          changed = true;
-          continue;
-        }
+      for (const id of availableGroupIds) {
         next.add(id);
+        if (!current.has(id)) changed = true;
+      }
+      for (const id of current) {
+        if (!availableGroupIds.has(id)) changed = true;
       }
       return changed ? next : current;
     });
@@ -296,9 +296,9 @@ export function ConversationTimeline({
       ) : null}
     </div>
   );
-}
+});
 
-function TranscriptList({
+const TranscriptList = memo(function TranscriptList({
   entries,
   virtualize,
   timelinePaneRef,
@@ -436,9 +436,9 @@ function TranscriptList({
       })}
     </div>
   );
-}
+});
 
-function MeasuredTimelineItem({
+const MeasuredTimelineItem = memo(function MeasuredTimelineItem({
   entry,
   className,
   top,
@@ -522,7 +522,7 @@ function MeasuredTimelineItem({
       )}
     </div>
   );
-}
+});
 
 function findStartIndex(offsets: readonly number[], heights: readonly number[], targetOffset: number): number {
   let low = 0;

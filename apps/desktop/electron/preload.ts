@@ -287,8 +287,12 @@ contextBridge.exposeInMainWorld("piApp", {
     ipcRenderer.invoke(desktopIpc.installOpenDesign) as Promise<{ ok: boolean; message: string }>,
   getDshWebStatus: () =>
     ipcRenderer.invoke(desktopIpc.getDshWebStatus) as Promise<DshWebStatus>,
+  getDsBotInstalled: () =>
+    ipcRenderer.invoke(desktopIpc.getDsBotInstalled) as Promise<boolean>,
   startDshWeb: () =>
     ipcRenderer.invoke(desktopIpc.startDshWeb) as Promise<DshWebStatus>,
+  launchDshWeb: () =>
+    ipcRenderer.invoke(desktopIpc.launchDshWeb) as Promise<DshWebStatus>,
   stopDshWeb: () =>
     ipcRenderer.invoke(desktopIpc.stopDshWeb) as Promise<DshWebStatus>,
   getTregStatus: () =>

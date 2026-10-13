@@ -690,6 +690,8 @@
   max-width: 760px;
   min-width: 0;
   overflow-wrap: anywhere;
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .timeline-item--summary-card {
@@ -1549,6 +1551,8 @@
   line-height: 1.33;
   overflow-wrap: anywhere;
   word-break: break-word;
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .message__content > :first-child {

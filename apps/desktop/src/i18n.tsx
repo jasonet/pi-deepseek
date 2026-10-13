@@ -26,6 +26,7 @@ const translations: Record<Locale, Record<string, string>> = {
     // Sidebar
     "sidebar.threads": "Threads",
     "sidebar.deepseekHarness": "DeepSeek Harness",
+    "sidebar.deepseekBot": "DeepSeek Bot",
     "sidebar.newThread": "New Thread",
     "sidebar.skills": "Skills",
     "sidebar.extensions": "Extensions",
@@ -495,6 +496,7 @@ const translations: Record<Locale, Record<string, string>> = {
     // Sidebar
     "sidebar.threads": "会话",
     "sidebar.deepseekHarness": "DeepSeek Harness",
+    "sidebar.deepseekBot": "DeepSeek Bot",
     "sidebar.newThread": "新建会话",
     "sidebar.skills": "技能",
     "sidebar.extensions": "扩展",
@@ -956,6 +958,7 @@ const translations: Record<Locale, Record<string, string>> = {
     // Sidebar
     "sidebar.threads": "會話",
     "sidebar.deepseekHarness": "DeepSeek Harness",
+    "sidebar.deepseekBot": "DeepSeek Bot",
     "sidebar.newThread": "新增會話",
     "sidebar.skills": "技能",
     "sidebar.extensions": "擴充功能",
@@ -1330,6 +1333,7 @@ const translations: Record<Locale, Record<string, string>> = {
     // Sidebar
     "sidebar.threads": "スレッド",
     "sidebar.deepseekHarness": "DeepSeek Harness",
+    "sidebar.deepseekBot": "DeepSeek Bot",
     "sidebar.newThread": "新規スレッド",
     "sidebar.skills": "スキル",
     "sidebar.extensions": "拡張機能",
@@ -1791,14 +1795,17 @@ function template(str: string, vars: Record<string, string>): string {
   return str.replace(/\{(\w+)\}/g, (_, key: string) => vars[key] ?? `{${key}}`);
 }
 
+export function translate(locale: Locale | undefined, key: string, vars?: Record<string, string>): string {
+  const loc = locale ?? "en";
+  const raw = translations[loc]?.[key] ?? translations.en[key] ?? key;
+  return vars ? template(raw, vars) : raw;
+}
+
 /* ── Hook ───────────────────────────────────────────── */
 
 export function useT() {
   const ctx = useContext(LocaleContext);
-  return (key: string, vars?: Record<string, string>) => {
-    const raw = translations[ctx.locale]?.[key] ?? translations.en[key] ?? key;
-    return vars ? template(raw, vars) : raw;
-  };
+  return (key: string, vars?: Record<string, string>) => translate(ctx.locale, key, vars);
 }
 
 export function useLocale() {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { AgentBackendId } from "@pi-gui/session-driver";
 import {
   DndContext,
@@ -84,6 +84,12 @@ export function Sidebar(props: SidebarProps) {
 
   const t = useT();
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [isDsBotInstalled, setIsDsBotInstalled] = useState(false);
+
+  useEffect(() => {
+    void api.getDsBotInstalled().then(setIsDsBotInstalled).catch(() => {});
+  }, [api]);
+
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   // Collision detection based on workspace row headers only (~30px top of each group),
@@ -169,6 +175,17 @@ export function Sidebar(props: SidebarProps) {
             <img className="sidebar__nav-logo" src={deepseekLogo} alt="" />
             <span>{t("sidebar.deepseekHarness")}</span>
           </button>
+          {isDsBotInstalled ? (
+            <button
+              className={`sidebar__nav-item ${activeView === "deepseek-bot" ? "sidebar__nav-item--active" : ""}`}
+              data-testid="open-deepseek-bot"
+              type="button"
+              onClick={() => onSetActiveView("deepseek-bot")}
+            >
+              <img className="sidebar__nav-logo" src={deepseekLogo} alt="" />
+              <span>{t("sidebar.deepseekBot")}</span>
+            </button>
+          ) : null}
           <button
             className="sidebar__nav-item"
             type="button"

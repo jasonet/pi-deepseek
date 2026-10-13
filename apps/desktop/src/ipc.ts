@@ -171,7 +171,9 @@ export const desktopIpc = {
   getOpenDesignStatus: "pi-gui:get-open-design-status",
   installOpenDesign: "pi-gui:install-open-design",
   getDshWebStatus: "pi-gui:get-dsh-web-status",
+  getDsBotInstalled: "pi-gui:get-ds-bot-installed",
   startDshWeb: "pi-gui:start-dsh-web",
+  launchDshWeb: "pi-gui:launch-dsh-web",
   stopDshWeb: "pi-gui:stop-dsh-web",
   getTregStatus: "pi-gui:get-treg-status",
   saveTregSettings: "pi-gui:save-treg-settings",
@@ -298,7 +300,7 @@ export interface OpenDesignStatus {
 
 export type DshWebStatus =
   | {
-      readonly state: "idle" | "starting";
+      readonly state: "idle" | "starting" | "launching";
     }
   | {
       readonly state: "running";
@@ -509,7 +511,9 @@ export interface PiDesktopApi {
   getOpenDesignStatus(): Promise<OpenDesignStatus>;
   installOpenDesign(): Promise<{ ok: boolean; message: string }>;
   getDshWebStatus(): Promise<DshWebStatus>;
+  getDsBotInstalled(): Promise<boolean>;
   startDshWeb(): Promise<DshWebStatus>;
+  launchDshWeb(): Promise<DshWebStatus>;
   stopDshWeb(): Promise<DshWebStatus>;
   getTregStatus(): Promise<TregStatus>;
   saveTregSettings(settings: SaveTregSettingsInput): Promise<TregStatus>;

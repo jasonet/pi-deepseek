@@ -11,6 +11,7 @@ import {
   resolveRuntimeSlashCommand,
 } from "../src/composer-commands";
 import { appendQueuedUserMessage, appendUserMessage, clearActiveAssistantMessage } from "./app-store-timeline";
+import { unarchiveSession } from "./app-store-workspace";
 import {
   cloneComposerAttachments,
   makeActivityItem,
@@ -475,7 +476,7 @@ export async function sendMessageToSession(
     await store.ensureSessionReady(sessionRef);
   }
   if (store.sessionFromState(sessionRef)?.archivedAt) {
-    await store.driver.unarchiveSession(sessionRef);
+    await unarchiveSession(store, { workspaceId: sessionRef.workspaceId, sessionId: sessionRef.sessionId });
   }
   appendUserMessage(
     store.sessionState.transcriptCache,

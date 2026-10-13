@@ -196,4 +196,12 @@ test.describe("Markdown formatting utilities", () => {
       expect(matches).toEqual(["package.json", "README.md"]);
     });
   });
+
+  test.describe("formatFileMentionsAndNumbers with context-based preview", () => {
+    test("renders file pills and numbers without explicit onPreviewFile prop", () => {
+      const { formatFileMentionsAndNumbers } = require("../../src/message-markdown");
+      const rendered = formatFileMentionsAndNumbers("See apps/desktop/src/App.tsx:42 for 100% details");
+      expect(rendered).toBeDefined();
+    });
+  });
 });

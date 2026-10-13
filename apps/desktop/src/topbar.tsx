@@ -160,6 +160,11 @@ export function Topbar(props: TopbarProps) {
             <span className="topbar__separator">/</span>
             <span className="topbar__session">DeepSeek Harness</span>
           </>
+        ) : activeView === "deepseek-bot" ? (
+          <>
+            <span className="topbar__separator">/</span>
+            <span className="topbar__session">DeepSeek Bot</span>
+          </>
         ) : null}
       </div>
 

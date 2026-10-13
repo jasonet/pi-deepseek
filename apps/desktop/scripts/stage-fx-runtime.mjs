@@ -80,6 +80,10 @@ async function stageTarget(target) {
     return;
   }
   const destination = join(outputRoot, target);
+  if (existsSync(join(destination, "fx"))) {
+    log(`${target}: fx runtime already present at ${destination}`);
+    return;
+  }
   rmSync(destination, { recursive: true, force: true });
   mkdirSync(destination, { recursive: true });
   const localBinary = candidateLocalBinary(target);

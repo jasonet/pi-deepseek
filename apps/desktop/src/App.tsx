@@ -37,7 +37,7 @@ import { buildThreadGroups, getVisibleThreadNavigationEntries } from "./thread-g
 import { computeDualPanePartner } from "./dual-pane-rotation";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
-import { LocaleProvider, useT } from "./i18n";
+import { LocaleProvider, translate } from "./i18n";
 import { ConversationTimeline, VIRTUALIZATION_THRESHOLD } from "./conversation-timeline";
 import { useSlashMenu } from "./hooks/use-slash-menu";
 import { useMentionMenu } from "./hooks/use-mention-menu";
@@ -88,6 +88,8 @@ const GLOBAL_SETTINGS_WORKSPACE: WorkspaceRecord = {
   kind: "primary",
   sessions: [],
 };
+
+const NOOP_FN = () => {};
 
 function useDesktopAppState() {
   const [snapshot, setSnapshot] = useState<DesktopAppState | null>(null);
@@ -150,7 +152,7 @@ function isEventInsideTerminal(event: globalThis.KeyboardEvent): boolean {
 }
 
 function canTogglePrimarySidebar(view: AppView | undefined): boolean {
-  return view === "threads" || view === "new-thread" || view === "deepseek-harness";
+  return view === "threads" || view === "new-thread" || view === "deepseek-harness" || view === "deepseek-bot";
 }
 
 function useRunningLabel(startedAt: string | undefined) {
@@ -384,7 +386,7 @@ export default function App() {
 
   const selectedWorkspace = snapshot ? (getSelectedWorkspace(snapshot) ?? snapshot.workspaces[0]) : undefined;
   const selectedSession = snapshot
-    ? (getSelectedSession(snapshot) ?? selectedWorkspace?.sessions.find((session) => !session.archivedAt))
+    ? (getSelectedSession(snapshot) ?? selectedWorkspace?.sessions.find((session) => !session.archivedAt) ?? selectedWorkspace?.sessions[0])
     : undefined;
 
   // Dual-pane (side-by-side sessions). The secondary pane shows the *other* most
@@ -1067,6 +1069,57 @@ export default function App() {
       line,
     });
   }, []);
+
+  const handlePreviewSelectedWorkspaceFile = useCallback(
+    (rawPath: string) => {
+      if (selectedWorkspace?.id) {
+        handlePreviewFile(selectedWorkspace.id, rawPath);
+      }
+    },
+    [handlePreviewFile, selectedWorkspace?.id],
+  );
+
+  const handlePreviewSecondaryWorkspaceFile = useCallback(
+    (rawPath: string) => {
+      if (secondaryWorkspace?.id) {
+        handlePreviewFile(secondaryWorkspace.id, rawPath);
+      }
+    },
+    [handlePreviewFile, secondaryWorkspace?.id],
+  );
+
+  const selectedSessionRef = useRef(selectedSession);
+  selectedSessionRef.current = selectedSession;
+
+  const handleRerunMessage = useCallback(
+    (text: string) => {
+      const session = selectedSessionRef.current;
+      if (!session || session.status === "running" || !text.trim() || !api) return;
+      void updateSnapshot(api, setSnapshot, () => api.submitComposer(text));
+    },
+    [api, setSnapshot],
+  );
+
+  const handleEditMessage = useCallback(
+    (text: string) => {
+      setComposerDraft(text);
+      setTimeout(() => composerRef.current?.focus(), 0);
+    },
+    [setComposerDraft],
+  );
+
+  const handleEnhanceMessage = useCallback(
+    (text: string) => {
+      const enhanced = `請優化以下 prompt，使其更清晰、具體、便於 AI 深度推理，保留原意但補充必要背景和預期輸出格式：\n\n${text}`;
+      setComposerDraft(enhanced);
+      setTimeout(() => composerRef.current?.focus(), 0);
+    },
+    [setComposerDraft],
+  );
+
+  const jumpToLatest = useCallback(() => {
+    requestPinnedBottomAlignment("smooth", { preferExactRestore: true });
+  }, [requestPinnedBottomAlignment]);
 
   const toggleDiffPanel = useCallback(() => {
     const pane = timelinePaneRef.current;
@@ -1974,31 +2027,6 @@ export default function App() {
     void updateSnapshot(api, setSnapshot, () => api.submitComposer(lastUserMessage.text));
   };
 
-  const handleRerunMessage = useCallback(
-    (text: string) => {
-      if (!selectedSession || selectedSession.status === "running" || !text.trim()) return;
-      void updateSnapshot(api, setSnapshot, () => api.submitComposer(text));
-    },
-    [api, selectedSession],
-  );
-
-  const handleEditMessage = useCallback(
-    (text: string) => {
-      setComposerDraft(text);
-      setTimeout(() => composerRef.current?.focus(), 0);
-    },
-    [setComposerDraft],
-  );
-
-  const handleEnhanceMessage = useCallback(
-    (text: string) => {
-      const enhanced = `請優化以下 prompt，使其更清晰、具體、便於 AI 深度推理，保留原意但補充必要背景和預期輸出格式：\n\n${text}`;
-      setComposerDraft(enhanced);
-      setTimeout(() => composerRef.current?.focus(), 0);
-    },
-    [setComposerDraft],
-  );
-
   const handleSecondarySubmit = (options: { readonly deliverAs?: "steer" | "followUp" } = {}) => {
     if (!secondarySession || !secondaryWorkspaceId || !api || !secondaryDraft.trim()) return;
     if (secondarySession.backendId === "fx" && secondarySession.status === "running") return;
@@ -2506,8 +2534,13 @@ export default function App() {
 
   const handleSelectSession = (target: { workspaceId: string; sessionId: string }) => {
     // Check if the target is an archived session
-    const targetWs = snapshot?.workspaces.find((w) => w.id === target.workspaceId);
-    const targetSession = targetWs?.sessions.find((s) => s.id === target.sessionId);
+    let targetSession = snapshot?.workspaces.find((w) => w.id === target.workspaceId)?.sessions.find((s) => s.id === target.sessionId);
+    if (!targetSession && snapshot) {
+      for (const w of snapshot.workspaces) {
+        targetSession = w.sessions.find((s) => s.id === target.sessionId);
+        if (targetSession) break;
+      }
+    }
     if (targetSession?.archivedAt) {
       // Archived sessions must strictly be viewed in single-pane mode, never in dual-pane mode
       clearSecondary();
@@ -2695,10 +2728,6 @@ export default function App() {
     }
   };
 
-  const jumpToLatest = () => {
-    requestPinnedBottomAlignment("smooth", { preferExactRestore: true });
-  };
-
   const handleComposerKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (
       handleClipboardImageShortcut(event, (clipboardImage) => {
@@ -2777,7 +2806,7 @@ export default function App() {
     handleStartThread();
   };
 
-  const t = useT();
+  const t = (key: string, vars?: Record<string, string>) => translate(snapshot.locale, key, vars);
   const L = snapshot.locale ?? "en";
   const nav = (en: string, zh: string, tw: string, ja: string) => {
     if (L === "zh-CN") return zh;
@@ -3052,7 +3081,7 @@ export default function App() {
           terminalPanel
         ) : (
           <>
-        {snapshot.activeView === "deepseek-harness" ? (
+        {snapshot.activeView === "deepseek-harness" || snapshot.activeView === "deepseek-bot" ? (
           <Suspense fallback={<ViewFallback />}>
             <DeepSeekHarnessView api={api} />
           </Suspense>
@@ -3186,7 +3215,7 @@ export default function App() {
                   onJumpToLatest={jumpToLatest}
                   onContentHeightChange={handleTimelineContentHeightChange}
                   onViewFileInDiff={handleViewFileInDiff}
-                  onPreviewFile={(path) => handlePreviewFile(selectedWorkspace.id, path)}
+                  onPreviewFile={handlePreviewSelectedWorkspaceFile}
                   onRerunMessage={handleRerunMessage}
                   onEditMessage={handleEditMessage}
                   onEnhanceMessage={handleEnhanceMessage}
@@ -3284,10 +3313,10 @@ export default function App() {
                       onTimelineScroll={handleSecondaryTimelineScroll}
                       threadSearch={secondaryThreadSearch}
                       showJumpToLatest={false}
-                      onJumpToLatest={() => {}}
-                      onContentHeightChange={() => {}}
+                      onJumpToLatest={NOOP_FN}
+                      onContentHeightChange={NOOP_FN}
                       onViewFileInDiff={handleViewFileInDiff}
-                      onPreviewFile={(path) => secondaryWorkspace && handlePreviewFile(secondaryWorkspace.id, path)}
+                      onPreviewFile={handlePreviewSecondaryWorkspaceFile}
                     />
                   </div>
                 </section>
@@ -3373,7 +3402,40 @@ export default function App() {
                   <div className="chat-header__row">
                     <h1 className="chat-header__title">{displayedSessionTitle}</h1>
                     <div className="chat-header__status">
-                      {selectedSession.status === "running" ? runningLabel : formatRelativeTime(selectedSession.updatedAt)}
+                      {selectedSession.archivedAt ? (
+                        <div style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+                          <span
+                            style={{
+                              padding: "2px 7px",
+                              borderRadius: "6px",
+                              fontSize: "11px",
+                              fontWeight: 500,
+                              background: "var(--surface-muted)",
+                              color: "var(--text-muted)",
+                              border: "1px solid var(--line)",
+                            }}
+                          >
+                            {t("threads.archived")}
+                          </span>
+                          <button
+                            type="button"
+                            className="button button--ghost"
+                            style={{ padding: "2px 8px", fontSize: "11px", height: "auto" }}
+                            onClick={() =>
+                              handleUnarchiveSession({
+                                workspaceId: selectedWorkspace.id,
+                                sessionId: selectedSession.id,
+                              })
+                            }
+                          >
+                            {t("common.unarchive")}
+                          </button>
+                        </div>
+                      ) : selectedSession.status === "running" ? (
+                        runningLabel
+                      ) : (
+                        formatRelativeTime(selectedSession.updatedAt)
+                      )}
                     </div>
                   </div>
                 </div>
@@ -3391,7 +3453,7 @@ export default function App() {
                   onJumpToLatest={jumpToLatest}
                   onContentHeightChange={handleTimelineContentHeightChange}
                   onViewFileInDiff={handleViewFileInDiff}
-                  onPreviewFile={(path) => handlePreviewFile(selectedWorkspace.id, path)}
+                  onPreviewFile={handlePreviewSelectedWorkspaceFile}
                   onRerunMessage={handleRerunMessage}
                   onEditMessage={handleEditMessage}
                   onEnhanceMessage={handleEnhanceMessage}

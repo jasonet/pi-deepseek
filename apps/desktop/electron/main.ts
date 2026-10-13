@@ -884,6 +884,12 @@ function createWindow(): BrowserWindow {
     }
   });
 
+  window.webContents.on("console-message", (_event, level, message, line, sourceId) => {
+    if (level >= 2) {
+      logError("renderer", `[console:${level}] ${message} (${sourceId}:${line})`);
+    }
+  });
+
   window.once("ready-to-show", () => {
     if (!backgroundTestMode) {
       window.show();
@@ -1442,7 +1448,9 @@ app.whenReady().then(async () => {
     }
   });
   ipcMain.handle(desktopIpc.getDshWebStatus, () => dshWebService.getStatus());
+  ipcMain.handle(desktopIpc.getDsBotInstalled, () => dshWebService.checkDsBotInstalled());
   ipcMain.handle(desktopIpc.startDshWeb, () => dshWebService.start());
+  ipcMain.handle(desktopIpc.launchDshWeb, () => dshWebService.launch());
   ipcMain.handle(desktopIpc.stopDshWeb, () => dshWebService.stop());
   ipcMain.handle(desktopIpc.getTregStatus, () => tregService.getStatus());
   ipcMain.handle(desktopIpc.saveTregSettings, async (_event, settings) => {

@@ -1,7 +1,11 @@
 import {
   Fragment,
   cloneElement,
+  createContext,
+  createElement,
   isValidElement,
+  memo,
+  useContext,
   useMemo,
   type MouseEvent,
   type ReactNode,
@@ -74,6 +78,46 @@ function highlightNumbersInText(text: string): ReactNode {
   return <>{parts}</>;
 }
 
+export const MarkdownPreviewFileContext = createContext<((path: string) => void) | undefined>(undefined);
+
+export function MarkdownFilePill({
+  targetWithLine,
+  fullMatch,
+  onPreviewFile: explicitOnPreviewFile,
+}: {
+  readonly targetWithLine: string;
+  readonly fullMatch: string;
+  readonly onPreviewFile?: (path: string) => void;
+}) {
+  const contextOnPreviewFile = useContext(MarkdownPreviewFileContext);
+  const onPreviewFile = explicitOnPreviewFile ?? contextOnPreviewFile;
+
+  return (
+    <span
+      className="markdown-file-pill"
+      role="button"
+      tabIndex={0}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onPreviewFile?.(targetWithLine);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onPreviewFile?.(targetWithLine);
+        }
+      }}
+      title={`查看文件: ${targetWithLine}`}
+    >
+      <span className="markdown-file-pill__icon" aria-hidden="true">
+        <FileIcon />
+      </span>
+      <span className="markdown-file-pill__text">{fullMatch}</span>
+    </span>
+  );
+}
+
 export function formatFileMentionsAndNumbers(
   text: string,
   onPreviewFile?: (path: string) => void,
@@ -99,29 +143,12 @@ export function formatFileMentionsAndNumbers(
     const targetWithLine = lineNumber ? `${cleanPath}:${lineNumber}` : cleanPath;
 
     parts.push(
-      <span
+      <MarkdownFilePill
         key={`file:${matchIndex}:${targetWithLine}`}
-        className="markdown-file-pill"
-        role="button"
-        tabIndex={0}
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          onPreviewFile?.(targetWithLine);
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            onPreviewFile?.(targetWithLine);
-          }
-        }}
-        title={`查看文件: ${targetWithLine}`}
-      >
-        <span className="markdown-file-pill__icon" aria-hidden="true">
-          <FileIcon />
-        </span>
-        <span className="markdown-file-pill__text">{fullMatch}</span>
-      </span>,
+        targetWithLine={targetWithLine}
+        fullMatch={fullMatch}
+        onPreviewFile={onPreviewFile}
+      />,
     );
 
     lastIndex = FILE_PATH_PROSE_REGEX.lastIndex;
@@ -168,39 +195,24 @@ function formatProseContent(children: ReactNode, onPreviewFile?: (path: string) 
 function MarkdownInlineCode({
   className,
   children,
-  onPreviewFile,
+  onPreviewFile: explicitOnPreviewFile,
 }: {
-  className?: string;
-  children?: ReactNode;
-  onPreviewFile?: (path: string) => void;
+  readonly className?: string;
+  readonly children?: ReactNode;
+  readonly onPreviewFile?: (path: string) => void;
 }) {
+  const contextOnPreviewFile = useContext(MarkdownPreviewFileContext);
+  const onPreviewFile = explicitOnPreviewFile ?? contextOnPreviewFile;
   const rawText = extractTextFromChildren(children).trim();
   const isFile = isFilePathString(rawText);
 
   if (isFile && onPreviewFile) {
     return (
-      <code
-        className={`${className ?? "message-inline-code"} message-inline-code--file`}
-        role="button"
-        tabIndex={0}
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          onPreviewFile(rawText);
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            onPreviewFile(rawText);
-          }
-        }}
-        title={`点击浮层查看文件: ${rawText}`}
-      >
-        <span className="markdown-file-pill__icon" aria-hidden="true">
-          <FileIcon />
-        </span>
-        {children}
-      </code>
+      <MarkdownFilePill
+        targetWithLine={rawText}
+        fullMatch={rawText}
+        onPreviewFile={onPreviewFile}
+      />
     );
   }
 
@@ -322,114 +334,109 @@ const BASE_MARKDOWN_COMPONENTS = {
   },
 } as const;
 
-export function MessageMarkdown(props: { readonly text: string; readonly onPreviewFile?: (path: string) => void }) {
-  const normalizedText = useMemo(() => normalizeMarkdownText(props.text), [props.text]);
+function createProseWrapper(tag: string) {
+  return function ProseWrapper({ children }: { readonly children?: ReactNode }) {
+    return createElement(tag, null, formatProseContent(children));
+  };
+}
+
+const MarkdownParagraph = createProseWrapper("p");
+const MarkdownListItem = createProseWrapper("li");
+const MarkdownBlockquote = createProseWrapper("blockquote");
+const MarkdownH1 = createProseWrapper("h1");
+const MarkdownH2 = createProseWrapper("h2");
+const MarkdownH3 = createProseWrapper("h3");
+const MarkdownH4 = createProseWrapper("h4");
+const MarkdownH5 = createProseWrapper("h5");
+const MarkdownH6 = createProseWrapper("h6");
+const MarkdownTd = createProseWrapper("td");
+const MarkdownTh = createProseWrapper("th");
+
+function MarkdownAnchor({ href, children }: { readonly href?: string; readonly children?: ReactNode }) {
+  const onPreviewFile = useContext(MarkdownPreviewFileContext);
+  const isFileLink = Boolean(href && isPreviewableFileLink(href));
+  const isHttpLink = Boolean(href && (href.startsWith("http://") || href.startsWith("https://")));
+
+  const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (isFileLink && href && onPreviewFile) {
+      event.preventDefault();
+      onPreviewFile(href);
+      return;
+    }
+    if (isHttpLink && href) {
+      event.preventDefault();
+      if (window.piApp?.openExternal) {
+        void window.piApp.openExternal(href);
+      } else {
+        window.open(href, "_blank", "noopener,noreferrer");
+      }
+    }
+  };
+
   return (
-    <RenderErrorBoundary fallback={<div className="message__content"><pre className="markdown-error-fallback">{normalizedText}</pre></div>}>
-      <RenderedMarkdown {...props} text={normalizedText} />
-    </RenderErrorBoundary>
+    <a
+      data-file-link={isFileLink ? "true" : undefined}
+      className={isFileLink ? "markdown-file-link" : undefined}
+      href={href}
+      onClick={handleClick}
+      rel={isFileLink ? undefined : "noreferrer noopener"}
+      target={isFileLink ? undefined : "_blank"}
+      title={isFileLink ? `预览文件: ${href}` : undefined}
+    >
+      {isFileLink ? (
+        <span className="markdown-file-pill__icon" aria-hidden="true">
+          <FileIcon />
+        </span>
+      ) : null}
+      {formatProseContent(children)}
+    </a>
   );
 }
 
-function RenderedMarkdown({
+const STATIC_MARKDOWN_COMPONENTS = {
+  ...BASE_MARKDOWN_COMPONENTS,
+  code: MarkdownInlineCode,
+  p: MarkdownParagraph,
+  li: MarkdownListItem,
+  blockquote: MarkdownBlockquote,
+  h1: MarkdownH1,
+  h2: MarkdownH2,
+  h3: MarkdownH3,
+  h4: MarkdownH4,
+  h5: MarkdownH5,
+  h6: MarkdownH6,
+  td: MarkdownTd,
+  th: MarkdownTh,
+  a: MarkdownAnchor,
+} as const;
+
+const RenderedMarkdown = memo(function RenderedMarkdown({
   text,
-  onPreviewFile,
 }: {
   readonly text: string;
-  readonly onPreviewFile?: (path: string) => void;
 }) {
-  const components = useMemo(
-    () => ({
-      ...BASE_MARKDOWN_COMPONENTS,
-      code: ({ className, children }: { className?: string; children?: ReactNode }) => (
-        <MarkdownInlineCode className={className} onPreviewFile={onPreviewFile}>
-          {children}
-        </MarkdownInlineCode>
-      ),
-      p: ({ children }: { children?: ReactNode }) => (
-        <p>{formatProseContent(children, onPreviewFile)}</p>
-      ),
-      li: ({ children }: { children?: ReactNode }) => (
-        <li>{formatProseContent(children, onPreviewFile)}</li>
-      ),
-      blockquote: ({ children }: { children?: ReactNode }) => (
-        <blockquote>{formatProseContent(children, onPreviewFile)}</blockquote>
-      ),
-      h1: ({ children }: { children?: ReactNode }) => (
-        <h1>{formatProseContent(children, onPreviewFile)}</h1>
-      ),
-      h2: ({ children }: { children?: ReactNode }) => (
-        <h2>{formatProseContent(children, onPreviewFile)}</h2>
-      ),
-      h3: ({ children }: { children?: ReactNode }) => (
-        <h3>{formatProseContent(children, onPreviewFile)}</h3>
-      ),
-      h4: ({ children }: { children?: ReactNode }) => (
-        <h4>{formatProseContent(children, onPreviewFile)}</h4>
-      ),
-      h5: ({ children }: { children?: ReactNode }) => (
-        <h5>{formatProseContent(children, onPreviewFile)}</h5>
-      ),
-      h6: ({ children }: { children?: ReactNode }) => (
-        <h6>{formatProseContent(children, onPreviewFile)}</h6>
-      ),
-      td: ({ children }: { children?: ReactNode }) => (
-        <td>{formatProseContent(children, onPreviewFile)}</td>
-      ),
-      th: ({ children }: { children?: ReactNode }) => (
-        <th>{formatProseContent(children, onPreviewFile)}</th>
-      ),
-      a: ({ href, children }: { href?: string; children?: ReactNode }) => {
-        const isFileLink = Boolean(href && isPreviewableFileLink(href));
-        const isHttpLink = Boolean(href && (href.startsWith("http://") || href.startsWith("https://")));
-
-        const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
-          if (isFileLink && href && onPreviewFile) {
-            event.preventDefault();
-            onPreviewFile(href);
-            return;
-          }
-          if (isHttpLink && href) {
-            event.preventDefault();
-            if (window.piApp?.openExternal) {
-              void window.piApp.openExternal(href);
-            } else {
-              window.open(href, "_blank", "noopener,noreferrer");
-            }
-          }
-        };
-
-        return (
-          <a
-            data-file-link={isFileLink ? "true" : undefined}
-            className={isFileLink ? "markdown-file-link" : undefined}
-            href={href}
-            onClick={handleClick}
-            rel={isFileLink ? undefined : "noreferrer noopener"}
-            target={isFileLink ? undefined : "_blank"}
-            title={isFileLink ? `预览文件: ${href}` : undefined}
-          >
-            {isFileLink ? (
-              <span className="markdown-file-pill__icon" aria-hidden="true">
-                <FileIcon />
-              </span>
-            ) : null}
-            {children}
-          </a>
-        );
-      },
-    }),
-    [onPreviewFile],
-  );
-
   return (
     <div className="message__content">
-      <ReactMarkdown remarkPlugins={REMARK_PLUGINS} components={components}>
+      <ReactMarkdown remarkPlugins={REMARK_PLUGINS} components={STATIC_MARKDOWN_COMPONENTS}>
         {text}
       </ReactMarkdown>
     </div>
   );
-}
+});
+
+export const MessageMarkdown = memo(function MessageMarkdown(props: {
+  readonly text: string;
+  readonly onPreviewFile?: (path: string) => void;
+}) {
+  const normalizedText = useMemo(() => normalizeMarkdownText(props.text), [props.text]);
+  return (
+    <RenderErrorBoundary fallback={<div className="message__content"><pre className="markdown-error-fallback">{normalizedText}</pre></div>}>
+      <MarkdownPreviewFileContext.Provider value={props.onPreviewFile}>
+        <RenderedMarkdown text={normalizedText} />
+      </MarkdownPreviewFileContext.Provider>
+    </RenderErrorBoundary>
+  );
+});
 
 export function isPreviewableFileLink(href: string): boolean {
   if (/^(https?:|mailto:|tel:|ftp:|#)/i.test(href)) {

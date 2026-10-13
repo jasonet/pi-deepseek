@@ -5,7 +5,7 @@ import { expect, test } from "@playwright/test";
 import { parse } from "yaml";
 
 import { makeUserDataDir } from "../helpers/electron-app";
-import { syncDshDeepSeekCredential } from "../../electron/dsh-web-service";
+import { checkDsBotInstalled, syncDshDeepSeekCredential } from "../../electron/dsh-web-service";
 
 const VALID_KEY = "valid-pi-key";
 const OTHER_VALID_KEY = "valid-dsh-key";
@@ -13,6 +13,28 @@ const testRoots: string[] = [];
 
 test.afterEach(async () => {
   await Promise.all(testRoots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
+});
+
+test("detects whether ds-bot is installed in web profile", async () => {
+  const root = await makeDshTestRoot("pi-gui-ds-bot-check-");
+  const dshHome = join(root, "dsh");
+  const webProfile = join(dshHome, "profiles", "web");
+
+  expect(await checkDsBotInstalled({ dshHome })).toBe(false);
+
+  await mkdir(join(webProfile, "node_modules", "ds-bot"), { recursive: true });
+  await writeFile(
+    join(webProfile, "package.json"),
+    JSON.stringify({ dependencies: { "ds-bot": "^0.1.1" } }),
+    "utf8",
+  );
+  await writeFile(
+    join(webProfile, "node_modules", "ds-bot", "package.json"),
+    JSON.stringify({ name: "ds-bot", version: "0.1.1" }),
+    "utf8",
+  );
+
+  expect(await checkDsBotInstalled({ dshHome })).toBe(true);
 });
 
 test("syncs a valid Pi key into the DSH credential store", async () => {

@@ -6,6 +6,80 @@ import { InlineDiff, extractDiffFromOutput } from "./diff-inline";
 import { ChevronRightIcon, CopyIcon, DiffIcon, FileIcon, PencilIcon, RefreshIcon, SparkIcon, TrashIcon } from "./icons";
 import { extensionToLanguage } from "./syntax-highlight";
 
+function areTimelineItemPropsEqual(
+  prevProps: {
+    readonly item: TranscriptMessage;
+    readonly expandedToolCallIds?: ReadonlySet<string>;
+    readonly onToggleToolCall?: (callId: string) => void;
+    readonly onViewFileInDiff?: (path: string) => void;
+    readonly onPreviewFile?: (path: string) => void;
+    readonly onCopyMessage?: (text: string) => void;
+    readonly onRerunMessage?: (text: string) => void;
+    readonly onEditMessage?: (text: string) => void;
+    readonly onEnhanceMessage?: (text: string) => void;
+  },
+  nextProps: typeof prevProps,
+): boolean {
+  if (prevProps.item.kind !== nextProps.item.kind || prevProps.item.id !== nextProps.item.id) {
+    return false;
+  }
+
+  if (prevProps.item.kind === "message" && nextProps.item.kind === "message") {
+    if (
+      prevProps.item.role !== nextProps.item.role ||
+      prevProps.item.text !== nextProps.item.text ||
+      (prevProps.item.attachments?.length ?? 0) !== (nextProps.item.attachments?.length ?? 0)
+    ) {
+      return false;
+    }
+    return (
+      prevProps.onPreviewFile === nextProps.onPreviewFile &&
+      prevProps.onCopyMessage === nextProps.onCopyMessage &&
+      prevProps.onRerunMessage === nextProps.onRerunMessage &&
+      prevProps.onEditMessage === nextProps.onEditMessage &&
+      prevProps.onEnhanceMessage === nextProps.onEnhanceMessage
+    );
+  }
+
+  if (prevProps.item.kind === "tool" && nextProps.item.kind === "tool") {
+    const prevExpanded = prevProps.expandedToolCallIds?.has(prevProps.item.callId) ?? false;
+    const nextExpanded = nextProps.expandedToolCallIds?.has(nextProps.item.callId) ?? false;
+    if (prevExpanded !== nextExpanded) return false;
+    if (
+      prevProps.item.status !== nextProps.item.status ||
+      prevProps.item.detail !== nextProps.item.detail ||
+      prevProps.item.label !== nextProps.item.label ||
+      prevProps.item.output !== nextProps.item.output ||
+      prevProps.item.input !== nextProps.item.input
+    ) {
+      return false;
+    }
+    return (
+      prevProps.onToggleToolCall === nextProps.onToggleToolCall &&
+      prevProps.onViewFileInDiff === nextProps.onViewFileInDiff
+    );
+  }
+
+  if (prevProps.item.kind === "activity" && nextProps.item.kind === "activity") {
+    return (
+      prevProps.item.label === nextProps.item.label &&
+      prevProps.item.tone === nextProps.item.tone &&
+      prevProps.item.detail === nextProps.item.detail &&
+      prevProps.item.metadata === nextProps.item.metadata
+    );
+  }
+
+  if (prevProps.item.kind === "summary" && nextProps.item.kind === "summary") {
+    return (
+      prevProps.item.label === nextProps.item.label &&
+      prevProps.item.presentation === nextProps.item.presentation &&
+      prevProps.item.metadata === nextProps.item.metadata
+    );
+  }
+
+  return prevProps.item === nextProps.item;
+}
+
 export const TimelineItem = memo(function TimelineItem({
   item,
   expandedToolCallIds,
@@ -55,9 +129,9 @@ export const TimelineItem = memo(function TimelineItem({
     default:
       return null;
   }
-});
+}, areTimelineItemPropsEqual);
 
-function TimelineMessage({
+const TimelineMessage = memo(function TimelineMessage({
   item,
   onPreviewFile,
   onCopyMessage,
@@ -198,7 +272,7 @@ function TimelineMessage({
       <MessageMarkdown text={item.text} onPreviewFile={onPreviewFile} />
     </article>
   );
-}
+});
 
 function TimelineActivityItem({ item }: { readonly item: TimelineActivity }) {
   return (

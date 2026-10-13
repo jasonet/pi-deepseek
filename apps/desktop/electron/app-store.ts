@@ -3092,16 +3092,19 @@ function resolveSelectedSessionIdFromCatalog(
   preferredSessionId: string,
   sessions: readonly SessionCatalogEntry[],
 ): string {
-  const workspaceSessions = sessions.filter((session) => session.workspaceId === workspaceId);
-  const activeSessions = workspaceSessions.filter((session) => !session.archivedAt);
-  if (!activeSessions.length) {
-    return "";
-  }
-  if (preferredSessionId &&
-    activeSessions.some((session) => session.sessionRef.sessionId === preferredSessionId)) {
+  if (
+    preferredSessionId &&
+    sessions.some((session) => session.workspaceId === workspaceId && session.sessionRef.sessionId === preferredSessionId)
+  ) {
     return preferredSessionId;
   }
-  return activeSessions[0]?.sessionRef.sessionId ?? "";
+  let firstWorkspaceSessionId = "";
+  for (const session of sessions) {
+    if (session.workspaceId !== workspaceId) continue;
+    if (!firstWorkspaceSessionId) firstWorkspaceSessionId = session.sessionRef.sessionId;
+    if (!session.archivedAt) return session.sessionRef.sessionId;
+  }
+  return firstWorkspaceSessionId;
 }
 
 function resolvePrimarySessionIdFromCatalog(
@@ -3112,7 +3115,7 @@ function resolvePrimarySessionIdFromCatalog(
 ): string {
   const selected = sessions.find(
     (session) =>
-      session.workspaceId === workspaceId && session.sessionRef.sessionId === selectedSessionId && !session.archivedAt,
+      session.workspaceId === workspaceId && session.sessionRef.sessionId === selectedSessionId,
   );
   if (selected?.backendId !== "fx") {
     return selectedSessionId;

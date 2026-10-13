@@ -67,6 +67,7 @@ const TerminalPanel = lazy(() => import("./terminal-panel").then((m) => ({ defau
 const TreeModal = lazy(() => import("./tree-modal").then((m) => ({ default: m.TreeModal })));
 import { SecondarySurface } from "./secondary-surface";
 import { HarnessEngineSwitch } from "./harness-engine-switch";
+import { CloseIcon } from "./icons";
 import type { SettingsSection } from "./settings-view";
 import type { DiffPanelFileRequest } from "./diff-panel";
 import { UpdateStatusBanner } from "./update-status-banner";
@@ -3199,6 +3200,17 @@ export default function App() {
                     <div className="chat-header__status">
                       {selectedSession.status === "running" ? runningLabel : formatRelativeTime(selectedSession.updatedAt)}
                     </div>
+                    <button
+                      className="chat-header__close"
+                      title="归档此会话"
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleArchiveSession({ workspaceId: selectedWorkspace.id, sessionId: selectedSession.id });
+                      }}
+                    >
+                      <CloseIcon />
+                    </button>
                   </div>
                 </div>
 
@@ -3304,6 +3316,19 @@ export default function App() {
                         <div className="chat-header__status">
                           {secondarySession.status === "running" ? runningLabel : formatRelativeTime(secondarySession.updatedAt)}
                         </div>
+                        <button
+                          className="chat-header__close"
+                          title="归档此会话"
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (secondaryWorkspaceId) {
+                              handleArchiveSession({ workspaceId: secondaryWorkspaceId, sessionId: secondarySession.id });
+                            }
+                          }}
+                        >
+                          <CloseIcon />
+                        </button>
                       </div>
                     </div>
                     <ConversationTimeline

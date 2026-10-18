@@ -581,24 +581,26 @@
   justify-content: center;
   width: 24px;
   height: 24px;
-  border: none;
+  border: 1px solid transparent;
   border-radius: 5px;
   background: transparent;
-  color: var(--text-muted);
+  color: var(--muted-strong);
   cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.15s, background 0.15s;
+  opacity: 0.7;
+  transition: opacity 0.15s, background 0.15s, color 0.15s, border-color 0.15s;
   padding: 0;
 }
 
-.chat-header:hover .chat-header__close,
-.chat-header__close:focus {
+.chat-header__close:hover {
   opacity: 1;
+  background: var(--surface-hover, rgba(125, 125, 125, 0.12));
+  color: var(--text-strong);
+  border-color: var(--line);
 }
 
-.chat-header__close:hover {
-  background: var(--surface-hover, rgba(0,0,0,0.08));
-  color: var(--text-strong);
+.chat-header__close:focus-visible {
+  opacity: 1;
+  outline: 2px solid var(--focus-ring, #2563eb);
 }
 
 .chat-header__close svg {
@@ -1810,6 +1812,129 @@
   background: var(--surface);
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+/* ── Run button ───────────────────────────────────────────────────── */
+.markdown-code-block__run {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 520;
+  color: var(--text-strong);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.markdown-code-block__run:hover {
+  background: #2563eb;
+  color: #fff;
+  border-color: #2563eb;
+}
+
+.markdown-code-block__run--abort {
+  color: #dc2626;
+  border-color: rgba(220,38,38,0.35);
+  background: rgba(220,38,38,0.06);
+}
+
+.markdown-code-block__run--abort:hover {
+  background: #dc2626;
+  color: #fff;
+  border-color: #dc2626;
+}
+
+.markdown-code-block__run--success {
+  color: #15803d;
+  border-color: rgba(16,185,129,0.35);
+  background: rgba(16,185,129,0.07);
+}
+
+.markdown-code-block__run--fail {
+  color: #dc2626;
+  border-color: rgba(220,38,38,0.35);
+  background: rgba(220,38,38,0.06);
+}
+
+.markdown-code-block__run-triangle {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 4px 0 4px 7px;
+  border-color: transparent transparent transparent currentColor;
+}
+
+.markdown-code-block__run-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #dc2626;
+}
+
+.markdown-code-block__run-dot--pulse {
+  animation: run-dot-pulse 1s infinite;
+}
+
+@keyframes run-dot-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* ── Output panel ────────────────────────────────────────────── */
+.markdown-code-block__output {
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 7px 7px;
+  background: var(--surface-muted, #f8f8f8);
+  overflow: hidden;
+}
+
+.markdown-code-block__output-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.markdown-code-block__output-label {
+  font-size: 11px;
+  font-weight: 520;
+  color: var(--muted-strong);
+}
+
+.markdown-code-block__output--running .markdown-code-block__output-label { color: #2563eb; }
+.markdown-code-block__output--success .markdown-code-block__output-label { color: #15803d; }
+.markdown-code-block__output--fail    .markdown-code-block__output-label { color: #dc2626; }
+.markdown-code-block__output--error   .markdown-code-block__output-label { color: #dc2626; }
+
+.markdown-code-block__output-clear {
+  font-size: 10px;
+  color: var(--muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+.markdown-code-block__output-clear:hover { color: var(--text); }
+
+.markdown-code-block__output-pre {
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 12px;
+  line-height: 1.55;
+  font-family: var(--font-mono, monospace);
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 320px;
+  overflow-y: auto;
 }
 
 .markdown-code-block__copy svg {
@@ -3568,17 +3693,22 @@ textarea.settings-input {
 }
 
 .custom-provider-dialog {
-  width: min(680px, calc(100vw - 48px));
-  max-width: 680px;
-  max-height: min(760px, calc(100vh - 48px));
-  overflow-y: auto;
+  width: min(840px, calc(100vw - 32px));
+  max-width: 840px;
+  height: min(92vh, 880px);
+  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 20px 24px;
 }
 
 .custom-provider-dialog__fields {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 12px;
-  margin: 16px 0;
+  gap: 10px 12px;
+  margin: 12px 0;
+  flex-shrink: 0;
 }
 
 .custom-provider-dialog__field {
@@ -3595,7 +3725,8 @@ textarea.settings-input {
 
 .custom-provider-dialog__probe-row {
   min-height: 34px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
+  flex-shrink: 0;
 }
 
 .custom-provider-dialog__status {
@@ -3609,13 +3740,19 @@ textarea.settings-input {
 
 .custom-provider-dialog__models {
   border-top: 1px solid var(--line);
-  padding-top: 12px;
+  padding-top: 10px;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .custom-provider-dialog__models-list {
-  max-height: 260px;
+  flex: 1 1 auto;
+  min-height: 120px;
+  max-height: none;
   overflow-y: auto;
-  padding-right: 4px;
+  padding-right: 6px;
 }
 
 .custom-provider-dialog__models-header {
@@ -3624,6 +3761,7 @@ textarea.settings-input {
   justify-content: space-between;
   margin-bottom: 6px;
   font-size: 13px;
+  flex-shrink: 0;
 }
 
 .custom-provider-dialog__model {
@@ -3631,7 +3769,7 @@ textarea.settings-input {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
-  min-height: 42px;
+  min-height: 38px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -3648,12 +3786,20 @@ textarea.settings-input {
 }
 
 .custom-provider-dialog__manual-model {
-  margin-top: 12px;
+  margin-top: 10px;
+  flex-shrink: 0;
 }
 
 .custom-provider-dialog__manual-model .settings-search {
   min-width: 0;
   flex: 1;
+}
+
+.custom-provider-dialog .extension-dialog__actions {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  flex-shrink: 0;
 }
 
 @media (max-width: 720px) {

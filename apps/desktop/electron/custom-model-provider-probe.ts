@@ -69,13 +69,12 @@ export async function probeCustomModelProvider(
       thinkingFormat,
       fetcher,
     });
-    if (completionFailure && !completionFailure.timedOut) {
-      return { ok: false, message: completionFailure.message };
-    }
+    // Even if test chat completion fails (e.g. rate limit 429, payment required 402, or unsupported test payload),
+    // model discovery succeeded and returned models! We must return ok: true so the user gets the model list.
     return {
       ok: true,
       message: completionFailure
-        ? `Connected. Found ${models.length} model${models.length === 1 ? "" : "s"}. Model generation did not start within ${COMPLETION_PROBE_TIMEOUT_SECONDS} seconds; you can still save this provider.`
+        ? `Connected. Found ${models.length} model${models.length === 1 ? "" : "s"}. (${completionFailure.message})`
         : `Connected. Found ${models.length} model${models.length === 1 ? "" : "s"} and verified streaming.`,
       thinkingFormat,
       models,

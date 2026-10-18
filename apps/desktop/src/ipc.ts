@@ -192,6 +192,9 @@ export const desktopIpc = {
   terminalData: "pi-gui:terminal-data",
   terminalExit: "pi-gui:terminal-exit",
   terminalError: "pi-gui:terminal-error",
+  runCodeBlock: "pi-gui:run-code-block",
+  runCodeBlockAbort: "pi-gui:run-code-block-abort",
+  runCodeBlockOutput: "pi-gui:run-code-block-output",
   getNotificationPermissionStatus: "pi-gui:get-notification-permission-status",
   requestNotificationPermission: "pi-gui:request-notification-permission",
   openSystemNotificationSettings: "pi-gui:open-system-notification-settings",
@@ -286,6 +289,16 @@ export interface TerminalExitEvent {
 export interface TerminalErrorEvent {
   readonly terminalId: string;
   readonly message: string;
+}
+
+export interface CodeBlockOutputEvent {
+  readonly runId: string;
+  /** incremental stdout/stderr chunk */
+  readonly chunk?: string;
+  /** set when the process has exited */
+  readonly exitCode?: number;
+  /** error message if spawn failed */
+  readonly error?: string;
 }
 
 export interface OpenDesignStatus {
@@ -544,6 +557,12 @@ export interface PiDesktopApi {
   onTerminalData(listener: (event: TerminalDataEvent) => void): () => void;
   onTerminalExit(listener: (event: TerminalExitEvent) => void): () => void;
   onTerminalError(listener: (event: TerminalErrorEvent) => void): () => void;
+  /** Run a shell code block in the given cwd; returns a runId for abort/output tracking. */
+  runCodeBlock(code: string, cwd: string): Promise<string>;
+  /** Abort a running code block by runId. */
+  abortCodeBlock(runId: string): Promise<void>;
+  /** Subscribe to incremental output lines for all code block runs. */
+  onCodeBlockOutput(listener: (event: CodeBlockOutputEvent) => void): () => void;
   getNotificationPermissionStatus(): Promise<DesktopNotificationPermissionStatus>;
   requestNotificationPermission(): Promise<DesktopNotificationPermissionStatus>;
   openSystemNotificationSettings(): Promise<void>;

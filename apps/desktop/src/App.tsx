@@ -68,6 +68,7 @@ const TreeModal = lazy(() => import("./tree-modal").then((m) => ({ default: m.Tr
 import { SecondarySurface } from "./secondary-surface";
 import { HarnessEngineSwitch } from "./harness-engine-switch";
 import { CloseIcon } from "./icons";
+import type { CodeRunContext } from "./message-markdown";
 import type { SettingsSection } from "./settings-view";
 import type { DiffPanelFileRequest } from "./diff-panel";
 import { UpdateStatusBanner } from "./update-status-banner";
@@ -196,7 +197,7 @@ function formatRunningLabel(startedAt: string | undefined): string {
 export default function App() {
   const [snapshot, setSnapshot, selectedTranscript] = useDesktopAppState();
   const [composerDraft, setComposerDraft] = useState("");
-  const [settingsSection, setSettingsSection] = useState<SettingsSection>("harnesses");
+  const [settingsSection, setSettingsSection] = useState<SettingsSection>("providers");
   const [settingsWorkspaceId, setSettingsWorkspaceId] = useState("");
   const [skillsWorkspaceId, setSkillsWorkspaceId] = useState("");
   const [extensionsWorkspaceId, setExtensionsWorkspaceId] = useState("");
@@ -2816,10 +2817,10 @@ export default function App() {
     return en;
   };
   const settingsNav = [
+    { id: "providers", label: nav("Providers", "提供商", "提供者", "プロバイダー") },
     { id: "appearance", label: nav("Appearance", "外观", "外觀", "外観") },
     { id: "general", label: nav("General", "通用", "一般", "一般") },
     { id: "harnesses", label: nav("Harnesses", "运行引擎", "運行引擎", "ハーネス") },
-    { id: "providers", label: nav("Providers", "提供商", "提供者", "プロバイダー") },
     { id: "models", label: nav("Models", "模型", "模型", "モデル") },
     { id: "tools", label: nav("External tools", "外部工具", "外部工具", "外部ツール") },
     { id: "notifications", label: nav("Notifications", "通知", "通知", "通知") },
@@ -3231,6 +3232,7 @@ export default function App() {
                   onRerunMessage={handleRerunMessage}
                   onEditMessage={handleEditMessage}
                   onEnhanceMessage={handleEnhanceMessage}
+                  codeRunContext={selectedWorkspace ? { workspacePath: selectedWorkspace.path, api } : undefined}
                 />
               </div>
             </section>
@@ -3482,6 +3484,7 @@ export default function App() {
                   onRerunMessage={handleRerunMessage}
                   onEditMessage={handleEditMessage}
                   onEnhanceMessage={handleEnhanceMessage}
+                  codeRunContext={selectedWorkspace ? { workspacePath: selectedWorkspace.path, api } : undefined}
                 />
               </div>
             </section>

@@ -1,7 +1,7 @@
 import { memo, useCallback, useMemo, useState } from "react";
 import type { SessionTranscriptMessage } from "@pi-gui/pi-sdk-driver";
 import type { TimelineActivity, TimelineToolCall, TimelineToolGroup, TimelineSummary, TranscriptMessage } from "./timeline-types";
-import { MessageMarkdown } from "./message-markdown";
+import { MessageMarkdown, type CodeRunContext } from "./message-markdown";
 import { InlineDiff, extractDiffFromOutput } from "./diff-inline";
 import { ChevronRightIcon, CopyIcon, DiffIcon, FileIcon, PencilIcon, RefreshIcon, SparkIcon, TrashIcon } from "./icons";
 import { extensionToLanguage } from "./syntax-highlight";
@@ -90,6 +90,7 @@ export const TimelineItem = memo(function TimelineItem({
   onRerunMessage,
   onEditMessage,
   onEnhanceMessage,
+  codeRunContext,
 }: {
   readonly item: TranscriptMessage;
   readonly expandedToolCallIds?: ReadonlySet<string>;
@@ -100,6 +101,7 @@ export const TimelineItem = memo(function TimelineItem({
   readonly onRerunMessage?: (text: string) => void;
   readonly onEditMessage?: (text: string) => void;
   readonly onEnhanceMessage?: (text: string) => void;
+  readonly codeRunContext?: CodeRunContext;
 }) {
   switch (item.kind) {
     case "message":
@@ -111,6 +113,7 @@ export const TimelineItem = memo(function TimelineItem({
           onRerunMessage={onRerunMessage}
           onEditMessage={onEditMessage}
           onEnhanceMessage={onEnhanceMessage}
+          codeRunContext={codeRunContext}
         />
       );
     case "activity":
@@ -138,6 +141,7 @@ const TimelineMessage = memo(function TimelineMessage({
   onRerunMessage,
   onEditMessage,
   onEnhanceMessage,
+  codeRunContext,
 }: {
   readonly item: SessionTranscriptMessage;
   readonly onPreviewFile?: (path: string) => void;
@@ -145,6 +149,7 @@ const TimelineMessage = memo(function TimelineMessage({
   readonly onRerunMessage?: (text: string) => void;
   readonly onEditMessage?: (text: string) => void;
   readonly onEnhanceMessage?: (text: string) => void;
+  readonly codeRunContext?: CodeRunContext;
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -185,9 +190,7 @@ const TimelineMessage = memo(function TimelineMessage({
               )}
             </div>
           ) : null}
-          <MessageMarkdown text={item.text} onPreviewFile={onPreviewFile} />
-        </div>
-        <div className="timeline-item__user-actions">
+          <MessageMarkdown text={item.text} onPreviewFile={onPreviewFile} codeRunContext={codeRunContext} />
           <button
             className="timeline-item__action-btn"
             onClick={handleCopy}
@@ -269,7 +272,7 @@ const TimelineMessage = memo(function TimelineMessage({
           )}
         </div>
       ) : null}
-      <MessageMarkdown text={item.text} onPreviewFile={onPreviewFile} />
+      <MessageMarkdown text={item.text} onPreviewFile={onPreviewFile} codeRunContext={codeRunContext} />
     </article>
   );
 });

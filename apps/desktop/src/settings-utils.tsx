@@ -3,7 +3,7 @@ import type { RuntimeSettingsSnapshot, RuntimeSnapshot } from "@pi-gui/session-d
 import { ProviderIcon, providerLoginIconUrl } from "./provider-icons";
 import { ProviderBalance } from "./provider-balance";
 
-export type SettingsSection = "appearance" | "general" | "harnesses" | "providers" | "models" | "channels" | "tools" | "notifications";
+export type SettingsSection = "providers" | "appearance" | "general" | "harnesses" | "models" | "channels" | "tools" | "notifications";
 
 export const THINKING_LEVELS: NonNullable<RuntimeSettingsSnapshot["defaultThinkingLevel"]>[] = [
   "low", "medium", "high", "xhigh",

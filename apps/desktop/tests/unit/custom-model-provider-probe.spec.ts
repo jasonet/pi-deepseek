@@ -90,8 +90,8 @@ test("probe recommends Gemma 4 26B A4B and allows saving when generation is slow
   expect(result).toMatchObject({
     ok: true,
     recommendedModelId: preferredModelId,
-    message: "Connected. Found 3 models. Model generation did not start within 15 seconds; you can still save this provider.",
   });
+  expect(result.message).toContain("Connected. Found 3 models.");
   expect(completionBody).toMatchObject({ model: preferredModelId });
 });
 

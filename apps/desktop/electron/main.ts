@@ -1733,6 +1733,48 @@ app.whenReady().then(async () => {
       terminalFocusedWebContentsIds.delete(event.sender.id);
     }
   });
+
+  // ── Code-block runner ──────────────────────────────────────────────────────
+  const activeCodeBlockProcesses = new Map<string, ReturnType<typeof spawn>>();
+
+  ipcMain.handle(desktopIpc.runCodeBlock, (event, code: string, cwd: string) => {
+    const runId = randomUUID();
+    const sender = event.sender;
+    const child = spawn("bash", ["-c", code], {
+      cwd,
+      env: { ...process.env },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    activeCodeBlockProcesses.set(runId, child);
+
+    const emit = (payload: object) => {
+      if (!sender.isDestroyed()) {
+        sender.send(desktopIpc.runCodeBlockOutput, payload);
+      }
+    };
+
+    child.stdout?.on("data", (chunk: Buffer) => emit({ runId, chunk: chunk.toString("utf8") }));
+    child.stderr?.on("data", (chunk: Buffer) => emit({ runId, chunk: chunk.toString("utf8") }));
+    child.on("error", (err) => {
+      activeCodeBlockProcesses.delete(runId);
+      emit({ runId, error: err.message });
+    });
+    child.on("exit", (code) => {
+      activeCodeBlockProcesses.delete(runId);
+      emit({ runId, exitCode: code ?? -1 });
+    });
+
+    return runId;
+  });
+
+  ipcMain.handle(desktopIpc.runCodeBlockAbort, (_event, runId: string) => {
+    const child = activeCodeBlockProcesses.get(runId);
+    if (child) {
+      try { child.kill("SIGTERM"); } catch {}
+      activeCodeBlockProcesses.delete(runId);
+    }
+  });
+
   ipcMain.handle(desktopIpc.getNotificationPermissionStatus, () =>
     notificationPermissionService?.getCurrentStatus() ?? Promise.resolve("unknown"),
   );

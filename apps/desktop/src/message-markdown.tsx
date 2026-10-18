@@ -16,10 +16,18 @@ import remarkGfm from "remark-gfm";
 import { FileIcon } from "./icons";
 import { MarkdownCodeBlock } from "./markdown-code-block";
 import { MermaidDiagram } from "./mermaid-diagram";
+import type { PiDesktopApi } from "./ipc";
 
 const REMARK_PLUGINS = [remarkGfm];
 
 export const NUMBER_REGEX = /\b\d+(?:,\d{3})*(?:\.\d+)?%?(?![a-zA-Z\d]|[.,]\d)/g;
+
+/** Provides the current workspace path and api so code blocks can run commands. */
+export interface CodeRunContext {
+  readonly workspacePath: string;
+  readonly api: PiDesktopApi;
+}
+export const CodeRunContext = createContext<CodeRunContext | undefined>(undefined);
 
 const FILE_EXT_LIST =
   "md|markdown|ts|tsx|js|jsx|mjs|cjs|json|yml|yaml|toml|css|scss|less|html|svg|png|jpg|jpeg|gif|webp|pdf|sh|bash|zsh|py|rs|go|java|c|cpp|h|hpp|sql|txt|env|lock|plist|xml";
@@ -260,7 +268,7 @@ function MarkdownPre({ children }: { children?: ReactNode }) {
     return <MermaidDiagram code={rawCode} />;
   }
 
-  return <MarkdownCodeBlock language={language} code={rawCode} />;
+  return <MarkdownCodeBlock language={language} code={rawCode} codeRunContext={useContext(CodeRunContext)} />;
 }
 
 export function normalizeMarkdownText(input: unknown): string {
@@ -427,13 +435,16 @@ const RenderedMarkdown = memo(function RenderedMarkdown({
 export const MessageMarkdown = memo(function MessageMarkdown(props: {
   readonly text: string;
   readonly onPreviewFile?: (path: string) => void;
+  readonly codeRunContext?: CodeRunContext;
 }) {
   const normalizedText = useMemo(() => normalizeMarkdownText(props.text), [props.text]);
   return (
     <RenderErrorBoundary fallback={<div className="message__content"><pre className="markdown-error-fallback">{normalizedText}</pre></div>}>
-      <MarkdownPreviewFileContext.Provider value={props.onPreviewFile}>
-        <RenderedMarkdown text={normalizedText} />
-      </MarkdownPreviewFileContext.Provider>
+      <CodeRunContext.Provider value={props.codeRunContext}>
+        <MarkdownPreviewFileContext.Provider value={props.onPreviewFile}>
+          <RenderedMarkdown text={normalizedText} />
+        </MarkdownPreviewFileContext.Provider>
+      </CodeRunContext.Provider>
     </RenderErrorBoundary>
   );
 });

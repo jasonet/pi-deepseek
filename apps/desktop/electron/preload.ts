@@ -12,6 +12,7 @@ import {
   type TerminalDataEvent,
   type TerminalErrorEvent,
   type TerminalExitEvent,
+  type CodeBlockOutputEvent,
   type TerminalPanelSnapshot,
   type TerminalSize,
   type SaveTregSettingsInput,
@@ -331,6 +332,12 @@ contextBridge.exposeInMainWorld("piApp", {
     subscribeIpc(desktopIpc.terminalExit, listener),
   onTerminalError: (listener: (event: TerminalErrorEvent) => void) =>
     subscribeIpc(desktopIpc.terminalError, listener),
+  runCodeBlock: (code: string, cwd: string) =>
+    ipcRenderer.invoke(desktopIpc.runCodeBlock, code, cwd) as Promise<string>,
+  abortCodeBlock: (runId: string) =>
+    ipcRenderer.invoke(desktopIpc.runCodeBlockAbort, runId) as Promise<void>,
+  onCodeBlockOutput: (listener: (event: CodeBlockOutputEvent) => void) =>
+    subscribeIpc(desktopIpc.runCodeBlockOutput, listener),
   getNotificationPermissionStatus: () =>
     ipcRenderer.invoke(desktopIpc.getNotificationPermissionStatus) as Promise<DesktopNotificationPermissionStatus>,
   requestNotificationPermission: () =>

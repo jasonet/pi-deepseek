@@ -2,6 +2,7 @@ import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState, type Mut
 import type { TimelineEntry, TimelineToolCall, TimelineToolGroup, TranscriptMessage } from "./desktop-state";
 import { ThreadSearchBar } from "./thread-search";
 import { TimelineItem, TimelineToolGroupItem } from "./timeline-item";
+import type { CodeRunContext } from "./message-markdown";
 
 const OVERSCAN_PX = 720;
 const ROW_GAP_PX = 14;
@@ -92,6 +93,7 @@ interface ConversationTimelineProps {
   readonly onRerunMessage?: (text: string) => void;
   readonly onEditMessage?: (text: string) => void;
   readonly onEnhanceMessage?: (text: string) => void;
+  readonly codeRunContext?: CodeRunContext;
 }
 
 export const ConversationTimeline = memo(function ConversationTimeline({
@@ -112,6 +114,7 @@ export const ConversationTimeline = memo(function ConversationTimeline({
   onRerunMessage,
   onEditMessage,
   onEnhanceMessage,
+  codeRunContext,
 }: ConversationTimelineProps) {
   const entries = useMemo(() => groupTranscript(transcript), [transcript]);
 
@@ -431,6 +434,7 @@ const TranscriptList = memo(function TranscriptList({
             onRerunMessage={onRerunMessage}
             onEditMessage={onEditMessage}
             onEnhanceMessage={onEnhanceMessage}
+            codeRunContext={codeRunContext}
           />
         );
       })}
@@ -453,6 +457,7 @@ const MeasuredTimelineItem = memo(function MeasuredTimelineItem({
   onRerunMessage,
   onEditMessage,
   onEnhanceMessage,
+  codeRunContext,
 }: {
   readonly entry: TimelineEntry;
   readonly className?: string;
@@ -468,6 +473,7 @@ const MeasuredTimelineItem = memo(function MeasuredTimelineItem({
   readonly onRerunMessage?: (text: string) => void;
   readonly onEditMessage?: (text: string) => void;
   readonly onEnhanceMessage?: (text: string) => void;
+  readonly codeRunContext?: CodeRunContext;
 }) {
   const rowRef = useRef<HTMLDivElement | null>(null);
 
@@ -518,6 +524,7 @@ const MeasuredTimelineItem = memo(function MeasuredTimelineItem({
           onRerunMessage={onRerunMessage}
           onEditMessage={onEditMessage}
           onEnhanceMessage={onEnhanceMessage}
+          codeRunContext={codeRunContext}
         />
       )}
     </div>

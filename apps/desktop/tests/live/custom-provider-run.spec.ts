@@ -4,6 +4,7 @@ import { readdir, readFile, writeFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
 import {
   createNamedThread,
+  desktopShortcut,
   getDesktopState,
   launchDesktop as launchSourceDesktop,
   launchDesktopByExecutable,
@@ -134,6 +135,61 @@ test("custom provider timeout fails once instead of staying in Working", async (
     }).toBe("failed");
     await expect(window.locator(".timeline-activity--error")).toBeVisible();
     expect(requestCount).toBe(1);
+  } finally {
+    await harness.close();
+    await close(server);
+  }
+});
+
+test("Steer moves past a silent model request and submits the new prompt", async () => {
+  test.setTimeout(30_000);
+  const requests: Record<string, any>[] = [];
+  let firstDisconnected = false;
+  const server = createServer((request, response) => {
+    if (request.url !== "/v1/chat/completions" || request.method !== "POST") {
+      response.writeHead(404).end();
+      return;
+    }
+    let body = "";
+    request.setEncoding("utf8");
+    request.on("data", (chunk) => { body += chunk; });
+    request.on("end", () => {
+      requests.push(JSON.parse(body));
+      if (requests.length > 1) { writeCompletion(response, "STEER_APPLIED", 100); return; }
+      response.writeHead(200, { "content-type": "text/event-stream" });
+      response.flushHeaders();
+      const keepalive = setInterval(() => response.write(": keepalive\n\n"), 100);
+      response.on("close", () => { firstDisconnected = true; clearInterval(keepalive); });
+    });
+  });
+  const port = await listen(server);
+  const { agentDir, userDataDir, workspacePath } = await prepareCustomProvider(port);
+  const harness = await launchDesktop(userDataDir, {
+    agentDir, initialWorkspaces: [workspacePath], scrubProviderEnv: true, testMode: "background",
+    envOverrides: {
+      PI_APP_MODEL_FIRST_RESPONSE_TIMEOUT_MS: "10000",
+      PI_APP_STEER_IDLE_TIMEOUT_MS: "750",
+      PI_APP_STEER_MAX_WAIT_MS: "2000",
+    },
+  });
+  try {
+    const window = await harness.firstWindow();
+    await createNamedThread(window, "Steer stalled response");
+    const composer = window.getByTestId("composer");
+    const transcript = window.getByTestId("transcript");
+    await composer.fill("Wait for the slow model.");
+    await composer.press("Enter");
+    await expect(transcript).toContainText("Generating response...");
+    await expect.poll(() => requests.length).toBe(1);
+    await composer.fill("Follow the new instruction and say STEER_APPLIED.");
+    await composer.press(desktopShortcut("Enter"));
+    await expect(transcript).toContainText("STEER_APPLIED", { timeout: 8_000 });
+    await expect.poll(() => firstDisconnected).toBe(true);
+    await expect.poll(async () => (await getDesktopState(window)).workspaces[0]?.sessions[0]?.status).toBe("idle");
+    expect(requests).toHaveLength(2);
+    expect(JSON.stringify(requests[1]?.messages)).toContain("Follow the new instruction");
+    await expect(transcript).not.toContainText("Model response stalled");
+    await expect(window.getByTestId("queued-composer-message")).toHaveCount(0);
   } finally {
     await harness.close();
     await close(server);

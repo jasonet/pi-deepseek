@@ -135,6 +135,119 @@ test("first content switches from the longer first-response deadline to the idle
   assert.match((await output.result()).errorMessage, /no new content/);
 });
 
+test("steer advances a silent stream without waiting for the ordinary model timeout", async () => {
+  const source = createAssistantMessageEventStream();
+  let signal;
+  const stream = withResponseWatchdog((_m, _c, options) => {
+    signal = options.signal;
+    return source;
+  }, { firstResponseMs: 1_000, idleMs: 1_000, steerIdleMs: 80, steerMaxMs: 300 });
+  const output = stream(model, context);
+  stream.steer(true);
+  await delay(120);
+  const result = await output.result();
+  assert.equal(result.stopReason, "stop");
+  assert.equal(result.content[0].text, "Response interrupted to follow the new instruction.");
+  assert.equal(signal.aborted, true);
+  assert.equal((await source.result()).stopReason, "stop");
+});
+
+test("steer waits for an actively completing response", async () => {
+  const source = createAssistantMessageEventStream();
+  const stream = withResponseWatchdog(() => source,
+    { firstResponseMs: 1_000, idleMs: 1_000, steerIdleMs: 80, steerMaxMs: 300 });
+  const output = stream(model, context);
+  stream.steer(true);
+  await delay(25);
+  const message = {
+    role: "assistant", content: [{ type: "text", text: "current answer" }],
+    stopReason: "stop", api: model.api, model: model.id, provider: model.provider,
+  };
+  source.push({ type: "done", reason: "stop", message });
+  assert.equal((await output.result()).content[0].text, "current answer");
+  await delay(120);
+  assert.equal((await output.result()).content[0].text, "current answer");
+});
+
+test("removing a queued steer leaves the active response alone", async () => {
+  const source = createAssistantMessageEventStream();
+  const stream = withResponseWatchdog(() => source,
+    { firstResponseMs: 1_000, idleMs: 1_000, steerIdleMs: 80, steerMaxMs: 300 });
+  const output = stream(model, context);
+  stream.steer(true);
+  stream.steer(false);
+  await delay(120);
+  const message = {
+    role: "assistant", content: [{ type: "text", text: "original answer" }],
+    stopReason: "stop", api: model.api, model: model.id, provider: model.provider,
+  };
+  source.push({ type: "done", reason: "stop", message });
+  assert.equal((await output.result()).content[0].text, "original answer");
+});
+
+test("a pending steer advances instead of failing at an earlier ordinary deadline", async () => {
+  const source = createAssistantMessageEventStream();
+  const stream = withResponseWatchdog(() => source,
+    { firstResponseMs: 80, idleMs: 80, steerIdleMs: 300, steerMaxMs: 300 });
+  const output = stream(model, context);
+  stream.steer(true);
+  await delay(120);
+  assert.equal((await output.result()).stopReason, "stop");
+});
+
+test("steer has a finite wait even if content keeps arriving", async () => {
+  const source = createAssistantMessageEventStream();
+  let signal;
+  const stream = withResponseWatchdog((_m, _c, options) => {
+    signal = options.signal;
+    return source;
+  }, { firstResponseMs: 1_000, idleMs: 1_000, steerIdleMs: 100, steerMaxMs: 260 });
+  const output = stream(model, context);
+  const message = {
+    role: "assistant", content: [{ type: "text", text: "partial" }],
+    stopReason: "stop", api: model.api, model: model.id, provider: model.provider,
+  };
+  stream.steer(true);
+  for (let i = 0; i < 5; i += 1) {
+    source.push({ type: "text_delta", delta: ".", contentIndex: 0, partial: message });
+    await delay(50);
+    if (i < 4) assert.equal(signal.aborted, false);
+  }
+  await delay(40);
+  assert.equal((await output.result()).content[0].text, "partial");
+  assert.equal(signal.aborted, true);
+});
+
+test("steer drops an unfinished tool call and preserves the preceding text", async () => {
+  const source = createAssistantMessageEventStream();
+  const stream = withResponseWatchdog(() => source,
+    { firstResponseMs: 1_000, idleMs: 1_000, steerIdleMs: 80, steerMaxMs: 300 });
+  const output = stream(model, context);
+  const message = {
+    role: "assistant", content: [
+      { type: "text", text: "partial answer" },
+      { type: "toolCall", id: "unfinished", name: "shell", arguments: { command: "danger" }, partialArgs: "danger" },
+    ], stopReason: "stop", api: model.api, model: model.id, provider: model.provider,
+  };
+  source.push({ type: "toolcall_delta", delta: "danger", contentIndex: 1, partial: message });
+  stream.steer(true);
+  await delay(120);
+  assert.deepEqual((await output.result()).content, [{ type: "text", text: "partial answer" }]);
+});
+
+test("Stop still aborts a run with a pending steer", async () => {
+  const stop = new AbortController();
+  const source = createAssistantMessageEventStream();
+  const stream = withResponseWatchdog(() => source,
+    { firstResponseMs: 1_000, idleMs: 1_000, steerIdleMs: 80, steerMaxMs: 300 });
+  const output = stream(model, context, { signal: stop.signal });
+  stream.steer(true);
+  stop.abort();
+  assert.equal((await output.result()).stopReason, "aborted");
+  await delay(120);
+  assert.equal((await output.result()).stopReason, "aborted");
+});
+
 test("upstream failures and malformed closure settle through the SDK protocol", async () => {
   const thrown = withResponseWatchdog(() => { throw new Error("test failure"); }, deadlines)(model, context);
   assert.equal((await thrown.result()).errorMessage, "test failure");

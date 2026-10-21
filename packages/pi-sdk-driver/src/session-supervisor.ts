@@ -77,7 +77,7 @@ import {
 import { SystemPromptComposer, type PromptComposeContext } from "./system-prompt-composer.js";
 import { PI_BACKEND_ID } from "./backend-contract.js";
 import { compactionResourceOptions, compactionTimeoutMs } from "./compaction-policy.js";
-import { withResponseWatchdog } from "./response-watchdog.js";
+import { withResponseWatchdog, type SteerableStreamFn } from "./response-watchdog.js";
 
 export interface PiSdkDriverOptions {
   readonly catalogFilePath?: string;
@@ -168,7 +168,7 @@ export class SessionSupervisor {
   private readonly modelRegistry: ModelRegistry | undefined;
   private readonly composer: SystemPromptComposer;
   private readonly records = new Map<string, ManagedSessionRecord>();
-  private readonly configuredAgents = new WeakSet<object>();
+  private readonly modelStreams = new WeakMap<object, SteerableStreamFn>();
   private readonly compactionTimeouts = new WeakMap<ManagedSessionRecord, ReturnType<typeof setTimeout>>();
   private readonly stoppedCompactions = new WeakMap<ManagedSessionRecord, "timeout" | "cancelled">();
   private readonly pendingPrompts = new WeakMap<ManagedSessionRecord, { cancelled: boolean }>();
@@ -455,6 +455,7 @@ export class SessionSupervisor {
       const promptText = injectFileAttachmentPreamble(input.text, input.attachments);
       if (isQueuedMessage) {
         await this.queuePrompt(session, promptText, input.deliverAs!, images);
+        if (input.deliverAs === "steer") this.modelStreams.get(session.agent)?.steer(true);
       } else {
         const restoreAutoRetry = isCustomProvider(session.agent.state.model.provider) && session.autoRetryEnabled;
         if (restoreAutoRetry) {
@@ -527,6 +528,7 @@ export class SessionSupervisor {
       const promptText = injectFileAttachmentPreamble(message.text, message.attachments);
       await this.queuePrompt(session, promptText, message.mode, images);
     }
+    this.modelStreams.get(session.agent)?.steer(record.queuedMessages.some((message) => message.mode === "steer"));
 
     record.updatedAt = nowIso();
     await this.persistSnapshot(record);
@@ -894,12 +896,12 @@ export class SessionSupervisor {
   }
 
   private configureModelStream(record: ManagedSessionRecord, session: AgentSession): void {
-    if (this.configuredAgents.has(session.agent)) {
+    if (this.modelStreams.has(session.agent)) {
       return;
     }
-    this.configuredAgents.add(session.agent);
 
     const upstreamStream = withResponseWatchdog(session.agent.streamFn);
+    this.modelStreams.set(session.agent, upstreamStream);
     session.agent.streamFn = async (model, context, options) => {
       if (!isCustomProvider(model.provider)) {
         return upstreamStream(model, context, options);

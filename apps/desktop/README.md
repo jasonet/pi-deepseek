@@ -70,6 +70,8 @@ Pi model streams have a content-silence watchdog in addition to the provider's H
 
 A stalled request is cancelled without automatic resubmission. Already received content remains in session history, and the user can retry in the same thread. Cancellation excludes internal streaming argument buffers from persisted messages.
 
+When a Steer message is queued during a Pi model request, the current response gets up to 10 seconds of content silence or 30 seconds total to finish. If it remains active, Taosi ends that response, cancels its network request, and lets Pi process the queued instruction in the same run. An incomplete tool call is discarded; preceding response text is retained. Tool execution and compaction are not interrupted by this model-stream rule.
+
 For unusually slow local models, set `PI_APP_MODEL_FIRST_RESPONSE_TIMEOUT_MS` and/or `PI_APP_MODEL_IDLE_TIMEOUT_MS` in the app process environment before launch. Positive finite values are clamped to 250 ms through 30 minutes; invalid values use the defaults. `PI_APP_CUSTOM_MODEL_TIMEOUT_MS` still controls the separate custom-provider HTTP connection timeout. These settings do not apply to the independent fx ACP runtime.
 
 ## Windows Updates

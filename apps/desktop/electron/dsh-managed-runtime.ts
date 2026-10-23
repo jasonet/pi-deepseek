@@ -56,9 +56,10 @@ export function dshEnvironment(node: string): NodeJS.ProcessEnv {
 
 export function sanitizeDshLog(text: string): string {
   return text.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "")
+    .replace(/(https?:\/\/)[^/\s@]+@/gi, "$1[redacted]@")
     .replace(/([?&]token=)[^\s&#]+/gi, "$1[redacted]")
     .replace(/\bsk-[\w-]+/g, "[redacted]")
-    .replace(/((?:api[_-]?key|authorization|password)\s*[:=]\s*)\S+/gi, "$1[redacted]")
+    .replace(/((?:api[_-]?key|authorization|password)\s*[:=]\s*)(?:(?:Bearer|Basic)\s+)?\S+/gi, "$1[redacted]")
     .slice(0, 600);
 }
 

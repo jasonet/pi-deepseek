@@ -114,6 +114,8 @@ test("stop aborts an installation and never launches after cancellation", async 
 test("diagnostics redact URL authentication and API credentials", () => {
   expect(sanitizeDshLog("dsh web: http://127.0.0.1:123/?token=secret sk-abcdef api_key=anything"))
     .toBe("dsh web: http://127.0.0.1:123/?token=[redacted] [redacted] api_key=[redacted]");
+  expect(sanitizeDshLog("Authorization: Bearer private-token https://user:password@registry.example.org/pkg"))
+    .toBe("Authorization: [redacted] https://[redacted]@registry.example.org/pkg");
 });
 
 test("output buffering never exposes partial tokens or broken UTF-8", () => {

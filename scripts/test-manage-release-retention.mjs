@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { planRetention } from "./manage-release-retention.mjs";
+import { planRetention, previousBuiltVersion } from "./manage-release-retention.mjs";
 
 async function main() {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "retention-test-"));
@@ -45,6 +45,13 @@ async function main() {
   assert.ok(deletedPaths.includes("Pi-Deepseek-2.8.0-mac-arm64.dmg"), "Should delete older 2.8.0 dmg");
   assert.ok(deletedPaths.includes(".temp0123-Pi-Deepseek-0.2.5.1-mac-arm64.dmg"), "Should delete temp dmg");
 
+  fs.mkdirSync(path.join(releaseDir, "Taosi-3.0.15-mac-arm64.app"));
+  assert.equal(previousBuiltVersion("3.0.16", ["3.0.8"], tempDir), "3.0.15",
+    "Untagged local builds must be retained ahead of older public releases");
+  const localPlan = planRetention({ latestVersion: "3.0.16",
+    previousVersion: previousBuiltVersion("3.0.16", ["3.0.8"], tempDir), desktopDir: tempDir });
+  assert.ok(localPlan.toKeep.some((item) => item.path.endsWith("Taosi-3.0.15-mac-arm64.app")));
+  assert.equal(previousBuiltVersion("3.0.15", ["3.0.8", "3.0.16"], tempDir), "3.0.8");
   fs.rmSync(tempDir, { recursive: true, force: true });
   console.log("manage-release-retention tests passed successfully.");
 }

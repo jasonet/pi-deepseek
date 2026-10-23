@@ -124,6 +124,21 @@ export function planRetention({
   return { toKeep, toDelete };
 }
 
+export function previousBuiltVersion(latestVersion, gitTags, desktopDir = DESKTOP_DIR) {
+  const versions = [...gitTags];
+  for (const directory of [desktopDir, path.join(desktopDir, "release")]) {
+    if (!fs.existsSync(directory)) continue;
+    for (const name of fs.readdirSync(directory)) {
+      const match = directory === desktopDir
+        ? /^release-(\d+\.\d+\.\d+)(?:$|[-.])/.exec(name)
+        : /^(?:Taosi|Pi-Deepseek)-(\d+\.\d+\.\d+)(?:$|[-.])/.exec(name);
+      if (match) versions.push(match[1]);
+    }
+  }
+  return versions.filter((version) => compareSemver(version, latestVersion) < 0)
+    .sort((a, b) => compareSemver(b, a))[0];
+}
+
 function getDirSize(dirPath) {
   let size = 0;
   try {
@@ -171,7 +186,7 @@ async function main() {
   const latestVersion = values.latest || rootPkg.version;
   const previousVersion =
     values.previous ||
-    gitTags.find((v) => compareSemver(v, latestVersion) < 0) ||
+    previousBuiltVersion(latestVersion, gitTags) ||
     "3.0.1";
 
   console.log(`[Release Retention Manager]`);

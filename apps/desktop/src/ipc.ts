@@ -175,6 +175,7 @@ export const desktopIpc = {
   startDshWeb: "pi-gui:start-dsh-web",
   launchDshWeb: "pi-gui:launch-dsh-web",
   stopDshWeb: "pi-gui:stop-dsh-web",
+  restartDshWeb: "pi-gui:restart-dsh-web",
   getTregStatus: "pi-gui:get-treg-status",
   saveTregSettings: "pi-gui:save-treg-settings",
   installTregHarnessPlugin: "pi-gui:install-treg-harness-plugin",
@@ -311,9 +312,18 @@ export interface OpenDesignStatus {
   readonly message?: string;
 }
 
-export type DshWebStatus =
+export interface DshWebProgress {
+  readonly phase?: "runtime" | "dependencies" | "pojia" | "service";
+  readonly progress?: number;
+  readonly logs?: readonly string[];
+  readonly managed?: boolean;
+  readonly port?: number;
+  readonly pid?: number;
+}
+
+export type DshWebStatus = DshWebProgress & (
   | {
-      readonly state: "idle" | "starting" | "launching";
+      readonly state: "idle" | "starting" | "installing" | "launching" | "stopping";
     }
   | {
       readonly state: "running";
@@ -322,7 +332,7 @@ export type DshWebStatus =
   | {
       readonly state: "error";
       readonly message: string;
-    };
+    });
 
 export interface TregSettings {
   readonly enabled: boolean;
@@ -528,6 +538,7 @@ export interface PiDesktopApi {
   startDshWeb(): Promise<DshWebStatus>;
   launchDshWeb(): Promise<DshWebStatus>;
   stopDshWeb(): Promise<DshWebStatus>;
+  restartDshWeb(): Promise<DshWebStatus>;
   getTregStatus(): Promise<TregStatus>;
   saveTregSettings(settings: SaveTregSettingsInput): Promise<TregStatus>;
   installTregHarnessPlugin(): Promise<{ ok: boolean; message: string }>;

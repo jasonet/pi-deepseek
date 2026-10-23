@@ -7,19 +7,13 @@ import { spawn } from "node:child_process";
 import lockfile from "proper-lockfile";
 import { parseDocument } from "yaml";
 
-import type { DshWebStatus } from "../src/ipc";
+import type { DshWebProgress, DshWebStatus } from "../src/ipc";
 import { withDshFileLock } from "./dsh-file-lock";
+import { dshEnvironment, dshOutputLines, ensureDshRuntime, sanitizeDshLog, stopDshProcess } from "./dsh-managed-runtime";
 
-const DEFAULT_DSH_WEB_URL = "http://127.0.0.1:3080";
 const DSH_PROBE_TIMEOUT_MS = 2_000;
 const DSH_CREDENTIAL_PROBE_TIMEOUT_MS = 2_000;
-const DSH_LAUNCH_TIMEOUT_MS = 30_000;
 const DEEPSEEK_BALANCE_URL = "https://api.deepseek.com/user/balance";
-const DSH_START_COMMAND = "env -u DEEPSEEK_API_KEY npx @deepseek-ai/dsh web";
-const DSH_NOT_RUNNING_MESSAGE =
-  `未检测到本机 DSH Web 服务。请在终端运行：${DSH_START_COMMAND}`;
-// Matches the URL line printed by dsh-web-app: "dsh web: http://127.0.0.1:3080/?token=xxx"
-const DSH_URL_LINE_RE = /^dsh web: (https?:\/\/\S+)/m;
 
 interface DshCredentialSyncOptions {
   readonly agentDir?: string;
@@ -44,143 +38,161 @@ interface PiCredentialState {
 
 export class DshWebService {
   private pendingStart: Promise<DshWebStatus> | undefined;
-  private pendingLaunch: Promise<DshWebStatus> | undefined;
+  private pendingStop: Promise<DshWebStatus> | undefined;
+  private pendingRestart: Promise<DshWebStatus> | undefined;
+  private controller: AbortController | undefined;
   private status: DshWebStatus = { state: "idle" };
-  /** Child process spawned by launch(); kept alive until stop(). */
   private childProcess: ReturnType<typeof spawn> | undefined;
+  private disposed = false;
+
+  constructor(private readonly options: {
+    readonly runtimeRoot: string;
+    readonly install?: typeof ensureDshRuntime;
+    readonly syncCredentials?: typeof syncDshDeepSeekCredential;
+    readonly externalUrl?: string;
+    readonly launchTimeoutMs?: number;
+  }) {}
 
   async checkDsBotInstalled(options: { dshHome?: string } = {}): Promise<boolean> {
     return checkDsBotInstalled(options);
   }
 
   async getStatus(): Promise<DshWebStatus> {
-    if (this.status.state !== "running" || !this.status.url) {
-      return this.status;
+    const current = this.status;
+    if (current.state === "running" && !await probeDshWeb(current.url) && this.status === current) {
+      this.status = { ...current, state: "error", message: "DSH 服务连接已断开，请重试或重启。" };
     }
-    if (await probeDshWeb(this.status.url)) {
-      return this.status;
-    }
-    this.status = notRunningStatus();
     return this.status;
   }
 
   start(): Promise<DshWebStatus> {
-    if (this.pendingStart) {
-      return this.pendingStart;
-    }
-
-    this.pendingStart = this.connect().finally(() => {
-      this.pendingStart = undefined;
-    });
+    if (this.disposed) return Promise.resolve({ state: "idle" });
+    if (this.pendingStop) return this.pendingStop.then(() => this.start());
+    if (this.pendingStart) return this.pendingStart;
+    if (this.status.state === "running") return Promise.resolve(this.status);
+    const controller = new AbortController();
+    this.controller = controller;
+    this.status = { state: "starting", managed: !this.externalUrl, logs: [] };
+    this.pendingStart = this.startService(controller.signal).catch(async (error) => {
+      if (this.childProcess) {
+        const child = this.childProcess;
+        this.childProcess = undefined;
+        await stopDshProcess(child);
+      }
+      if (!controller.signal.aborted) this.status = {
+        ...this.status, state: "error",
+        message: sanitizeDshLog(error instanceof Error ? error.message : String(error)),
+      };
+      return this.status;
+    }).finally(() => { this.pendingStart = undefined; });
     return this.pendingStart;
   }
 
-  /** Spawn `npx @deepseek-ai/dsh web` in background, capture the authenticated URL from stdout. */
-  launch(): Promise<DshWebStatus> {
-    if (this.pendingLaunch) return this.pendingLaunch;
-    if (this.status.state === "running") return Promise.resolve(this.status);
+  launch(): Promise<DshWebStatus> { return this.start(); }
 
-    this.pendingLaunch = this.spawnDshWeb().finally(() => {
-      this.pendingLaunch = undefined;
-    });
-    return this.pendingLaunch;
+  shutdown(): Promise<DshWebStatus> {
+    this.disposed = true;
+    return this.stop();
+  }
+
+  restart(): Promise<DshWebStatus> {
+    if (this.pendingRestart) return this.pendingRestart;
+    this.pendingRestart = this.stop().then(() => this.start()).finally(() => { this.pendingRestart = undefined; });
+    return this.pendingRestart;
   }
 
   stop(): Promise<DshWebStatus> {
-    this.pendingStart = undefined;
-    this.pendingLaunch = undefined;
-    if (this.childProcess) {
-      try { this.childProcess.kill(); } catch {}
+    if (this.pendingStop) return this.pendingStop;
+    this.status = { ...this.status, state: "stopping" };
+    this.controller?.abort();
+    this.pendingStop = (async () => {
+      const child = this.childProcess;
       this.childProcess = undefined;
-    }
-    this.status = { state: "idle" };
-    return Promise.resolve(this.status);
+      if (child) await stopDshProcess(child);
+      await this.pendingStart;
+      this.status = { state: "idle" };
+      return this.status;
+    })().finally(() => { this.pendingStop = undefined; });
+    return this.pendingStop;
   }
 
-  private async spawnDshWeb(): Promise<DshWebStatus> {
-    this.status = { state: "launching" };
-    // Sync credentials first
-    await syncDshDeepSeekCredential().catch((err) => {
-      console.warn("[DSH Web] Could not sync credentials before launch:", err instanceof Error ? err.message : err);
-    });
-
-    return new Promise<DshWebStatus>((resolve) => {
-      const env = { ...process.env };
-      delete env["DEEPSEEK_API_KEY"]; // dsh manages its own key
-      const child = spawn(
-        "npx",
-        ["--yes", "@deepseek-ai/dsh@0.2.1-alpha.1", "web", "--no-open"],
-        { env, stdio: ["ignore", "pipe", "pipe"], detached: false },
-      );
-      this.childProcess = child;
-
-      let buffer = "";
-      let resolved = false;
-
-      const onData = (chunk: Buffer) => {
-        buffer += chunk.toString("utf8");
-        const match = DSH_URL_LINE_RE.exec(buffer);
-        if (match && !resolved) {
-          resolved = true;
-          const url = match[1]!;
-          // strip LAN suffix like " (LAN: http://...)"
-          const cleanUrl = url.split(" ")[0]!;
-          this.status = { state: "running", url: cleanUrl };
-          resolve(this.status);
-        }
-      };
-
-      child.stdout?.on("data", onData);
-      child.stderr?.on("data", onData); // dsh may write to stderr too
-
-      const timeout = setTimeout(() => {
-        if (!resolved) {
-          resolved = true;
-          this.status = { state: "error", message: "DSH Web 启动超时，请手动在终端运行：" + DSH_START_COMMAND };
-          resolve(this.status);
-        }
-      }, DSH_LAUNCH_TIMEOUT_MS);
-
-      child.on("error", (err) => {
-        clearTimeout(timeout);
-        if (!resolved) {
-          resolved = true;
-          this.status = { state: "error", message: `DSH Web 启动失败：${err.message}` };
-          resolve(this.status);
-        }
-      });
-
-      child.on("exit", (code) => {
-        clearTimeout(timeout);
-        if (!resolved) {
-          resolved = true;
-          this.status = { state: "error", message: `DSH Web 进程意外退出（code ${String(code)}）` };
-          resolve(this.status);
-        } else if (this.childProcess === child) {
-          // Process died after we got the URL — revert to idle so UI can re-probe
-          this.status = notRunningStatus();
-          this.childProcess = undefined;
-        }
-      });
-    });
+  private get externalUrl(): string | undefined {
+    return this.options.externalUrl ?? (process.env.PI_APP_DSH_WEB_URL?.trim() || undefined);
   }
 
-  private async connect(): Promise<DshWebStatus> {
-    const url = resolveDshWebUrl();
-    this.status = { state: "starting" };
-    const credentialSync = syncDshDeepSeekCredential().catch((error) => {
-      console.warn("[DSH Web] Could not sync DeepSeek credentials:", error instanceof Error ? error.message : error);
-    });
-    const isRunning = await probeDshWeb(url);
-    await credentialSync;
-    if (isRunning) {
-      this.status = {
-        state: "running",
-        url,
-      };
-    } else {
-      this.status = notRunningStatus();
+  private report(update: DshWebProgress & { readonly line?: string }): void {
+    const { line, ...progress } = update;
+    const logs = line ? [...(this.status.logs ?? []), sanitizeDshLog(line)].slice(-80) : this.status.logs;
+    this.status = { ...this.status, ...progress, logs };
+  }
+
+  private async startService(signal: AbortSignal): Promise<DshWebStatus> {
+    if (this.childProcess) {
+      const child = this.childProcess;
+      this.childProcess = undefined;
+      await stopDshProcess(child);
     }
+    signal.throwIfAborted();
+    if (this.externalUrl) {
+      const url = validateLocalDshUrl(this.externalUrl);
+      if (!await probeDshWeb(url)) throw new Error("指定的本机 DSH 服务未运行。请启动该服务后重试。");
+      signal.throwIfAborted();
+      this.status = { state: "running", managed: false, url, port: Number(new URL(url).port) };
+      return this.status;
+    }
+    this.status = { state: "installing", managed: true, logs: [] };
+    const runtime = await (this.options.install ?? ensureDshRuntime)(this.options.runtimeRoot, signal, (update) => {
+      if (!signal.aborted) this.report(update);
+    });
+    signal.throwIfAborted();
+    this.status = { ...this.status, state: "launching", phase: "service", progress: undefined };
+    this.report({ line: "同步本机 DeepSeek 凭据" });
+    await (this.options.syncCredentials ?? syncDshDeepSeekCredential)().catch(() => {
+      this.report({ line: "凭据同步未完成，可在 Harness 中配置自己的 API Key。" });
+    });
+    signal.throwIfAborted();
+    this.report({ line: "启动本机 Pojia Harness 服务" });
+    const child = spawn(runtime.node, [runtime.cli, "web", "--host", "127.0.0.1", "--port", "0", "--no-open"], {
+      env: dshEnvironment(runtime.node), cwd: homedir(), detached: process.platform !== "win32",
+      windowsHide: true, stdio: ["ignore", "pipe", "pipe"],
+    });
+    this.childProcess = child;
+    const url = await new Promise<string>((resolve, reject) => {
+      let settled = false;
+      const timeout = setTimeout(() => finish(new Error("DSH 服务启动超时，请重试。")), this.options.launchTimeoutMs ?? 90_000);
+      const abort = () => finish(new Error("DSH 启动已取消。"));
+      const finish = (error?: Error, url?: string) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        signal.removeEventListener("abort", abort);
+        error ? reject(error) : resolve(url!);
+      };
+      const onLine = (line: string) => {
+        const match = /^dsh web: (https?:\/\/\S+)/.exec(line);
+        if (match && !settled) {
+          try { finish(undefined, validateLocalDshUrl(match[1]!)); } catch (error) { finish(error as Error); }
+        }
+        if (!signal.aborted) this.report({ line });
+      };
+      signal.addEventListener("abort", abort, { once: true });
+      child.stdout?.on("data", dshOutputLines(onLine));
+      child.stderr?.on("data", dshOutputLines(onLine));
+      child.once("error", (error) => finish(error));
+      child.once("exit", (code) => {
+        finish(new Error(`DSH 服务已退出 (code ${String(code)})。`));
+        if (this.childProcess === child && !signal.aborted) {
+          this.status = { ...this.status, state: "error", message: "DSH 服务意外退出，请重启。" };
+          void stopDshProcess(child).catch(() => undefined);
+        }
+      });
+      if (signal.aborted) abort();
+    });
+    signal.throwIfAborted();
+    if (!await probeDshWeb(url)) throw new Error("DSH 已启动，但页面健康检查失败。");
+    signal.throwIfAborted();
+    if (child.exitCode !== null || child.signalCode !== null) throw new Error("DSH 服务已退出。");
+    this.status = { ...this.status, state: "running", url, port: Number(new URL(url).port), pid: child.pid };
     return this.status;
   }
 }
@@ -480,19 +492,22 @@ function isNodeError(error: unknown): error is NodeJS.ErrnoException {
   return error instanceof Error && "code" in error;
 }
 
-function notRunningStatus(): DshWebStatus {
-  return {
-    state: "error",
-    message: DSH_NOT_RUNNING_MESSAGE,
-  };
-}
-
 async function probeDshWeb(url: string): Promise<boolean> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), DSH_PROBE_TIMEOUT_MS);
   try {
-    const response = await fetch(url, { signal: controller.signal });
+    const response = await fetch(url, { signal: controller.signal, redirect: "manual" });
     await response.body?.cancel();
+    // DSH exchanges the printed token for a cookie, then redirects to a clean URL.
+    // Node fetch does not keep that cookie automatically as the embedded browser does.
+    if (response.status === 303 && response.headers.has("set-cookie")) {
+      const target = new URL(response.headers.get("location") ?? "./", url);
+      if (target.origin !== new URL(url).origin) return false;
+      const cookie = response.headers.getSetCookie().map((value) => value.split(";", 1)[0]).join("; ");
+      const page = await fetch(target, { headers: { cookie }, signal: controller.signal, redirect: "error" });
+      await page.body?.cancel();
+      return page.ok;
+    }
     return response.ok;
   } catch {
     return false;
@@ -501,14 +516,12 @@ async function probeDshWeb(url: string): Promise<boolean> {
   }
 }
 
-function resolveDshWebUrl(): string {
-  const configured = process.env.PI_APP_DSH_WEB_URL?.trim();
-  if (!configured) return `${DEFAULT_DSH_WEB_URL}/`;
+function validateLocalDshUrl(configured: string): string {
   try {
     const url = new URL(configured);
     if (url.protocol === "http:" && ["127.0.0.1", "localhost", "[::1]"].includes(url.hostname)) {
       return url.toString();
     }
   } catch {}
-  return `${DEFAULT_DSH_WEB_URL}/`;
+  throw new Error("DSH 服务地址必须是本机 HTTP 地址。");
 }

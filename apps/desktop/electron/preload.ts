@@ -296,6 +296,8 @@ contextBridge.exposeInMainWorld("piApp", {
     ipcRenderer.invoke(desktopIpc.launchDshWeb) as Promise<DshWebStatus>,
   stopDshWeb: () =>
     ipcRenderer.invoke(desktopIpc.stopDshWeb) as Promise<DshWebStatus>,
+  restartDshWeb: () =>
+    ipcRenderer.invoke(desktopIpc.restartDshWeb) as Promise<DshWebStatus>,
   getTregStatus: () =>
     ipcRenderer.invoke(desktopIpc.getTregStatus) as Promise<TregStatus>,
   saveTregSettings: (settings: SaveTregSettingsInput) =>

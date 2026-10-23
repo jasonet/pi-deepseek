@@ -106,7 +106,6 @@ let desktopUpdateStatus: DesktopUpdateStatus = {
 let skipAutoTitle = false;
 let composerWorkMode: string = "pi-agent";
 let imWebhookServer: ImWebhookServer | null = null;
-const dshWebService = new DshWebService();
 const tregService = new TregService();
 
 function safeAutoUpdater() { return autoUpdater; }
@@ -820,6 +819,7 @@ async function installDesktopUpdate(): Promise<void> {
   updateInstallRequestCount += 1;
   if (process.env.PI_APP_TEST_MODE) return;
   await store.flushPersistence().catch(() => undefined);
+  await dshWebService.shutdown();
   quittingAfterStoreFlush = true;
   safeAutoUpdater()?.quitAndInstall(false, true);
 }
@@ -1274,6 +1274,7 @@ app.setAboutPanelOptions({
 
 const configuredUserDataDir = process.env.PI_APP_USER_DATA_DIR?.trim() || app.getPath("userData").replace(/\/pi$/, "/pi-deepseek");
 app.setPath("userData", configuredUserDataDir);
+const dshWebService = new DshWebService({ runtimeRoot: path.join(configuredUserDataDir, "harness") });
 
 const shouldRequestSingleInstanceLock = !process.env.PI_APP_TEST_MODE;
 const hasSingleInstanceLock = shouldRequestSingleInstanceLock ? app.requestSingleInstanceLock() : true;
@@ -1452,6 +1453,7 @@ app.whenReady().then(async () => {
   ipcMain.handle(desktopIpc.startDshWeb, () => dshWebService.start());
   ipcMain.handle(desktopIpc.launchDshWeb, () => dshWebService.launch());
   ipcMain.handle(desktopIpc.stopDshWeb, () => dshWebService.stop());
+  ipcMain.handle(desktopIpc.restartDshWeb, () => dshWebService.restart());
   ipcMain.handle(desktopIpc.getTregStatus, () => tregService.getStatus());
   ipcMain.handle(desktopIpc.saveTregSettings, async (_event, settings) => {
     const status = await tregService.saveSettings(settings);
@@ -1986,7 +1988,7 @@ app.on("window-all-closed", () => {
     terminalService = undefined;
     stopPeriodicGcHint();
     stopWeixinBridgeRuntime();
-    void dshWebService.stop();
+    void dshWebService.shutdown();
     app.quit();
   }
 });
@@ -2004,15 +2006,14 @@ app.on("before-quit", (event) => {
   terminalService = undefined;
   stopPeriodicGcHint();
   stopWeixinBridgeRuntime();
-  void dshWebService.stop();
-  if (quittingAfterStoreFlush || !store) {
+  if (quittingAfterStoreFlush) {
+    void dshWebService.shutdown();
     return;
   }
 
   event.preventDefault();
   quittingAfterStoreFlush = true;
-  void store
-    .flushPersistence()
+  void Promise.all([store?.flushPersistence(), dshWebService.shutdown()])
     .catch(() => undefined)
     .finally(() => {
       app.quit();

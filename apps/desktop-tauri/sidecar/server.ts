@@ -140,7 +140,7 @@ const store = new DesktopAppStore({
     return undefined;
   },
 });
-const dshWebService = new DshWebService();
+const dshWebService = new DshWebService({ runtimeRoot: path.join(resolveUserDataDir(), "harness") });
 const tregService = new TregService();
 
 // ---------------------------------------------------------------------------
@@ -430,6 +430,9 @@ const handlers: Record<string, Handler> = {
   [desktopIpc.installOpenDesign]: () => installOpenDesign(),
   [desktopIpc.getDshWebStatus]: () => dshWebService.getStatus(),
   [desktopIpc.startDshWeb]: () => dshWebService.start(),
+  [desktopIpc.launchDshWeb]: () => dshWebService.launch(),
+  [desktopIpc.restartDshWeb]: () => dshWebService.restart(),
+  [desktopIpc.getDsBotInstalled]: () => dshWebService.checkDsBotInstalled(),
   [desktopIpc.stopDshWeb]: () => dshWebService.stop(),
   [desktopIpc.getTregStatus]: () => tregService.getStatus(),
   [desktopIpc.saveTregSettings]: async (settings: Parameters<TregService["saveSettings"]>[0]) => {
@@ -686,7 +689,7 @@ async function main(): Promise<void> {
     void handleLine(line);
   });
   rl.on("close", () => {
-    void dshWebService.stop().finally(() => process.exit(0));
+    void dshWebService.shutdown().finally(() => process.exit(0));
   });
 }
 

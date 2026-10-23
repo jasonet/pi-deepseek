@@ -48,6 +48,13 @@ synchronization is retained; credentials come only from user environment/stores,
 never from the app bundle. Recognized tokens and credentials are redacted from
 logs, including split output chunks.
 
+Managed DSH now prefers a valid key saved in Pi's `auth.json` over older DSH
+references and inherited environment values. The selected key is passed only
+to the launched DSH process; dependency installers receive no DeepSeek API key.
+Each service start/restart reads Pi's current configuration again. After
+changing the Pi key while DSH is running, restart that DSH service to refresh
+its launch environment. An explicit 401/403 is not treated as an offline probe.
+
 Credential writes use the DSH 0.2.1 version-1 layout (`version: 1` plus
 `refs.DEEPSEEK_API_KEY`). Before validating keys over the network, recognized
 flat stores and versioned stores polluted by the old top-level key are migrated

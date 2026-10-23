@@ -1,5 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
+import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { parse } from "yaml";
@@ -57,7 +58,7 @@ test("fresh managed Pojia Harness installs, opens, restarts and stops with Elect
     const unauthenticated = await fetch(new URL("/", first.url));
     expect(unauthenticated.status).toBe(401);
     await unauthenticated.body?.cancel();
-    await window.getByRole("button", { name: "重启 DSH 服务", exact: true }).click();
+    await window.getByRole("button", { name: "重启 DeepSeek Harness 服务", exact: true }).click();
     await expect.poll(async () => (await status()).pid, { timeout: 120_000 }).not.toBe(pid);
     await expect(window.getByTestId("dsh-web-surface")).toBeVisible({ timeout: 120_000 });
     await expect(frame.getByRole("button").first()).toBeVisible({ timeout: 30_000 });
@@ -77,7 +78,7 @@ test("fresh managed Pojia Harness installs, opens, restarts and stops with Elect
     expect(status.logs?.join("\n")).not.toContain("安装 DeepSeek Harness");
     pid = status.pid;
     await reopened.electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.setSize(1060, 760));
-    await expect(window.getByRole("button", { name: "重启 DSH 服务", exact: true })).toBeVisible();
+    await expect(window.getByRole("button", { name: "重启 DeepSeek Harness 服务", exact: true })).toBeVisible();
     await window.screenshot({ path: test.info().outputPath("reopened-compact.png") });
   } finally { await reopened.close(); }
   if (pid) await expect.poll(() => { try { process.kill(pid!, 0); return true; } catch { return false; } }).toBe(false);
@@ -107,8 +108,22 @@ test("installed Harness starts with the explicitly selected existing user profil
       const status = () => window.evaluate(() => window.piApp!.getDshWebStatus());
       pid = (await status()).pid;
       expect(pid).toBeGreaterThan(0);
+      if (process.env.PI_APP_DSH_VERIFY_PI_KEY === "1") {
+        const pi = JSON.parse(await readFile(join(homedir(), ".pi", "agent", "auth.json"), "utf8"));
+        const key = pi.deepseek?.key;
+        expect(typeof key === "string" && key.length > 0).toBe(true);
+        const command = execFileSync("/bin/ps", ["eww", "-p", String(pid), "-o", "command="], { encoding: "utf8" });
+        // Compare in-process only: never attach the environment or key to a trace.
+        expect(`${command.trim()} `.includes(`DEEPSEEK_API_KEY=${key} `)).toBe(true);
+        const validation = await fetch("https://api.deepseek.com/user/balance", {
+          headers: { Authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(8000),
+        });
+        await validation.body?.cancel();
+        expect(validation.status).toBe(200);
+        console.log("Managed DSH uses the Pi key; official credential validation HTTP 200");
+      }
       if (attempt === 0) {
-        await window.getByRole("button", { name: "重启 DSH 服务", exact: true }).click();
+        await window.getByRole("button", { name: "重启 DeepSeek Harness 服务", exact: true }).click();
         await expect.poll(async () => (await status()).pid, { timeout: 60_000 }).not.toBe(pid);
         await expect(frame.getByRole("textbox").first()).toBeVisible({ timeout: 60_000 });
         expect(() => process.kill(pid!, 0)).toThrow();

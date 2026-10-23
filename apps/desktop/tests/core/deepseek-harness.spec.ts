@@ -70,7 +70,7 @@ test("retries an explicitly configured external DSH without installing or taking
 
     await expect(window.getByTestId("dsh-web-error")).toBeVisible();
     await expect(window.getByRole("heading", { name: "DeepSeek Harness 未运行" })).toBeVisible();
-    await expect(window.getByText("指定的本机 DSH 服务未运行。请启动该服务后重试。", { exact: false })).toBeVisible();
+    await expect(window.getByText("指定的本机 DeepSeek Harness 服务未运行。请启动该服务后重试。", { exact: false })).toBeVisible();
     const retry = window.getByRole("button", { name: "重试" });
     await expect(retry).toBeVisible();
 

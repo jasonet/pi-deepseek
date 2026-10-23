@@ -42,7 +42,7 @@ test("opens a running DeepSeek Harness web UI as a sidebar tab", async () => {
   }
 });
 
-test("prompts for the DSH web command when no local service is running", async () => {
+test("retries an explicitly configured external DSH without installing or taking ownership", async () => {
   const server = createServer((_request, response) => {
     response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
     response.end("<!doctype html><html><body><main>Harness started after prompt</main></body></html>");
@@ -70,7 +70,7 @@ test("prompts for the DSH web command when no local service is running", async (
 
     await expect(window.getByTestId("dsh-web-error")).toBeVisible();
     await expect(window.getByRole("heading", { name: "DeepSeek Harness 未运行" })).toBeVisible();
-    await expect(window.getByText("env -u DEEPSEEK_API_KEY npx @deepseek-ai/dsh web", { exact: false })).toBeVisible();
+    await expect(window.getByText("指定的本机 DSH 服务未运行。请启动该服务后重试。", { exact: false })).toBeVisible();
     const retry = window.getByRole("button", { name: "重试" });
     await expect(retry).toBeVisible();
 

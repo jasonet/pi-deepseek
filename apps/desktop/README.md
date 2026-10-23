@@ -2,6 +2,10 @@
 
 Codex-style Electron shell for `pi`, with Playwright E2E coverage organized by test lane.
 
+The local 3.0.16 build installs Pojia-configured DeepSeek Harness on first tab open,
+with progress, port/status display and managed restart. See [managed Harness](../../docs/managed-harness.md)
+for pinned sources, installation ownership, credential handling and smoke tests.
+
 macOS remains the source of truth for desktop UI verification. Linux is supported for packaging and manual validation, with CI packaging checks to catch AppImage regressions.
 
 ## Setup

@@ -251,6 +251,9 @@ function describeDshStatus(status: DshWebStatus | undefined, t: (key: string) =>
   if (!status) return t("settings.harnesses.checking");
   if (status.state === "running") return t("settings.harnesses.connected");
   if (status.state === "starting") return t("settings.harnesses.connecting");
+  if (status.state === "installing") return "正在安装 Pojia Harness";
+  if (status.state === "launching") return "正在启动 DSH";
+  if (status.state === "stopping") return "正在停止 DSH";
   if (status.state === "error") return t("settings.harnesses.unavailable");
   return t("settings.harnesses.notConnected");
 }

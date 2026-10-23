@@ -1,138 +1,121 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import deepseekLogo from "../resources/providers/deepseek.png";
+import { RefreshIcon } from "./icons";
 import type { DshWebStatus, PiDesktopApi } from "./ipc";
 
-interface DeepSeekHarnessViewProps {
-  readonly api: PiDesktopApi;
+interface DeepSeekHarnessViewProps { readonly api: PiDesktopApi; }
+
+const PHASES = [
+  ["runtime", "运行环境"], ["dependencies", "安装 DSH"],
+  ["pojia", "Pojia 配置"], ["service", "启动服务"],
+] as const;
+
+function statusLabel(status: DshWebStatus): string {
+  switch (status.state) {
+    case "running": return "运行中";
+    case "installing": return "正在安装";
+    case "error": return "未运行";
+    case "stopping": return "正在停止";
+    case "idle": return "未启动";
+    default: return "正在启动";
+  }
 }
 
 export function DeepSeekHarnessView({ api }: DeepSeekHarnessViewProps) {
   const [status, setStatus] = useState<DshWebStatus>({ state: "starting" });
   const [frameLoaded, setFrameLoaded] = useState(false);
-  const [launching, setLaunching] = useState(false);
-  const mountedRef = useRef(true);
+  const mounted = useRef(false);
+  const epoch = useRef(0);
+  const logsRef = useRef<HTMLPreElement>(null);
+  const busy = ["starting", "installing", "launching", "stopping"].includes(status.state);
 
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => { mountedRef.current = false; };
-  }, []);
-
-  // On mount: probe whether dsh is already running
-  const probe = useCallback(async () => {
+  const run = useCallback(async (restart = false) => {
+    epoch.current++;
     setFrameLoaded(false);
-    setStatus({ state: "starting" });
+    setStatus({ state: restart ? "stopping" : "starting" });
     try {
-      const s = await api.startDshWeb();
-      if (mountedRef.current) setStatus(s);
+      const result = await (restart ? api.restartDshWeb() : api.startDshWeb());
+      epoch.current++;
+      if (mounted.current) setStatus(result);
     } catch (error) {
-      if (mountedRef.current) {
-        setStatus({
-          state: "error",
-          message: error instanceof Error ? error.message : String(error),
-        });
-      }
+      epoch.current++;
+      if (mounted.current) setStatus({ state: "error", message: error instanceof Error ? error.message : String(error) });
     }
   }, [api]);
 
   useEffect(() => {
-    void probe();
-  }, [probe]);
+    mounted.current = true;
+    let active = true;
+    void run();
+    let timer: ReturnType<typeof setTimeout>;
+    const poll = async () => {
+      const current = epoch.current;
+      let running = false;
+      try {
+        const next = await api.getDshWebStatus();
+        running = next.state === "running";
+        if (active && current === epoch.current) setStatus(next);
+      } catch {
+        // A transient IPC failure must not hide an active installation.
+      }
+      if (active) timer = setTimeout(() => void poll(), running ? 3000 : 500);
+    };
+    timer = setTimeout(() => void poll(), 200);
+    return () => { active = false; mounted.current = false; clearTimeout(timer); };
+  }, [api, run]);
 
-  // Poll while running to detect disconnection
   useEffect(() => {
-    if (status.state !== "running") return undefined;
-    const interval = window.setInterval(() => {
-      void api.getDshWebStatus().then((next) => {
-        if (mountedRef.current && next.state !== "running") setStatus(next);
-      });
-    }, 3_000);
-    return () => window.clearInterval(interval);
-  }, [api, status]);
+    if (logsRef.current) logsRef.current.scrollTop = logsRef.current.scrollHeight;
+  }, [status.logs]);
 
-  // One-click launch: spawn dsh web in background
-  const handleLaunch = useCallback(async () => {
-    setLaunching(true);
-    setStatus({ state: "launching" });
-    try {
-      const s = await api.launchDshWeb();
-      if (mountedRef.current) {
-        setStatus(s);
-        setFrameLoaded(false);
-      }
-    } catch (error) {
-      if (mountedRef.current) {
-        setStatus({
-          state: "error",
-          message: error instanceof Error ? error.message : String(error),
-        });
-      }
-    } finally {
-      if (mountedRef.current) setLaunching(false);
-    }
-  }, [api]);
-
-  // Not running → show launch button
-  if (status.state === "error") {
-    return (
-      <section className="dsh-web dsh-web--status" data-testid="dsh-web-error">
-        <img className="dsh-web__logo" src={deepseekLogo} alt="" />
-        <h1>DeepSeek Harness 未运行</h1>
-        <p style={{ marginBottom: 16, color: "var(--muted-strong)", fontSize: 13 }}>
-          {status.message}
-        </p>
-        <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
-          <button
-            className="button button--primary"
-            type="button"
-            disabled={launching}
-            onClick={() => void handleLaunch()}
-          >
-            {launching ? "启动中…" : "一键启动 DSH Web"}
-          </button>
-          <button className="button button--ghost" type="button" onClick={() => void probe()}>
-            重新检测
-          </button>
-        </div>
-      </section>
-    );
-  }
-
-  if (status.state === "launching") {
-    return (
-      <section className="dsh-web dsh-web--status" data-testid="dsh-web-launching">
-        <img className="dsh-web__logo dsh-web__logo--loading" src={deepseekLogo} alt="" />
-        <h1>正在启动 DeepSeek Harness…</h1>
-        <p style={{ color: "var(--muted-strong)", fontSize: 13 }}>
-          首次启动需要下载依赖，请稍候（最多 30 秒）
-        </p>
-      </section>
-    );
-  }
-
-  if (status.state !== "running") {
-    return (
-      <section className="dsh-web dsh-web--status" data-testid="dsh-web-loading">
-        <img className="dsh-web__logo dsh-web__logo--loading" src={deepseekLogo} alt="" />
-        <h1>正在检测 DeepSeek Harness</h1>
-      </section>
-    );
-  }
-
+  const phaseIndex = PHASES.findIndex(([phase]) => phase === status.phase);
   return (
-    <section className="dsh-web" data-testid="dsh-web-surface">
-      {!frameLoaded ? (
-        <div className="dsh-web__frame-loading" aria-live="polite">正在载入 DeepSeek Harness</div>
-      ) : null}
-      <iframe
-        allow="clipboard-read; clipboard-write"
-        className="dsh-web__frame"
-        data-testid="dsh-web-frame"
-        onLoad={() => setFrameLoaded(true)}
-        sandbox="allow-downloads allow-forms allow-modals allow-popups allow-same-origin allow-scripts"
-        src={status.url}
-        title="DeepSeek Harness"
-      />
+    <section className="dsh-web" data-testid={status.state === "running" ? "dsh-web-surface" : undefined}>
+      <header className="dsh-web__toolbar">
+        <img className="dsh-web__logo" src={deepseekLogo} alt="" />
+        <strong>DeepSeek Harness</strong>
+        <span className="dsh-web__edition">{status.managed === false ? "外部服务" : "Pojia"}</span>
+        <span className="dsh-web__connection" role="status">
+          {busy ? <span className="dsh-web__spinner" aria-hidden="true" /> : <span className={status.state === "running" ? "dsh-web__dot dsh-web__dot--running" : "dsh-web__dot"} />}
+          {statusLabel(status)}
+          {status.state === "running" ? <code data-testid="dsh-web-port">127.0.0.1:{status.port}</code> : null}
+        </span>
+        <button className="button button--ghost dsh-web__restart" type="button"
+          title={status.managed === false ? "重新连接 DSH 服务" : "重启 DSH 服务"}
+          aria-label={status.managed === false ? "重新连接 DSH 服务" : "重启 DSH 服务"}
+          disabled={busy} onClick={() => void run(true)}><RefreshIcon /></button>
+      </header>
+      {status.state === "running" ? (
+        <div className="dsh-web__content">
+          {!frameLoaded ? <div className="dsh-web__frame-loading" aria-live="polite">正在载入 DeepSeek Harness</div> : null}
+          <iframe allow="clipboard-read; clipboard-write" className="dsh-web__frame"
+            data-testid="dsh-web-frame" key={status.url} onLoad={() => setFrameLoaded(true)}
+            sandbox="allow-downloads allow-forms allow-modals allow-popups allow-same-origin allow-scripts"
+            src={status.url} title="DeepSeek Harness" />
+        </div>
+      ) : (
+        <div className="dsh-web__setup" data-testid={status.state === "error" ? "dsh-web-error" : "dsh-web-loading"}>
+          <div className="dsh-web__setup-heading">
+            {busy ? <span className="dsh-web__spinner" aria-hidden="true" /> : null}
+            <h1>{status.state === "error" ? "DeepSeek Harness 未运行" : status.state === "installing" ? "正在安装 Pojia Harness" : "正在启动 DeepSeek Harness"}</h1>
+          </div>
+          {status.managed !== false && busy ? (
+            <>
+              <ol className="dsh-web__phases">
+                {PHASES.map(([phase, label], index) => <li key={phase} data-current={phase === status.phase} data-complete={index < phaseIndex}>
+                  <span>{index < phaseIndex ? "✓" : index + 1}</span>{label}
+                </li>)}
+              </ol>
+              <progress aria-label="安装进度" max={100} value={status.progress} />
+              {status.progress !== undefined ? <span className="dsh-web__percentage">{status.progress}%</span> : null}
+            </>
+          ) : null}
+          {status.state === "error" ? <><p role="alert">{status.message}</p>
+            <button className="button button--primary" type="button" onClick={() => void run()}><RefreshIcon />重试</button></> : null}
+          {status.logs?.length ? <pre className="dsh-web__logs" ref={logsRef} aria-label="安装与服务日志">{status.logs.join("\n")}</pre> : null}
+        </div>
+      )}
     </section>
   );
 }

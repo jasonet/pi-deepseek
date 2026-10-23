@@ -5,7 +5,7 @@ import { dirname, join, resolve } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { spawn } from "node:child_process";
 import lockfile from "proper-lockfile";
-import { parseDocument } from "yaml";
+import { type Document, isMap, isScalar, parseDocument } from "yaml";
 
 import type { DshWebProgress, DshWebStatus } from "../src/ipc";
 import { withDshFileLock } from "./dsh-file-lock";
@@ -233,14 +233,14 @@ export async function syncDshDeepSeekCredential(
   );
   const credentialsPath = join(dshHome, ".credentials.yaml");
   const authPath = join(agentDir, "auth.json");
-  const existingText = await readOptionalText(credentialsPath);
+  const existingText = await migrateDshCredentials(credentialsPath);
   if (existingText !== undefined) await chmod(credentialsPath, 0o600);
   const document = parseDocument(existingText ?? "{}");
   if (document.errors.length > 0) {
     throw new Error(`Invalid DSH credentials file at ${credentialsPath}.`);
   }
 
-  const existingKey = document.get("DEEPSEEK_API_KEY");
+  const existingKey = document.getIn(["refs", "DEEPSEEK_API_KEY"]);
   const normalizedExistingKey = typeof existingKey === "string" ? existingKey.trim() : undefined;
   const piCredentials = await readPiCredentials(authPath, options.environmentKey);
   const validityByKey = await validateCredentialCandidates(
@@ -468,12 +468,59 @@ async function writeDshCredentials(
       }
       const document = parseDocument(latestText ?? "{}");
       if (document.errors.length > 0) return false;
-      document.set("DEEPSEEK_API_KEY", apiKey);
+      document.set("version", 1);
+      document.setIn(["refs", "DEEPSEEK_API_KEY"], apiKey);
       await writePrivateFile(path, document.toString());
       return true;
     };
     if (!expectedPiSource) return commit();
     return (await withPiAuthLock(expectedPiSource.authPath, commit)) ?? false;
+  });
+}
+
+// Repair only recognized legacy layouts, under the same writer lock as DSH.
+// A versioned reference wins over a stray legacy copy; the backup retains both.
+async function migrateDshCredentials(path: string): Promise<string | undefined> {
+  if (await readOptionalText(path) === undefined) return undefined;
+  return withDshFileLock(path, async () => {
+    const text = await readOptionalText(path);
+    if (text === undefined) return undefined;
+    const document: Document = parseDocument(text);
+    const root = document.contents;
+    const invalid = () => new Error(`Unsupported DSH credentials layout at ${path}.`);
+    if (document.errors.length > 0 || (root !== null && !isMap(root))) throw invalid();
+    if (!isMap(root) || root.items.length === 0) return text;
+    const versioned = document.has("version");
+    if (versioned && document.get("version") !== 1) throw invalid();
+    const legacy = root.items.filter((pair) => !versioned
+      || !["version", "refs", "records"].includes(String(pair.key)));
+    for (const pair of legacy) {
+      if (!isScalar(pair.key) || typeof pair.key.value !== "string"
+        || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(pair.key.value)
+        || (versioned && pair.key.value !== "DEEPSEEK_API_KEY")
+        || !isScalar(pair.value) || typeof pair.value.value !== "string" || !pair.value.value.length) {
+        throw invalid();
+      }
+    }
+    if (legacy.length === 0) return text;
+    const refs = document.get("refs", true);
+    if (versioned && refs != null && !isMap(refs) && !(isScalar(refs) && refs.value === null)) throw invalid();
+    if (!versioned) {
+      document.contents = document.createNode({ version: 1 });
+      document.set("refs", root);
+    } else {
+      if (!isMap(refs)) document.set("refs", document.createNode({}));
+      for (const pair of legacy) {
+        const key = String(pair.key);
+        if (!document.hasIn(["refs", key])) document.setIn(["refs", key], pair.value);
+        document.delete(key);
+      }
+    }
+    const backup = `${path}.pre-v1-${Date.now()}-${randomBytes(4).toString("hex")}.bak`;
+    await writeFile(backup, text, { encoding: "utf8", mode: 0o600, flag: "wx" });
+    const migrated = document.toString();
+    await writePrivateFile(path, migrated);
+    return migrated;
   });
 }
 

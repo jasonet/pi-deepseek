@@ -21,7 +21,6 @@ const packagedReleaseDir = join(desktopDir, "release");
 const nativeClipboardImagePath = resolve(__dirname, "..", "..", "..", "website", "public", "og.png");
 const execFileAsync = promisify(execFile);
 const require = createRequire(__filename);
-const electronExecutablePath = require("electron") as string;
 const REAL_AUTH_ENV_VAR = "PI_APP_REAL_AUTH";
 const REAL_AUTH_SOURCE_DIR_ENV_VAR = "PI_APP_REAL_AUTH_SOURCE_DIR";
 const REQUIRED_REAL_AUTH_FILES = ["auth.json"] as const;
@@ -118,7 +117,7 @@ export async function spawnDesktopProcess(
   const normalized = Array.isArray(options) ? { initialWorkspaces: options } : options;
   const agentDir = await prepareAgentDir(userDataDir, normalized);
   const env = buildDesktopLaunchEnv(userDataDir, agentDir, normalized);
-  return spawn(electronExecutablePath, [desktopDir], {
+  return spawn(require("electron") as string, [desktopDir], {
     cwd: desktopDir,
     env,
     stdio: "ignore",

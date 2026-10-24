@@ -20,15 +20,17 @@
 
 | 平台 | 架构 | 引擎 | 版本 | 格式 | 大小 | 下载 |
 |------|------|------|------|------|------|------|
-| **macOS** | Apple Silicon (M1–M5) | Electron | v3.0.8 | ZIP / DMG | 147 MiB | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.8/Taosi-3.0.8-mac-arm64.dmg) |
-| **macOS** | Intel (x64) | Electron | v3.0.8 | DMG / ZIP | 165 MiB | [![Download](https://img.shields.io/badge/Download-x64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.8/Taosi-3.0.8-mac-x64.dmg) |
+| **macOS** | Apple Silicon (M1–M5) | Electron | v3.0.17 | ZIP / DMG | 150.4 MiB | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.17/Taosi-3.0.17-mac-arm64.dmg) |
+| **macOS** | Intel (x64) | Electron | v3.0.17 | DMG / ZIP | 157.9 MiB | [![Download](https://img.shields.io/badge/Download-x64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.17/Taosi-3.0.17-mac-x64.dmg) |
 | **macOS** | Apple Silicon (M1–M5) | Tauri | v3.0.8 | DMG | 157 MiB | [![Download](https://img.shields.io/badge/Download-arm64-%237C6BF5?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.8/Taosi-3.0.8-tauri-mac-arm64.dmg) |
-| **Windows** | x64 | Electron | v3.0.8 | 安装版 | 132 MB | [![Download](https://img.shields.io/badge/Download-Setup-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.8/Taosi-3.0.8-win-x64-setup.exe) |
-| **Windows** | x64 | Electron | v3.0.8 | 便携版 | 132 MB | [![Download](https://img.shields.io/badge/Download-Portable-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.8/Taosi-3.0.8-win-x64-portable.exe) |
+| **Windows** | x64 | Electron | v3.0.17 | 安装版 | 129.7 MiB | [![Download](https://img.shields.io/badge/Download-Setup-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.17/Taosi-3.0.17-win-x64-setup.exe) |
+| **Windows** | x64 | Electron | v3.0.17 | 便携版 | 129.4 MiB | [![Download](https://img.shields.io/badge/Download-Portable-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.17/Taosi-3.0.17-win-x64-portable.exe) |
 | **Linux** | x64 | Electron | v3.0.1 | deb | 157 MB | [![Download](https://img.shields.io/badge/Download-.deb-%234D6BFE?logo=ubuntu)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.1/Taosi-3.0.1-linux-amd64.deb) |
 | **Linux** | x64 | Electron | v3.0.1 | AppImage | 161 MB | [![Download](https://img.shields.io/badge/Download-AppImage-%234D6BFE?logo=linux)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.1/Taosi-3.0.1-linux-x86_64.AppImage) |
 
-> 🚀 **v3.x / v3.0.8 重大版本汇总 / Taosi 3.x Consolidated Highlights:**
+> 🚀 **v3.x / v3.0.17 重大版本汇总 / Taosi 3.x Consolidated Highlights:**
+> - **托管 DeepSeek Harness（v3.0.17）**：首次进入时安装本地运行环境，并显示启动进度、端口与状态；支持重启，以及同步用户现有的 Pi DeepSeek 凭据。DeepSeek Bot 与 Harness 使用独立服务。
+> - **会话可靠性（v3.0.17）**：挂起的模型响应可由新输入推进，自动上下文压缩与桌面渲染恢复逻辑持续完善。
 > - **全新品牌与全平台重构（v3.0.0）**：正式升级更名为 **Taosi**；新增右侧**文件实时预览面板（File Preview Panel）**；原生支持 EasyCLIProxyAPI（OAuth with Claude, Antigravity, Codex, Kimi, xAI）及各类 OpenAI 兼容网关；全新顶栏折叠与长标题自适应交互。
 > - **桌面自动化控制扩展（v3.0.5）**：内置集成 `@injaneity/pi-computer-use`，赋能 AI 智能体直接观察与操控操作系统桌面应用，支持屏幕截屏、UI 辅助功能树提取与精准键鼠交互。
 > - **代码块折叠与语法高亮（v3.0.5）**：时间线代码块默认折叠显示语言标签、行数与首行预览，展开显示行号与语法高亮，支持一键复制代码。

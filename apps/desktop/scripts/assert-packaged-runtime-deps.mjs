@@ -1,10 +1,10 @@
-import { execFileSync } from "node:child_process";
 import { constants, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { access } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { fileURLToPath } from "node:url";
+import { extractAll } from "@electron/asar";
 
 const requiredPackages = [
   // Keep packaging-sensitive runtime transitive deps explicit; electron-builder
@@ -49,7 +49,6 @@ const notificationHelperPath =
   packagePlatform === "darwin"
     ? resolveMacAppPath(desktopDir, "Contents", "MacOS", "pi-deepseek-notification-status-helper")
     : undefined;
-const asarBinary = path.resolve(desktopDir, "../../node_modules/.bin/asar");
 const piCodingAgentPackageName = "@earendil-works/pi-coding-agent";
 const requiredPiCodingAgentVersion = "0.74.0";
 const packagedRuntimeImportChecks = [
@@ -70,10 +69,7 @@ if (notificationHelperPath && !existsSync(notificationHelperPath)) {
 
 const extractedDir = mkdtempSync(path.join(tmpdir(), "pi-gui-packaged-runtime-"));
 try {
-  execFileSync(process.execPath, [asarBinary, "extract", asarPath, extractedDir], {
-    cwd: desktopDir,
-    stdio: "pipe",
-  });
+  extractAll(asarPath, extractedDir);
 
   verifyRequiredPackages(extractedDir);
   await verifyPackagedPiRuntime(extractedDir);

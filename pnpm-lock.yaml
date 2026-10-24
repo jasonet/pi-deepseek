@@ -169,6 +169,9 @@ importers:
       '@dnd-kit/utilities':
         specifier: ^3.2.2
         version: 3.2.2(react@19.2.4)
+      '@electron/asar':
+        specifier: 3.4.1
+        version: 3.4.1
       '@types/node':
         specifier: ^22.13.0
         version: 22.19.15

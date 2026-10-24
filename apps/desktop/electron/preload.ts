@@ -286,18 +286,18 @@ contextBridge.exposeInMainWorld("piApp", {
     ipcRenderer.invoke(desktopIpc.getOpenDesignStatus) as Promise<OpenDesignStatus>,
   installOpenDesign: () =>
     ipcRenderer.invoke(desktopIpc.installOpenDesign) as Promise<{ ok: boolean; message: string }>,
-  getDshWebStatus: () =>
-    ipcRenderer.invoke(desktopIpc.getDshWebStatus) as Promise<DshWebStatus>,
+  getDshWebStatus: (mode?: "harness" | "bot") =>
+    ipcRenderer.invoke(desktopIpc.getDshWebStatus, mode) as Promise<DshWebStatus>,
   getDsBotInstalled: () =>
     ipcRenderer.invoke(desktopIpc.getDsBotInstalled) as Promise<boolean>,
-  startDshWeb: () =>
-    ipcRenderer.invoke(desktopIpc.startDshWeb) as Promise<DshWebStatus>,
-  launchDshWeb: () =>
-    ipcRenderer.invoke(desktopIpc.launchDshWeb) as Promise<DshWebStatus>,
-  stopDshWeb: () =>
-    ipcRenderer.invoke(desktopIpc.stopDshWeb) as Promise<DshWebStatus>,
-  restartDshWeb: () =>
-    ipcRenderer.invoke(desktopIpc.restartDshWeb) as Promise<DshWebStatus>,
+  startDshWeb: (mode?: "harness" | "bot") =>
+    ipcRenderer.invoke(desktopIpc.startDshWeb, mode) as Promise<DshWebStatus>,
+  launchDshWeb: (mode?: "harness" | "bot") =>
+    ipcRenderer.invoke(desktopIpc.launchDshWeb, mode) as Promise<DshWebStatus>,
+  stopDshWeb: (mode?: "harness" | "bot") =>
+    ipcRenderer.invoke(desktopIpc.stopDshWeb, mode) as Promise<DshWebStatus>,
+  restartDshWeb: (mode?: "harness" | "bot") =>
+    ipcRenderer.invoke(desktopIpc.restartDshWeb, mode) as Promise<DshWebStatus>,
   getTregStatus: () =>
     ipcRenderer.invoke(desktopIpc.getTregStatus) as Promise<TregStatus>,
   saveTregSettings: (settings: SaveTregSettingsInput) =>

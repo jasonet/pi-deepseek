@@ -533,12 +533,12 @@ export interface PiDesktopApi {
   setSkipAutoTitle(enabled: boolean): Promise<DesktopAppState>;
   getOpenDesignStatus(): Promise<OpenDesignStatus>;
   installOpenDesign(): Promise<{ ok: boolean; message: string }>;
-  getDshWebStatus(): Promise<DshWebStatus>;
+  getDshWebStatus(mode?: "harness" | "bot"): Promise<DshWebStatus>;
   getDsBotInstalled(): Promise<boolean>;
-  startDshWeb(): Promise<DshWebStatus>;
-  launchDshWeb(): Promise<DshWebStatus>;
-  stopDshWeb(): Promise<DshWebStatus>;
-  restartDshWeb(): Promise<DshWebStatus>;
+  startDshWeb(mode?: "harness" | "bot"): Promise<DshWebStatus>;
+  launchDshWeb(mode?: "harness" | "bot"): Promise<DshWebStatus>;
+  stopDshWeb(mode?: "harness" | "bot"): Promise<DshWebStatus>;
+  restartDshWeb(mode?: "harness" | "bot"): Promise<DshWebStatus>;
   getTregStatus(): Promise<TregStatus>;
   saveTregSettings(settings: SaveTregSettingsInput): Promise<TregStatus>;
   installTregHarnessPlugin(): Promise<{ ok: boolean; message: string }>;

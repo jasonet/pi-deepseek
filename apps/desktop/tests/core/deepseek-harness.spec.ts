@@ -1,4 +1,6 @@
 import { createServer } from "node:http";
+import { mkdir, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 
 import { expect, test } from "@playwright/test";
 
@@ -83,6 +85,59 @@ test("retries an explicitly configured external DSH without installing or taking
   } finally {
     await harness.close();
     if (server.listening) {
+      await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    }
+  }
+});
+
+test("keeps the Harness and Bot tabs on their separate local services", async () => {
+  const harnessServer = createServer((_request, response) => {
+    response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    response.end("<!doctype html><html><body>Harness-only page</body></html>");
+  });
+  const botServer = createServer((_request, response) => {
+    response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    response.end("<!doctype html><html><body>Bot-only page</body></html>");
+  });
+  for (const server of [harnessServer, botServer]) {
+    await new Promise<void>((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(0, "127.0.0.1", resolve);
+    });
+  }
+  const harnessAddress = harnessServer.address();
+  const botAddress = botServer.address();
+  if (!harnessAddress || typeof harnessAddress === "string" || !botAddress || typeof botAddress === "string") {
+    throw new Error("DSH fixture server did not bind a TCP port");
+  }
+  const userDataDir = await makeUserDataDir("pi-gui-dsh-split-");
+  const workspacePath = await makeWorkspace("dsh-split-workspace");
+  const dshHome = join(userDataDir, "dsh");
+  const webProfile = join(dshHome, "profiles", "web");
+  await mkdir(join(webProfile, "node_modules", "ds-bot"), { recursive: true });
+  await writeFile(join(webProfile, "package.json"), JSON.stringify({ dependencies: { "ds-bot": "1.0.0" } }));
+  await writeFile(join(webProfile, "node_modules", "ds-bot", "package.json"), "{}\n");
+  const harness = await launchDesktop(userDataDir, {
+    initialWorkspaces: [workspacePath],
+    scrubProviderEnv: true,
+    testMode: "background",
+    envOverrides: {
+      PI_APP_DSH_WEB_URL: `http://127.0.0.1:${harnessAddress.port}`,
+      PI_APP_DS_BOT_WEB_URL: `http://127.0.0.1:${botAddress.port}`,
+      DSH_HOME: dshHome,
+    },
+  });
+  try {
+    const window = await harness.firstWindow();
+    await window.getByTestId("open-deepseek-bot").click();
+    await expect(window.frameLocator('[data-testid="ds-bot-frame"]').getByText("Bot-only page")).toBeVisible();
+    await window.getByTestId("open-deepseek-harness").click();
+    await expect(window.frameLocator('[data-testid="dsh-web-frame"]').getByText("Harness-only page")).toBeVisible();
+    await window.getByTestId("open-deepseek-bot").click();
+    await expect(window.getByTestId("ds-bot-surface")).toBeVisible();
+  } finally {
+    await harness.close();
+    for (const server of [harnessServer, botServer]) {
       await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     }
   }

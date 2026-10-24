@@ -7,6 +7,7 @@ name: Release Desktop (Taosi)
 # Usage: Actions tab -> "Release Desktop (Taosi)" -> Run workflow ->
 #   version: 2.6.6            (Electron, builds all 3 OSes)
 #   platforms: windows-linux  (or all / one platform)
+#   platforms: macos-windows  (macOS and Windows in one verified release)
 #   tauri_version: 2.6.6      (leave blank to skip the macOS Tauri build)
 #
 # electron-builder reads packaging metadata from apps/desktop/electron-builder.yml.
@@ -25,6 +26,7 @@ on:
         type: choice
         options:
           - all
+          - macos-windows
           - windows-linux
           - macos
           - windows
@@ -52,6 +54,9 @@ jobs:
           case "$PLATFORMS" in
             all)
               value='{"include":[{"platform":"macos","os":"macos-latest","args":"--mac"},{"platform":"windows","os":"windows-latest","args":"--win"},{"platform":"linux","os":"ubuntu-latest","args":"--linux"}]}'
+              ;;
+            macos-windows)
+              value='{"include":[{"platform":"macos","os":"macos-latest","args":"--mac"},{"platform":"windows","os":"windows-latest","args":"--win"}]}'
               ;;
             windows-linux)
               value='{"include":[{"platform":"windows","os":"windows-latest","args":"--win"},{"platform":"linux","os":"ubuntu-latest","args":"--linux"}]}'
@@ -153,6 +158,11 @@ jobs:
         run: |
           codesign --verify --deep --strict --verbose=2 release/mac/Taosi.app
           codesign --verify --deep --strict --verbose=2 release/mac-arm64/Taosi.app
+
+      - name: Smoke test macOS release ZIP
+        if: ${{ matrix.platform == 'macos' }}
+        working-directory: apps/desktop
+        run: pnpm run test:prod:release-zip-smoke:ci
 
       - name: First-run smoke (Windows)
         if: ${{ matrix.platform == 'windows' }}

@@ -4,7 +4,10 @@ import deepseekLogo from "../resources/providers/deepseek.png";
 import { RefreshIcon } from "./icons";
 import type { DshWebStatus, PiDesktopApi } from "./ipc";
 
-interface DeepSeekHarnessViewProps { readonly api: PiDesktopApi; }
+interface DeepSeekHarnessViewProps {
+  readonly api: PiDesktopApi;
+  readonly mode?: "harness" | "bot";
+}
 
 const PHASES = [
   ["runtime", "运行环境"], ["dependencies", "安装 DSH"],
@@ -22,7 +25,9 @@ function statusLabel(status: DshWebStatus): string {
   }
 }
 
-export function DeepSeekHarnessView({ api }: DeepSeekHarnessViewProps) {
+export function DeepSeekHarnessView({ api, mode = "harness" }: DeepSeekHarnessViewProps) {
+  const isBot = mode === "bot";
+  const title = isBot ? "DeepSeek Bot" : "DeepSeek Harness";
   const [status, setStatus] = useState<DshWebStatus>({ state: "starting" });
   const [frameLoaded, setFrameLoaded] = useState(false);
   const mounted = useRef(false);
@@ -35,14 +40,14 @@ export function DeepSeekHarnessView({ api }: DeepSeekHarnessViewProps) {
     setFrameLoaded(false);
     setStatus({ state: restart ? "stopping" : "starting" });
     try {
-      const result = await (restart ? api.restartDshWeb() : api.startDshWeb());
+      const result = await (restart ? api.restartDshWeb(mode) : api.startDshWeb(mode));
       epoch.current++;
       if (mounted.current) setStatus(result);
     } catch (error) {
       epoch.current++;
       if (mounted.current) setStatus({ state: "error", message: error instanceof Error ? error.message : String(error) });
     }
-  }, [api]);
+  }, [api, mode]);
 
   useEffect(() => {
     mounted.current = true;
@@ -53,7 +58,7 @@ export function DeepSeekHarnessView({ api }: DeepSeekHarnessViewProps) {
       const current = epoch.current;
       let running = false;
       try {
-        const next = await api.getDshWebStatus();
+        const next = await api.getDshWebStatus(mode);
         running = next.state === "running";
         if (active && current === epoch.current) setStatus(next);
       } catch {
@@ -63,7 +68,7 @@ export function DeepSeekHarnessView({ api }: DeepSeekHarnessViewProps) {
     };
     timer = setTimeout(() => void poll(), 200);
     return () => { active = false; mounted.current = false; clearTimeout(timer); };
-  }, [api, run]);
+  }, [api, mode, run]);
 
   useEffect(() => {
     if (logsRef.current) logsRef.current.scrollTop = logsRef.current.scrollHeight;
@@ -71,34 +76,34 @@ export function DeepSeekHarnessView({ api }: DeepSeekHarnessViewProps) {
 
   const phaseIndex = PHASES.findIndex(([phase]) => phase === status.phase);
   return (
-    <section className="dsh-web" data-testid={status.state === "running" ? "dsh-web-surface" : undefined}>
+    <section className="dsh-web" data-testid={status.state === "running" ? (isBot ? "ds-bot-surface" : "dsh-web-surface") : undefined}>
       <header className="dsh-web__toolbar">
         <img className="dsh-web__logo" src={deepseekLogo} alt="" />
-        <strong>DeepSeek Harness</strong>
-        <span className="dsh-web__edition">{status.managed === false ? "外部服务" : "Pojia"}</span>
+        <strong>{title}</strong>
+        <span className="dsh-web__edition">{status.managed === false ? "外部服务" : isBot ? "DS Bot" : "标准版"}</span>
         <span className="dsh-web__connection" role="status">
           {busy ? <span className="dsh-web__spinner" aria-hidden="true" /> : <span className={status.state === "running" ? "dsh-web__dot dsh-web__dot--running" : "dsh-web__dot"} />}
           {statusLabel(status)}
-          {status.state === "running" ? <code data-testid="dsh-web-port">127.0.0.1:{status.port}</code> : null}
+          {status.state === "running" ? <code data-testid={isBot ? "ds-bot-port" : "dsh-web-port"}>127.0.0.1:{status.port}</code> : null}
         </span>
         <button className="button button--ghost dsh-web__restart" type="button"
-          title={status.managed === false ? "重新连接 DSH 服务" : "重启 DSH 服务"}
-          aria-label={status.managed === false ? "重新连接 DSH 服务" : "重启 DSH 服务"}
+          title={status.managed === false ? `重新连接 ${title} 服务` : `重启 ${title} 服务`}
+          aria-label={status.managed === false ? `重新连接 ${title} 服务` : `重启 ${title} 服务`}
           disabled={busy} onClick={() => void run(true)}><RefreshIcon /></button>
       </header>
       {status.state === "running" ? (
         <div className="dsh-web__content">
-          {!frameLoaded ? <div className="dsh-web__frame-loading" aria-live="polite">正在载入 DeepSeek Harness</div> : null}
+          {!frameLoaded ? <div className="dsh-web__frame-loading" aria-live="polite">{`正在载入 ${title}`}</div> : null}
           <iframe allow="clipboard-read; clipboard-write" className="dsh-web__frame"
-            data-testid="dsh-web-frame" key={status.url} onLoad={() => setFrameLoaded(true)}
+            data-testid={isBot ? "ds-bot-frame" : "dsh-web-frame"} key={status.url} onLoad={() => setFrameLoaded(true)}
             sandbox="allow-downloads allow-forms allow-modals allow-popups allow-same-origin allow-scripts"
-            src={status.url} title="DeepSeek Harness" />
+            src={status.url} title={title} />
         </div>
       ) : (
-        <div className="dsh-web__setup" data-testid={status.state === "error" ? "dsh-web-error" : "dsh-web-loading"}>
+        <div className="dsh-web__setup" data-testid={status.state === "error" ? (isBot ? "ds-bot-error" : "dsh-web-error") : (isBot ? "ds-bot-loading" : "dsh-web-loading")}>
           <div className="dsh-web__setup-heading">
             {busy ? <span className="dsh-web__spinner" aria-hidden="true" /> : null}
-            <h1>{status.state === "error" ? "DeepSeek Harness 未运行" : status.state === "installing" ? "正在安装 Pojia Harness" : "正在启动 DeepSeek Harness"}</h1>
+            <h1>{status.state === "error" ? `${title} 未运行` : status.state === "installing" ? "正在安装运行环境" : `正在启动 ${title}`}</h1>
           </div>
           {status.managed !== false && busy ? (
             <>

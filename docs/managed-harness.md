@@ -1,6 +1,6 @@
 # Managed Pojia Harness
 
-Local development build: 3.0.16. This is not a GitHub release announcement.
+The managed Harness is included in the Taosi 3.0.17 desktop release.
 
 Opening the DeepSeek Harness tab installs and starts a managed local instance.
 The toolbar shows lifecycle state, the actual loopback port, and a restart action.
@@ -16,6 +16,7 @@ indeterminate progress bar for npm, and a bounded rolling diagnostic log.
 - Installation is staged and locked. Receipts are written after validation. Damaged installations are not accepted as ready; failed staging directories and replaced installations remain available for diagnosis.
 - Valid installations are reused on restart without another npm install. First install requires network access; subsequent starts use the local runtime.
 - DSH listens only on `127.0.0.1`, with an OS-selected free port. Restart and app quit stop only processes owned by this service.
+- Taosi uses its own `taosi-harness` profile, leaving user-created `harness` and `web` profiles untouched. DeepSeek Bot runs as a separate service using the existing `web` profile.
 - `PI_APP_DSH_WEB_URL` is an explicit, loopback-only external-service override. The app connects/reconnects but does not install, patch, or kill the external server. Such servers must support embedded authentication themselves.
 
 ## Pojia Source and Adaptation
@@ -43,8 +44,9 @@ The background readiness probe explicitly exchanges the token for a cookie.
 ## Data and Credentials
 
 DSH continues to use `DSH_HOME` or `~/.dsh`, preserving its sessions, plugins and
-settings. It is not merged into Pi/fx sessions. Existing bidirectional DeepSeek key
-synchronization is retained; credentials come only from user environment/stores,
+settings. It is not merged into Pi/fx sessions. Pi's configured DeepSeek key is
+synced into DSH, while importing a DSH key back into Pi requires an explicit
+request; provider logout is never undone by a background sync. Credentials come only from user environment/stores,
 never from the app bundle. Recognized tokens and credentials are redacted from
 logs, including split output chunks.
 
@@ -83,10 +85,9 @@ the user's sessions/keys when using the fresh-profile smoke.
 For an explicitly authorized existing-profile startup check, set
 `PI_APP_DSH_EXISTING_USER_DATA` to the real app data directory and run the
 `existing user profile` test. This uses `~/.dsh` and `~/.pi/agent`, exercises the
-real credential migration and existing plugins, restarts the service, and
-reopens the app without sending a model prompt. Existing `ds-bot` profiles can
-replace the stock Harness sidebar, so this check verifies the actual input
-surface rather than assuming stock button labels.
+real credential migration, restarts the service, and reopens the app without
+sending a model prompt. The test checks the Taosi-owned Harness profile without
+modifying a separately installed `ds-bot` profile.
 
 macOS Electron is the verified desktop surface. Tauri shares the installer and
 IPC implementation, but native WebKit embedding and Windows/Linux first-run

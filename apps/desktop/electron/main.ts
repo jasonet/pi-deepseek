@@ -42,7 +42,10 @@ import {
 import { configureLogger, logError, logInfo } from "./logger";
 import { ensurePathForGuiLaunch } from "./ensure-path";
 import { seedBundledExtensions } from "./seed-extensions";
-import { DshWebService } from "./dsh-web-service";
+import {
+  DshWebService,
+  syncDshDeepSeekCredential,
+} from "./dsh-web-service";
 import { TregService } from "./treg-service";
 import { humanizeUpdateError } from "./update-version";
 import type { DesktopAppState, SelectedTranscriptRecord, ThemeMode } from "../src/desktop-state";
@@ -819,7 +822,7 @@ async function installDesktopUpdate(): Promise<void> {
   updateInstallRequestCount += 1;
   if (process.env.PI_APP_TEST_MODE) return;
   await store.flushPersistence().catch(() => undefined);
-  await dshWebService.shutdown();
+  await Promise.all([dshHarnessService.shutdown(), dsBotService.shutdown()]).catch(() => undefined);
   quittingAfterStoreFlush = true;
   safeAutoUpdater()?.quitAndInstall(false, true);
 }
@@ -1274,7 +1277,23 @@ app.setAboutPanelOptions({
 
 const configuredUserDataDir = process.env.PI_APP_USER_DATA_DIR?.trim() || app.getPath("userData").replace(/\/pi$/, "/pi-deepseek");
 app.setPath("userData", configuredUserDataDir);
-const dshWebService = new DshWebService({ runtimeRoot: path.join(configuredUserDataDir, "harness") });
+
+const dshHarnessService = new DshWebService({
+  runtimeRoot: path.join(configuredUserDataDir, "harness"),
+  profile: "taosi-harness",
+  title: "DeepSeek Harness",
+});
+
+const dsBotService = new DshWebService({
+  runtimeRoot: path.join(configuredUserDataDir, "harness"),
+  profile: "web",
+  title: "DeepSeek Bot",
+  externalUrl: process.env.PI_APP_DS_BOT_WEB_URL?.trim() || undefined,
+});
+
+function resolveDshService(mode?: "harness" | "bot"): DshWebService {
+  return mode === "bot" ? dsBotService : dshHarnessService;
+}
 
 const shouldRequestSingleInstanceLock = !process.env.PI_APP_TEST_MODE;
 const hasSingleInstanceLock = shouldRequestSingleInstanceLock ? app.requestSingleInstanceLock() : true;
@@ -1448,12 +1467,22 @@ app.whenReady().then(async () => {
       return { ok: false, message: e.message };
     }
   });
-  ipcMain.handle(desktopIpc.getDshWebStatus, () => dshWebService.getStatus());
-  ipcMain.handle(desktopIpc.getDsBotInstalled, () => dshWebService.checkDsBotInstalled());
-  ipcMain.handle(desktopIpc.startDshWeb, () => dshWebService.start());
-  ipcMain.handle(desktopIpc.launchDshWeb, () => dshWebService.launch());
-  ipcMain.handle(desktopIpc.stopDshWeb, () => dshWebService.stop());
-  ipcMain.handle(desktopIpc.restartDshWeb, () => dshWebService.restart());
+  ipcMain.handle(desktopIpc.getDshWebStatus, (_event, mode?: "harness" | "bot") =>
+    resolveDshService(mode).getStatus(),
+  );
+  ipcMain.handle(desktopIpc.getDsBotInstalled, () => dshHarnessService.checkDsBotInstalled());
+  ipcMain.handle(desktopIpc.startDshWeb, (_event, mode?: "harness" | "bot") =>
+    resolveDshService(mode).start(),
+  );
+  ipcMain.handle(desktopIpc.launchDshWeb, (_event, mode?: "harness" | "bot") =>
+    resolveDshService(mode).launch(),
+  );
+  ipcMain.handle(desktopIpc.stopDshWeb, (_event, mode?: "harness" | "bot") =>
+    resolveDshService(mode).stop(),
+  );
+  ipcMain.handle(desktopIpc.restartDshWeb, (_event, mode?: "harness" | "bot") =>
+    resolveDshService(mode).restart(),
+  );
   ipcMain.handle(desktopIpc.getTregStatus, () => tregService.getStatus());
   ipcMain.handle(desktopIpc.saveTregSettings, async (_event, settings) => {
     const status = await tregService.saveSettings(settings);
@@ -1538,12 +1567,17 @@ app.whenReady().then(async () => {
     if (!isFxAuthProvider(provider)) throw new Error("Unsupported fx provider.");
     return store.selectFxProvider(workspaceId, provider);
   });
-  ipcMain.handle(desktopIpc.logoutProvider, (_event, workspaceId: string, providerId: string) =>
-    store.logoutProvider(workspaceId, providerId),
-  );
-  ipcMain.handle(desktopIpc.setProviderApiKey, (_event, workspaceId: string, providerId: string, apiKey: string) =>
-    store.setProviderApiKey(workspaceId, providerId, apiKey),
-  );
+  ipcMain.handle(desktopIpc.logoutProvider, async (_event, workspaceId: string, providerId: string) => {
+    const state = await store.logoutProvider(workspaceId, providerId);
+    return state;
+  });
+  ipcMain.handle(desktopIpc.setProviderApiKey, async (_event, workspaceId: string, providerId: string, apiKey: string) => {
+    const state = await store.setProviderApiKey(workspaceId, providerId, apiKey);
+    if (providerId === "deepseek") {
+      void syncDshDeepSeekCredential().catch(() => {});
+    }
+    return state;
+  });
   ipcMain.handle(desktopIpc.listCustomModelProviders, () => store.listCustomModelProviders());
   ipcMain.handle(desktopIpc.probeCustomModelProvider, (_event, input) =>
     probeCustomModelProvider(
@@ -1988,7 +2022,7 @@ app.on("window-all-closed", () => {
     terminalService = undefined;
     stopPeriodicGcHint();
     stopWeixinBridgeRuntime();
-    void dshWebService.shutdown();
+    void Promise.all([dshHarnessService.shutdown(), dsBotService.shutdown()]);
     app.quit();
   }
 });
@@ -2007,13 +2041,17 @@ app.on("before-quit", (event) => {
   stopPeriodicGcHint();
   stopWeixinBridgeRuntime();
   if (quittingAfterStoreFlush) {
-    void dshWebService.shutdown();
+    void Promise.all([dshHarnessService.shutdown(), dsBotService.shutdown()]);
     return;
   }
 
   event.preventDefault();
   quittingAfterStoreFlush = true;
-  void Promise.all([store?.flushPersistence(), dshWebService.shutdown()])
+  void Promise.all([
+    store?.flushPersistence(),
+    dshHarnessService.shutdown(),
+    dsBotService.shutdown(),
+  ])
     .catch(() => undefined)
     .finally(() => {
       app.quit();

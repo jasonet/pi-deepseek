@@ -20,6 +20,7 @@ interface DshCredentialSyncOptions {
   readonly dshHome?: string;
   readonly environmentKey?: string | null;
   readonly fetchImpl?: typeof fetch;
+  readonly importDshIntoPi?: boolean;
 }
 
 export interface DshCredentialSyncResult {
@@ -51,7 +52,13 @@ export class DshWebService {
     readonly syncCredentials?: typeof syncDshDeepSeekCredential;
     readonly externalUrl?: string;
     readonly launchTimeoutMs?: number;
+    readonly profile?: string;
+    readonly title?: string;
   }) {}
+
+  private get title(): string {
+    return this.options.title ?? (this.options.profile === "web" ? "DeepSeek Bot" : "DeepSeek Harness");
+  }
 
   async checkDsBotInstalled(options: { dshHome?: string } = {}): Promise<boolean> {
     return checkDsBotInstalled(options);
@@ -60,7 +67,7 @@ export class DshWebService {
   async getStatus(): Promise<DshWebStatus> {
     const current = this.status;
     if (current.state === "running" && !await probeDshWeb(current.url) && this.status === current) {
-      this.status = { ...current, state: "error", message: "DSH 服务连接已断开，请重试或重启。" };
+      this.status = { ...current, state: "error", message: `${this.title} 服务连接已断开，请重试或重启。` };
     }
     return this.status;
   }
@@ -117,7 +124,11 @@ export class DshWebService {
   }
 
   private get externalUrl(): string | undefined {
-    return this.options.externalUrl ?? (process.env.PI_APP_DSH_WEB_URL?.trim() || undefined);
+    if (this.options.externalUrl) return this.options.externalUrl;
+    if (this.options.profile === "web") {
+      return process.env.PI_APP_DS_BOT_WEB_URL?.trim() || undefined;
+    }
+    return process.env.PI_APP_DSH_WEB_URL?.trim() || undefined;
   }
 
   private report(update: DshWebProgress & { readonly line?: string }): void {
@@ -135,7 +146,7 @@ export class DshWebService {
     signal.throwIfAborted();
     if (this.externalUrl) {
       const url = validateLocalDshUrl(this.externalUrl);
-      if (!await probeDshWeb(url)) throw new Error("指定的本机 DSH 服务未运行。请启动该服务后重试。");
+      if (!await probeDshWeb(url)) throw new Error(`指定的本机 ${this.title} 服务未运行。请启动该服务后重试。`);
       signal.throwIfAborted();
       this.status = { state: "running", managed: false, url, port: Number(new URL(url).port) };
       return this.status;
@@ -147,20 +158,29 @@ export class DshWebService {
     signal.throwIfAborted();
     this.status = { ...this.status, state: "launching", phase: "service", progress: undefined };
     this.report({ line: "同步本机 DeepSeek 凭据" });
-    await (this.options.syncCredentials ?? syncDshDeepSeekCredential)().catch(() => {
-      this.report({ line: "凭据同步未完成，可在 Harness 中配置自己的 API Key。" });
+    const syncResult = await (this.options.syncCredentials ?? syncDshDeepSeekCredential)().catch(() => {
+      this.report({ line: "凭据同步未完成，可在设置中配置自己的 DeepSeek API Key。" });
+      return undefined;
     });
     signal.throwIfAborted();
-    this.report({ line: "启动本机 Pojia Harness 服务" });
-    const child = spawn(runtime.node, [runtime.cli, "web", "--host", "127.0.0.1", "--port", "0", "--no-open"], {
-      env: dshEnvironment(runtime.node), cwd: homedir(), detached: process.platform !== "win32",
+    const profile = this.options.profile ?? "taosi-harness";
+    const dshHome = resolveUserPath(process.env.DSH_HOME, join(homedir(), ".dsh"));
+    if (profile === "taosi-harness") {
+      await ensureHarnessProfile(dshHome);
+    }
+    this.report({ line: `启动本机 ${this.title} 服务` });
+    const agentDir = resolveUserPath(process.env.PI_CODING_AGENT_DIR, join(homedir(), ".pi", "agent"));
+    const activeApiKey = await resolveActiveDeepSeekKey(dshHome, agentDir, undefined, fetch, syncResult?.source);
+
+    const child = spawn(runtime.node, [runtime.cli, profile, "--host", "127.0.0.1", "--port", "0", "--no-open"], {
+      env: dshEnvironment(runtime.node, activeApiKey), cwd: homedir(), detached: process.platform !== "win32",
       windowsHide: true, stdio: ["ignore", "pipe", "pipe"],
     });
     this.childProcess = child;
     const url = await new Promise<string>((resolve, reject) => {
       let settled = false;
-      const timeout = setTimeout(() => finish(new Error("DSH 服务启动超时，请重试。")), this.options.launchTimeoutMs ?? 90_000);
-      const abort = () => finish(new Error("DSH 启动已取消。"));
+      const timeout = setTimeout(() => finish(new Error(`${this.title} 服务启动超时，请重试。`)), this.options.launchTimeoutMs ?? 90_000);
+      const abort = () => finish(new Error(`${this.title} 启动已取消。`));
       const finish = (error?: Error, url?: string) => {
         if (settled) return;
         settled = true;
@@ -180,21 +200,99 @@ export class DshWebService {
       child.stderr?.on("data", dshOutputLines(onLine));
       child.once("error", (error) => finish(error));
       child.once("exit", (code) => {
-        finish(new Error(`DSH 服务已退出 (code ${String(code)})。`));
+        finish(new Error(`${this.title} 服务已退出 (code ${String(code)})。`));
         if (this.childProcess === child && !signal.aborted) {
-          this.status = { ...this.status, state: "error", message: "DSH 服务意外退出，请重启。" };
+          this.status = { ...this.status, state: "error", message: `${this.title} 服务意外退出，请重启。` };
           void stopDshProcess(child).catch(() => undefined);
         }
       });
       if (signal.aborted) abort();
     });
     signal.throwIfAborted();
-    if (!await probeDshWeb(url)) throw new Error("DSH 已启动，但页面健康检查失败。");
+    if (!await probeDshWeb(url)) throw new Error(`${this.title} 已启动，但页面健康检查失败。`);
     signal.throwIfAborted();
-    if (child.exitCode !== null || child.signalCode !== null) throw new Error("DSH 服务已退出。");
+    if (child.exitCode !== null || child.signalCode !== null) throw new Error(`${this.title} 服务已退出。`);
     this.status = { ...this.status, state: "running", url, port: Number(new URL(url).port), pid: child.pid };
     return this.status;
   }
+}
+
+export async function ensureHarnessProfile(
+  dshHome: string = resolveUserPath(process.env.DSH_HOME, join(homedir(), ".dsh")),
+): Promise<string> {
+  const harnessDir = join(dshHome, "profiles", "taosi-harness");
+  await mkdir(harnessDir, { recursive: true, mode: 0o700 });
+  const pkgPath = join(harnessDir, "package.json");
+  const cordisPath = join(harnessDir, "cordis.yml");
+  const patchPath = join(harnessDir, "cordis.patch.yml");
+  const pnpmWorkspacePath = join(harnessDir, "pnpm-workspace.yaml");
+
+  const existingPkgText = await readOptionalText(pkgPath);
+  if (existingPkgText) {
+    const parsed = JSON.parse(existingPkgText);
+    const bundles: string[] = parsed?.dsh?.profile?.bundles ?? [];
+    const hasDsBot = Boolean(parsed?.dependencies?.["ds-bot"] || bundles.includes("ds-bot"));
+    if (!bundles.includes("@deepseek-ai/dsh-base") || !bundles.includes("@deepseek-ai/dsh-web-app") || hasDsBot) {
+      throw new Error("Taosi Harness profile 已被修改，请检查其配置。");
+    }
+  }
+
+  if (!existingPkgText) {
+    await writeFile(pkgPath, JSON.stringify({
+      name: "dsh-profile-taosi-harness",
+      private: true,
+      dependencies: {},
+      dsh: {
+        profile: {
+          bundles: [
+            "@deepseek-ai/dsh-base",
+            "@deepseek-ai/dsh-web-app",
+          ],
+        },
+      },
+    }, null, 2) + "\n", { encoding: "utf8", mode: 0o600 });
+  }
+
+  if (!await readOptionalText(cordisPath)) {
+    await writeFile(cordisPath, "[]\n", { encoding: "utf8", mode: 0o600 });
+  }
+  if (!await readOptionalText(patchPath)) {
+    await writeFile(patchPath, "[]\n", { encoding: "utf8", mode: 0o600 });
+  }
+  if (!await readOptionalText(pnpmWorkspacePath)) {
+    await writeFile(pnpmWorkspacePath, "packages:\n  - .\nnodeLinker: hoisted\nautoInstallPeers: false\n", { encoding: "utf8", mode: 0o600 });
+  }
+  return harnessDir;
+}
+
+export async function resolveActiveDeepSeekKey(
+  dshHome: string = resolveUserPath(process.env.DSH_HOME, join(homedir(), ".dsh")),
+  agentDir: string = resolveUserPath(process.env.PI_CODING_AGENT_DIR, join(homedir(), ".pi", "agent")),
+  environmentKey?: string | null,
+  fetchImpl: typeof fetch = fetch,
+  syncedSource?: "dsh" | "pi",
+): Promise<string | undefined> {
+  const credentialsPath = join(dshHome, ".credentials.yaml");
+  const authPath = join(agentDir, "auth.json");
+  // The app's provider setting is authoritative for its managed DSH process.
+  const pi = await readPiCredentials(authPath, environmentKey);
+  let dshKey: string | undefined;
+  const text = await readOptionalText(credentialsPath);
+  if (text) {
+    try {
+      const doc = parseDocument(text);
+      const key = doc.errors.length === 0 ? doc.getIn(["refs", "DEEPSEEK_API_KEY"]) : undefined;
+      if (typeof key === "string" && key.trim()) dshKey = key.trim();
+    } catch {}
+  }
+  if (syncedSource && dshKey) return dshKey;
+  if (pi.storedKey) {
+    if (!dshKey || dshKey === pi.storedKey) return pi.storedKey;
+    // Synchronization may have selected a fallback after Pi returned 401/403.
+    // Do not undo that recovery; an offline probe alone never rejects Pi.
+    if (await getDeepSeekCredentialValidity(pi.storedKey, fetchImpl) !== "invalid") return pi.storedKey;
+  }
+  return dshKey ?? pi.environmentKey;
 }
 
 export async function checkDsBotInstalled(
@@ -264,8 +362,8 @@ export async function syncDshDeepSeekCredential(
   const validPiKey = piCandidates.find((key) => validityByKey.get(key) === "valid");
   const piValidationUnavailable = piCandidates.some((key) => validityByKey.get(key) === "unavailable");
 
-  if (existingKeyValidity === "valid") {
-    if (!validPiKey && !piValidationUnavailable) {
+  if (!validPiKey && existingKeyValidity === "valid") {
+    if (options.importDshIntoPi && !piValidationUnavailable) {
       if (!piCredentials.canPersistStoredCredential) return { status: "unavailable", source: "pi" };
       const synced = await writePiCredentials(
         authPath,
@@ -278,23 +376,32 @@ export async function syncDshDeepSeekCredential(
     }
     return { status: "unchanged", source: "dsh" };
   }
-  if (existingKeyValidity === "unavailable") {
+  if (!validPiKey && existingKeyValidity === "unavailable") {
     return { status: "unavailable", source: "dsh" };
   }
-  if (!validPiKey) {
+
+  const candidatePiKey = validPiKey ?? (
+    (!normalizedExistingKey || existingKeyValidity === "invalid") && piValidationUnavailable
+      ? piCandidates.find((key) => validityByKey.get(key) === "unavailable")
+      : undefined
+  );
+
+  if (!candidatePiKey) {
     return { status: "unavailable" };
   }
 
-  const expectedPiCredential = validPiKey === piCredentials.storedKey
+  const expectedPiCredential = candidatePiKey === piCredentials.storedKey
     ? piCredentials.storedCredential
     : undefined;
   const synced = await writeDshCredentials(
     credentialsPath,
     existingText,
-    validPiKey,
+    candidatePiKey,
     expectedPiCredential === undefined ? undefined : { authPath, credential: expectedPiCredential },
   );
-  return synced ? { status: "synced", source: "pi" } : { status: "unchanged", source: "dsh" };
+  return synced
+    ? { status: candidatePiKey === normalizedExistingKey ? "unchanged" : "synced", source: "pi" }
+    : { status: "unchanged", source: "dsh" };
 }
 
 async function readPiCredentials(
@@ -468,7 +575,9 @@ async function writeDshCredentials(
       }
       const document = parseDocument(latestText ?? "{}");
       if (document.errors.length > 0) return false;
+      if (document.get("version") === 1 && document.getIn(["refs", "DEEPSEEK_API_KEY"]) === apiKey) return true;
       document.set("version", 1);
+      document.delete("DEEPSEEK_API_KEY");
       document.setIn(["refs", "DEEPSEEK_API_KEY"], apiKey);
       await writePrivateFile(path, document.toString());
       return true;

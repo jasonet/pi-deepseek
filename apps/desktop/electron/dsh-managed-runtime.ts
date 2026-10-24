@@ -6,6 +6,7 @@ import { delimiter, dirname, join } from "node:path";
 import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { StringDecoder } from "node:string_decoder";
+import { setTimeout as delay } from "node:timers/promises";
 import lockfile from "proper-lockfile";
 import type { DshWebProgress } from "../src/ipc";
 import { applyPojiaDsh, POJIA_REVISION, verifyPojiaDsh } from "./pojia-dsh";
@@ -46,11 +47,14 @@ export function dshOutputLines(onLine: (line: string) => void): (chunk: Buffer) 
   };
 }
 
-export function dshEnvironment(node: string): NodeJS.ProcessEnv {
+export function dshEnvironment(node: string, apiKey?: string): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...process.env, PATH: `${dirname(node)}${delimiter}${process.env.PATH ?? ""}` };
   delete env.ELECTRON_RUN_AS_NODE;
   delete env.NODE_OPTIONS;
   delete env.DEEPSEEK_API_KEY;
+  if (apiKey) {
+    env.DEEPSEEK_API_KEY = apiKey;
+  }
   return env;
 }
 
@@ -118,10 +122,19 @@ async function runInstaller(command: string, args: string[], signal: AbortSignal
 export async function ensureDshRuntime(root: string, signal: AbortSignal, report: DshInstallReporter): Promise<DshRuntime> {
   await mkdir(root, { recursive: true, mode: 0o700 });
   const lockController = new AbortController();
-  const release = await lockfile.lock(root, {
-    stale: 30_000, retries: { retries: 0 }, onCompromised: (error) => lockController.abort(error),
-  });
   const boundedSignal = AbortSignal.any([signal, lockController.signal, AbortSignal.timeout(15 * 60_000)]);
+  let release: (() => Promise<void>) | undefined;
+  while (!release) {
+    boundedSignal.throwIfAborted();
+    try {
+      release = await lockfile.lock(root, {
+        stale: 30_000, retries: { retries: 0 }, onCompromised: (error) => lockController.abort(error),
+      });
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ELOCKED") throw error;
+      await delay(500, undefined, { signal: boundedSignal });
+    }
+  }
   try {
     boundedSignal.throwIfAborted();
     const platform = process.platform;

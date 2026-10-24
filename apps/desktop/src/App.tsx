@@ -1090,6 +1090,16 @@ export default function App() {
     [handlePreviewFile, secondaryWorkspace?.id],
   );
 
+  const codeRunContext: CodeRunContext | undefined = useMemo(
+    () => (selectedWorkspace?.path && api ? { workspacePath: selectedWorkspace.path, api } : undefined),
+    [selectedWorkspace?.path, api],
+  );
+
+  const secondaryCodeRunContext: CodeRunContext | undefined = useMemo(
+    () => (secondaryWorkspace?.path && api ? { workspacePath: secondaryWorkspace.path, api } : undefined),
+    [secondaryWorkspace?.path, api],
+  );
+
   const selectedSessionRef = useRef(selectedSession);
   selectedSessionRef.current = selectedSession;
 
@@ -2821,6 +2831,7 @@ export default function App() {
     { id: "appearance", label: nav("Appearance", "外观", "外觀", "外観") },
     { id: "general", label: nav("General", "通用", "一般", "一般") },
     { id: "harnesses", label: nav("Harnesses", "运行引擎", "運行引擎", "ハーネス") },
+    { id: "dsh", label: nav("DeepSeek Harness", "DSH 设置", "DSH 設定", "DSH 設定") },
     { id: "models", label: nav("Models", "模型", "模型", "モデル") },
     { id: "tools", label: nav("External tools", "外部工具", "外部工具", "外部ツール") },
     { id: "notifications", label: nav("Notifications", "通知", "通知", "通知") },
@@ -3083,9 +3094,13 @@ export default function App() {
           terminalPanel
         ) : (
           <>
-        {snapshot.activeView === "deepseek-harness" || snapshot.activeView === "deepseek-bot" ? (
+        {snapshot.activeView === "deepseek-harness" ? (
           <Suspense fallback={<ViewFallback />}>
-            <DeepSeekHarnessView api={api} />
+            <DeepSeekHarnessView key="deepseek-harness" api={api} mode="harness" />
+          </Suspense>
+        ) : snapshot.activeView === "deepseek-bot" ? (
+          <Suspense fallback={<ViewFallback />}>
+            <DeepSeekHarnessView key="deepseek-bot" api={api} mode="bot" />
           </Suspense>
         ) : snapshot.activeView === "new-thread" ? (
           rootWorkspaceOptions.length > 0 ? (
@@ -3232,7 +3247,7 @@ export default function App() {
                   onRerunMessage={handleRerunMessage}
                   onEditMessage={handleEditMessage}
                   onEnhanceMessage={handleEnhanceMessage}
-                  codeRunContext={selectedWorkspace ? { workspacePath: selectedWorkspace.path, api } : undefined}
+                  codeRunContext={codeRunContext}
                 />
               </div>
             </section>
@@ -3344,6 +3359,7 @@ export default function App() {
                       onContentHeightChange={NOOP_FN}
                       onViewFileInDiff={handleViewFileInDiff}
                       onPreviewFile={handlePreviewSecondaryWorkspaceFile}
+                      codeRunContext={secondaryCodeRunContext}
                     />
                   </div>
                 </section>
@@ -3484,7 +3500,7 @@ export default function App() {
                   onRerunMessage={handleRerunMessage}
                   onEditMessage={handleEditMessage}
                   onEnhanceMessage={handleEnhanceMessage}
-                  codeRunContext={selectedWorkspace ? { workspacePath: selectedWorkspace.path, api } : undefined}
+                  codeRunContext={codeRunContext}
                 />
               </div>
             </section>

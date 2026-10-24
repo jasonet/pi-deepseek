@@ -23,7 +23,7 @@ import { createInterface } from "node:readline";
 
 import { DesktopAppStore } from "../../desktop/electron/app-store";
 import { probeCustomModelProvider } from "../../desktop/electron/custom-model-provider-probe";
-import { DshWebService } from "../../desktop/electron/dsh-web-service";
+import { DshWebService, syncDshDeepSeekCredential } from "../../desktop/electron/dsh-web-service";
 import { TregService } from "../../desktop/electron/treg-service";
 import { seedBundledExtensionsFromPath } from "../../desktop/electron/seed-extensions-core";
 import { desktopIpc } from "../../desktop/src/ipc";
@@ -140,7 +140,22 @@ const store = new DesktopAppStore({
     return undefined;
   },
 });
-const dshWebService = new DshWebService({ runtimeRoot: path.join(resolveUserDataDir(), "harness") });
+const dshHarnessService = new DshWebService({
+  runtimeRoot: path.join(resolveUserDataDir(), "harness"),
+  profile: "taosi-harness",
+  title: "DeepSeek Harness",
+});
+
+const dsBotService = new DshWebService({
+  runtimeRoot: path.join(resolveUserDataDir(), "harness"),
+  profile: "web",
+  title: "DeepSeek Bot",
+  externalUrl: process.env.PI_APP_DS_BOT_WEB_URL?.trim() || undefined,
+});
+
+function resolveDshService(mode?: "harness" | "bot"): DshWebService {
+  return mode === "bot" ? dsBotService : dshHarnessService;
+}
 const tregService = new TregService();
 
 // ---------------------------------------------------------------------------
@@ -428,12 +443,12 @@ const handlers: Record<string, Handler> = {
   },
   [desktopIpc.getOpenDesignStatus]: () => getOpenDesignStatus(),
   [desktopIpc.installOpenDesign]: () => installOpenDesign(),
-  [desktopIpc.getDshWebStatus]: () => dshWebService.getStatus(),
-  [desktopIpc.startDshWeb]: () => dshWebService.start(),
-  [desktopIpc.launchDshWeb]: () => dshWebService.launch(),
-  [desktopIpc.restartDshWeb]: () => dshWebService.restart(),
-  [desktopIpc.getDsBotInstalled]: () => dshWebService.checkDsBotInstalled(),
-  [desktopIpc.stopDshWeb]: () => dshWebService.stop(),
+  [desktopIpc.getDshWebStatus]: (mode?: "harness" | "bot") => resolveDshService(mode).getStatus(),
+  [desktopIpc.startDshWeb]: (mode?: "harness" | "bot") => resolveDshService(mode).start(),
+  [desktopIpc.launchDshWeb]: (mode?: "harness" | "bot") => resolveDshService(mode).launch(),
+  [desktopIpc.restartDshWeb]: (mode?: "harness" | "bot") => resolveDshService(mode).restart(),
+  [desktopIpc.getDsBotInstalled]: () => dshHarnessService.checkDsBotInstalled(),
+  [desktopIpc.stopDshWeb]: (mode?: "harness" | "bot") => resolveDshService(mode).stop(),
   [desktopIpc.getTregStatus]: () => tregService.getStatus(),
   [desktopIpc.saveTregSettings]: async (settings: Parameters<TregService["saveSettings"]>[0]) => {
     const status = await tregService.saveSettings(settings);
@@ -480,10 +495,15 @@ const handlers: Record<string, Handler> = {
     store.setSessionThinkingLevel({ workspaceId, sessionId }, thinkingLevel),
   [desktopIpc.loginProvider]: (workspaceId: string, providerId: string) =>
     store.loginProvider(workspaceId, providerId, runtimeLoginCallbacks),
-  [desktopIpc.logoutProvider]: (workspaceId: string, providerId: string) =>
-    store.logoutProvider(workspaceId, providerId),
-  [desktopIpc.setProviderApiKey]: (workspaceId: string, providerId: string, apiKey: string) =>
-    store.setProviderApiKey(workspaceId, providerId, apiKey),
+  [desktopIpc.logoutProvider]: async (workspaceId: string, providerId: string) => {
+    const state = await store.logoutProvider(workspaceId, providerId);
+    return state;
+  },
+  [desktopIpc.setProviderApiKey]: async (workspaceId: string, providerId: string, apiKey: string) => {
+    const state = await store.setProviderApiKey(workspaceId, providerId, apiKey);
+    if (providerId === "deepseek") void syncDshDeepSeekCredential().catch(() => {});
+    return state;
+  },
   [desktopIpc.listCustomModelProviders]: () => store.listCustomModelProviders(),
   [desktopIpc.probeCustomModelProvider]: (input: any) => probeCustomModelProvider(input, fetch),
   [desktopIpc.saveCustomModelProvider]: (workspaceId: string, input: any) =>
@@ -689,7 +709,7 @@ async function main(): Promise<void> {
     void handleLine(line);
   });
   rl.on("close", () => {
-    void dshWebService.shutdown().finally(() => process.exit(0));
+    void Promise.all([dshHarnessService.shutdown(), dsBotService.shutdown()]).finally(() => process.exit(0));
   });
 }
 

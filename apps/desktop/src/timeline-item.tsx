@@ -17,6 +17,7 @@ function areTimelineItemPropsEqual(
     readonly onRerunMessage?: (text: string) => void;
     readonly onEditMessage?: (text: string) => void;
     readonly onEnhanceMessage?: (text: string) => void;
+    readonly codeRunContext?: CodeRunContext;
   },
   nextProps: typeof prevProps,
 ): boolean {
@@ -37,7 +38,9 @@ function areTimelineItemPropsEqual(
       prevProps.onCopyMessage === nextProps.onCopyMessage &&
       prevProps.onRerunMessage === nextProps.onRerunMessage &&
       prevProps.onEditMessage === nextProps.onEditMessage &&
-      prevProps.onEnhanceMessage === nextProps.onEnhanceMessage
+      prevProps.onEnhanceMessage === nextProps.onEnhanceMessage &&
+      prevProps.codeRunContext?.workspacePath === nextProps.codeRunContext?.workspacePath &&
+      prevProps.codeRunContext?.api === nextProps.codeRunContext?.api
     );
   }
 

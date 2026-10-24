@@ -5,7 +5,7 @@ import { expect, test } from "@playwright/test";
 import { parse } from "yaml";
 
 import { makeUserDataDir } from "../helpers/electron-app";
-import { checkDsBotInstalled, syncDshDeepSeekCredential } from "../../electron/dsh-web-service";
+import { checkDsBotInstalled, ensureHarnessProfile, resolveActiveDeepSeekKey, syncDshDeepSeekCredential } from "../../electron/dsh-web-service";
 
 const VALID_KEY = "valid-pi-key";
 const OTHER_VALID_KEY = "valid-dsh-key";
@@ -57,7 +57,7 @@ test("syncs a valid Pi key into the DSH credential store", async () => {
   expect((await stat(join(agentDir, "auth.json"))).mode & 0o777).toBe(0o600);
 });
 
-test("keeps a valid DSH key instead of replacing it", async () => {
+test("prefers the configured Pi key over a different valid DSH key", async () => {
   const root = await makeDshTestRoot("pi-gui-dsh-existing-credentials-");
   const agentDir = join(root, "agent");
   const dshHome = join(root, "dsh");
@@ -72,9 +72,9 @@ test("keeps a valid DSH key instead of replacing it", async () => {
     fetchImpl: credentialFetch,
   });
 
-  expect(result).toEqual({ status: "unchanged", source: "dsh" });
+  expect(result).toEqual({ status: "synced", source: "pi" });
   expect(parse(await readFile(join(dshHome, ".credentials.yaml"), "utf8"))).toEqual({
-    version: 1, refs: { DEEPSEEK_API_KEY: OTHER_VALID_KEY },
+    version: 1, refs: { DEEPSEEK_API_KEY: VALID_KEY },
   });
   expect((await stat(join(dshHome, ".credentials.yaml"))).mode & 0o777).toBe(0o600);
 });
@@ -98,7 +98,7 @@ test("validates a shared Pi and DSH key only once", async () => {
     },
   });
 
-  expect(result).toEqual({ status: "unchanged", source: "dsh" });
+  expect(result).toEqual({ status: "unchanged", source: "pi" });
   expect(validationCount).toBe(1);
 });
 
@@ -125,7 +125,7 @@ test("replaces an invalid DSH key with the valid Pi key", async () => {
   expect(parse(text)).toEqual({ version: 1, refs: { DEEPSEEK_API_KEY: VALID_KEY } });
 });
 
-test("preserves a DSH key when validation is temporarily unavailable", async () => {
+test("uses valid Pi credentials even when DSH validation is unavailable", async () => {
   const root = await makeDshTestRoot("pi-gui-dsh-unavailable-credentials-");
   const agentDir = join(root, "agent");
   const dshHome = join(root, "dsh");
@@ -144,8 +144,8 @@ test("preserves a DSH key when validation is temporarily unavailable", async () 
     },
   });
 
-  expect(result).toEqual({ status: "unavailable", source: "dsh" });
-  expect(parse(await readFile(credentialsPath, "utf8"))).toEqual({ version: 1, refs: { DEEPSEEK_API_KEY: OTHER_VALID_KEY } });
+  expect(result).toEqual({ status: "synced", source: "pi" });
+  expect(parse(await readFile(credentialsPath, "utf8"))).toEqual({ version: 1, refs: { DEEPSEEK_API_KEY: VALID_KEY } });
   expect((await stat(credentialsPath)).mode & 0o777).toBe(0o600);
 });
 
@@ -216,7 +216,7 @@ test("respects the DSH credentials writer lock", async () => {
   expect(parse(await readFile(credentialsPath, "utf8"))).toEqual({ version: 1, refs: { DEEPSEEK_API_KEY: VALID_KEY } });
 });
 
-test("syncs a valid DSH key into Pi when Pi has no valid key", async () => {
+test("imports a valid DSH key into Pi only when explicitly requested", async () => {
   const root = await makeDshTestRoot("pi-gui-dsh-to-pi-credentials-");
   const agentDir = join(root, "agent");
   const dshHome = join(root, "dsh");
@@ -234,6 +234,7 @@ test("syncs a valid DSH key into Pi when Pi has no valid key", async () => {
     dshHome,
     environmentKey: null,
     fetchImpl: credentialFetch,
+    importDshIntoPi: true,
   });
 
   expect(result).toEqual({ status: "synced", source: "dsh" });
@@ -243,6 +244,21 @@ test("syncs a valid DSH key into Pi when Pi has no valid key", async () => {
     deepseek: { type: "api_key", key: VALID_KEY },
   });
   expect((await stat(authPath)).mode & 0o777).toBe(0o600);
+});
+
+test("does not restore Pi credentials from DSH after a provider logout", async () => {
+  const root = await makeDshTestRoot("pi-gui-dsh-logged-out-");
+  const agentDir = join(root, "agent");
+  const dshHome = join(root, "dsh");
+  await mkdir(agentDir, { recursive: true });
+  await writeFile(join(agentDir, "auth.json"), "{}\n", "utf8");
+  await mkdir(dshHome, { recursive: true });
+  await writeFile(join(dshHome, ".credentials.yaml"), `version: 1\nrefs:\n  DEEPSEEK_API_KEY: ${VALID_KEY}\n`, "utf8");
+
+  expect(await syncDshDeepSeekCredential({ agentDir, dshHome, environmentKey: null, fetchImpl: credentialFetch }))
+    .toEqual({ status: "unchanged", source: "dsh" });
+  expect(JSON.parse(await readFile(join(agentDir, "auth.json"), "utf8"))).toEqual({});
+  expect(await resolveActiveDeepSeekKey(dshHome, agentDir, null, credentialFetch, "dsh")).toBe(VALID_KEY);
 });
 
 test("syncs a valid environment key into DSH without bundling or persisting it in Pi", async () => {
@@ -327,6 +343,7 @@ test("merges concurrent Pi credential changes while syncing from DSH", async () 
     agentDir,
     dshHome,
     environmentKey: null,
+    importDshIntoPi: true,
     fetchImpl: async () => {
       await writeFile(
         authPath,
@@ -381,6 +398,7 @@ test("does not replace a Pi key changed while validating the DSH source", async 
     agentDir,
     dshHome,
     environmentKey: null,
+    importDshIntoPi: true,
     fetchImpl: async (_input, init) => {
       const key = new Headers(init?.headers).get("authorization")?.replace(/^Bearer\s+/i, "");
       if (key === VALID_KEY) await writePiAuth(agentDir, OTHER_VALID_KEY);
@@ -490,3 +508,65 @@ async function credentialFetch(_input: string | URL | Request, init?: RequestIni
   const key = authorization?.replace(/^Bearer\s+/i, "");
   return new Response(null, { status: key === VALID_KEY || key === OTHER_VALID_KEY ? 200 : 401 });
 }
+
+test("ensureHarnessProfile creates clean standard DSH profile without ds-bot", async () => {
+  const root = await makeDshTestRoot("pi-gui-dsh-harness-profile-");
+  const harnessDir = await ensureHarnessProfile(root);
+  const pkg = JSON.parse(await readFile(join(harnessDir, "package.json"), "utf8"));
+  expect(pkg.name).toBe("dsh-profile-taosi-harness");
+  expect(pkg.dsh.profile.bundles).toEqual(["@deepseek-ai/dsh-base", "@deepseek-ai/dsh-web-app"]);
+  expect(pkg.dependencies?.["ds-bot"]).toBeUndefined();
+  expect(await readFile(join(harnessDir, "cordis.yml"), "utf8")).toBe("[]\n");
+});
+
+test("ensures the Taosi profile without modifying a user-owned Harness profile", async () => {
+  const root = await makeDshTestRoot("pi-gui-dsh-user-profile-");
+  const userProfile = join(root, "profiles", "harness");
+  await mkdir(userProfile, { recursive: true });
+  const original = JSON.stringify({ name: "my-harness", dependencies: { "ds-bot": "1.0.0" } });
+  await writeFile(join(userProfile, "package.json"), original, "utf8");
+  const appProfile = await ensureHarnessProfile(root);
+  expect(appProfile).toBe(join(root, "profiles", "taosi-harness"));
+  expect(await readFile(join(userProfile, "package.json"), "utf8")).toBe(original);
+});
+
+test("resolveActiveDeepSeekKey resolves key from credentials, auth.json, or env", async () => {
+  const root = await makeDshTestRoot("pi-gui-dsh-resolve-key-");
+  const agentDir = join(root, "agent");
+  await mkdir(agentDir, { recursive: true });
+
+  // 1. None
+  expect(await resolveActiveDeepSeekKey(root, agentDir, null)).toBeUndefined();
+
+  // 2. From env
+  expect(await resolveActiveDeepSeekKey(root, agentDir, "env-key")).toBe("env-key");
+
+  // 3. From auth.json
+  await writePiAuth(agentDir, "pi-stored-key");
+  expect(await resolveActiveDeepSeekKey(root, agentDir, null)).toBe("pi-stored-key");
+
+  // Pi stays authoritative over both a stale DSH key and a stale environment.
+  await writeFile(join(root, ".credentials.yaml"), "version: 1\nrefs:\n  DEEPSEEK_API_KEY: dsh-stored-key\n", "utf8");
+  expect(await resolveActiveDeepSeekKey(root, agentDir, "invalid-env-key", async () => new Response(null, { status: 200 }))).toBe("pi-stored-key");
+  await rm(join(agentDir, "auth.json"));
+  expect(await resolveActiveDeepSeekKey(root, agentDir, "invalid-env-key")).toBe("dsh-stored-key");
+});
+
+test("syncs Pi key into empty DSH credentials when network probe is unavailable", async () => {
+  const root = await makeDshTestRoot("pi-gui-dsh-sync-offline-");
+  const agentDir = join(root, "agent");
+  await writePiAuth(agentDir, VALID_KEY);
+
+  const result = await syncDshDeepSeekCredential({
+    agentDir,
+    dshHome: root,
+    environmentKey: null,
+    fetchImpl: async () => { throw new Error("offline"); },
+  });
+
+  expect(result).toEqual({ status: "synced", source: "pi" });
+  const credentialsPath = join(root, ".credentials.yaml");
+  expect(parse(await readFile(credentialsPath, "utf8"))).toEqual({
+    version: 1, refs: { DEEPSEEK_API_KEY: VALID_KEY },
+  });
+});

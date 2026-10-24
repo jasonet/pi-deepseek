@@ -27,7 +27,7 @@ test("fresh managed Pojia Harness installs, opens, restarts and stops with Elect
     const errors: string[] = [];
     window.on("pageerror", (error) => errors.push(error.message));
     await window.getByTestId("open-deepseek-harness").click();
-    await expect(window.getByRole("heading", { name: "正在安装 Pojia Harness" })).toBeVisible();
+    await expect(window.getByRole("heading", { name: "正在安装运行环境" })).toBeVisible();
     await expect(window.getByRole("progressbar", { name: "安装进度" })).toBeVisible();
     await window.screenshot({ path: test.info().outputPath("installing.png") });
     await expect.poll(async () => {

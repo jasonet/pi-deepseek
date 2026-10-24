@@ -290,6 +290,7 @@ export const ConversationTimeline = memo(function ConversationTimeline({
           onRerunMessage={onRerunMessage}
           onEditMessage={onEditMessage}
           onEnhanceMessage={onEnhanceMessage}
+          codeRunContext={codeRunContext}
         />
       )}
       {showJumpToLatest ? (
@@ -319,6 +320,7 @@ const TranscriptList = memo(function TranscriptList({
   onRerunMessage,
   onEditMessage,
   onEnhanceMessage,
+  codeRunContext,
 }: {
   readonly entries: readonly TimelineEntry[];
   readonly virtualize: boolean;
@@ -337,6 +339,7 @@ const TranscriptList = memo(function TranscriptList({
   readonly onRerunMessage?: (text: string) => void;
   readonly onEditMessage?: (text: string) => void;
   readonly onEnhanceMessage?: (text: string) => void;
+  readonly codeRunContext?: CodeRunContext;
 }) {
   const [viewport, setViewport] = useState({ scrollTop: 0, height: 0 });
   const previousTotalHeightRef = useRef(0);

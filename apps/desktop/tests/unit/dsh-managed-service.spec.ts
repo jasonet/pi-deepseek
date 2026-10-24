@@ -1,9 +1,10 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { expect, test } from "@playwright/test";
+import lockfile from "proper-lockfile";
 import { parse } from "yaml";
 import { DshWebService } from "../../electron/dsh-web-service";
-import { dshOutputLines, sanitizeDshLog } from "../../electron/dsh-managed-runtime";
+import { dshOutputLines, ensureDshRuntime, sanitizeDshLog } from "../../electron/dsh-managed-runtime";
 import { applyPojiaDsh, POJIA_PERSONA, verifyPojiaDsh } from "../../electron/pojia-dsh";
 import { makeUserDataDir } from "../helpers/electron-app";
 
@@ -138,4 +139,27 @@ test("shutdown prevents a pending restart from resurrecting the process", async 
   expect(installs()).toBe(1);
   expect((await service.getStatus()).state).toBe("idle");
   expect((await service.start()).state).toBe("idle");
+});
+
+test("supports separate harness and bot profiles with distinct titles", () => {
+  const harnessService = new DshWebService({ runtimeRoot: "/unused", profile: "harness" });
+  const botService = new DshWebService({ runtimeRoot: "/unused", profile: "web" });
+  expect(harnessService["title"]).toBe("DeepSeek Harness");
+  expect(botService["title"]).toBe("DeepSeek Bot");
+});
+
+test("a second service waits for the runtime install lock and can cancel", async () => {
+  const root = await makeUserDataDir("dsh-runtime-lock-");
+  const release = await lockfile.lock(root);
+  const controller = new AbortController();
+  try {
+    let settled = false;
+    const pending = ensureDshRuntime(root, controller.signal, () => {}).finally(() => { settled = true; });
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    expect(settled).toBe(false);
+    controller.abort();
+    await expect(pending).rejects.toThrow();
+  } finally {
+    await release();
+  }
 });

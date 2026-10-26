@@ -37,6 +37,8 @@ extraResources:
     to: extensions/pi-understand.tgz
   - from: resources/extensions/pi-treg.tgz
     to: extensions/pi-treg.tgz
+  - from: resources/extensions/dsh-our-free-model-2.5.9.tgz
+    to: extensions/dsh-our-free-model-2.5.9.tgz
   - from: resources/extensions/pi-computer-use.tgz
     to: extensions/pi-computer-use.tgz
 

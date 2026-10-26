@@ -10,6 +10,7 @@ import { type Document, isMap, isScalar, parseDocument } from "yaml";
 import type { DshWebProgress, DshWebStatus } from "../src/ipc";
 import { withDshFileLock } from "./dsh-file-lock";
 import { dshEnvironment, dshOutputLines, ensureDshRuntime, sanitizeDshLog, stopDshProcess } from "./dsh-managed-runtime";
+import { prepareDshFreeModel } from "./dsh-our-free-model";
 
 const DSH_PROBE_TIMEOUT_MS = 2_000;
 const DSH_CREDENTIAL_PROBE_TIMEOUT_MS = 2_000;
@@ -54,6 +55,7 @@ export class DshWebService {
     readonly launchTimeoutMs?: number;
     readonly profile?: string;
     readonly title?: string;
+    readonly freeModelArchivePath?: string;
   }) {}
 
   private get title(): string {
@@ -171,6 +173,14 @@ export class DshWebService {
     this.report({ line: `启动本机 ${this.title} 服务` });
     const agentDir = resolveUserPath(process.env.PI_CODING_AGENT_DIR, join(homedir(), ".pi", "agent"));
     const activeApiKey = await resolveActiveDeepSeekKey(dshHome, agentDir, undefined, fetch, syncResult?.source);
+
+    if (profile === "taosi-harness") {
+      await prepareDshFreeModel({
+        dshHome,
+        archivePath: this.options.freeModelArchivePath,
+        hasDeepSeekKey: Boolean(activeApiKey),
+      });
+    }
 
     const child = spawn(runtime.node, [runtime.cli, profile, "--host", "127.0.0.1", "--port", "0", "--no-open"], {
       env: dshEnvironment(runtime.node, activeApiKey), cwd: homedir(), detached: process.platform !== "win32",

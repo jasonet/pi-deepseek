@@ -982,7 +982,7 @@
 
 .timeline-tool__body {
   margin-top: 6px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 6px;
   overflow: hidden;
   max-height: 400px;
@@ -3644,6 +3644,38 @@ textarea.settings-input {
   border-color: #c6d0e8;
   background: #edf2fb;
   color: var(--text-strong);
+}
+
+.settings-segmented {
+  display: inline-flex;
+  max-width: 100%;
+  padding: 2px;
+  gap: 2px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--main);
+}
+
+.settings-segmented__option {
+  min-width: 80px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted-strong);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.settings-segmented__option--active {
+  background: var(--surface);
+  color: var(--text-strong);
+  box-shadow: 0 1px 3px #0000001a;
+}
+
+.settings-segmented__option:disabled {
+  cursor: default;
+  opacity: 0.55;
 }
 
 .settings-toggle-list {

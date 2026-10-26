@@ -172,6 +172,8 @@ export const desktopIpc = {
   installOpenDesign: "pi-gui:install-open-design",
   getDshWebStatus: "pi-gui:get-dsh-web-status",
   getDsBotInstalled: "pi-gui:get-ds-bot-installed",
+  getDshOurFreeModelStatus: "pi-gui:get-dsh-our-free-model-status",
+  setDshOurFreeModelConfig: "pi-gui:set-dsh-our-free-model-config",
   startDshWeb: "pi-gui:start-dsh-web",
   launchDshWeb: "pi-gui:launch-dsh-web",
   stopDshWeb: "pi-gui:stop-dsh-web",
@@ -420,6 +422,20 @@ export function getDesktopCommandFromShortcut(input: DesktopShortcutInput): PiDe
   return undefined;
 }
 
+export interface DshOurFreeModelStatus {
+  readonly available: boolean;
+  readonly installed: boolean;
+  readonly version?: string;
+  readonly enabled: boolean;
+  readonly mode: "auto" | "free";
+  readonly effectiveDefault: "free" | "official" | "custom";
+}
+
+export interface SetDshOurFreeModelConfigInput {
+  readonly enabled: boolean;
+  readonly mode: "auto" | "free";
+}
+
 export interface PiDesktopApi {
   platform: NodeJS.Platform;
   versions: NodeJS.ProcessVersions;
@@ -535,6 +551,8 @@ export interface PiDesktopApi {
   installOpenDesign(): Promise<{ ok: boolean; message: string }>;
   getDshWebStatus(mode?: "harness" | "bot"): Promise<DshWebStatus>;
   getDsBotInstalled(): Promise<boolean>;
+  getDshOurFreeModelStatus(): Promise<DshOurFreeModelStatus>;
+  setDshOurFreeModelConfig(input: SetDshOurFreeModelConfigInput): Promise<DshOurFreeModelStatus>;
   startDshWeb(mode?: "harness" | "bot"): Promise<DshWebStatus>;
   launchDshWeb(mode?: "harness" | "bot"): Promise<DshWebStatus>;
   stopDshWeb(mode?: "harness" | "bot"): Promise<DshWebStatus>;

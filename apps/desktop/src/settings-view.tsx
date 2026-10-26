@@ -5,6 +5,7 @@ import { SettingsAppearanceSection } from "./settings-appearance-section";
 import { SettingsChannelsSection } from "./settings-channels-section";
 import { SettingsGeneralSection } from "./settings-general-section";
 import { SettingsHarnessesSection } from "./settings-harnesses-section";
+import { SettingsDshSection } from "./settings-dsh-section";
 import { SettingsModelsSection } from "./settings-models-section";
 import { SettingsNotificationsSection } from "./settings-notifications-section";
 import { SettingsProvidersSection } from "./settings-providers-section";
@@ -103,7 +104,7 @@ export function SettingsView({
 }: SettingsViewProps) {
   const t = useT();
 
-  if (!workspace && section !== "general" && section !== "harnesses" && section !== "channels" && section !== "tools" && section !== "notifications" && section !== "appearance") {
+  if (!workspace && section !== "general" && section !== "harnesses" && section !== "dsh" && section !== "channels" && section !== "tools" && section !== "notifications" && section !== "appearance") {
     return (
       <section className="canvas canvas--empty">
         <div className="empty-panel">
@@ -166,6 +167,10 @@ export function SettingsView({
               onSetDefaultModel={onSetDefaultModel}
               onSetThinkingLevel={onSetThinkingLevel}
             />
+          ) : null}
+
+          {section === "dsh" ? (
+            <SettingsDshSection />
           ) : null}
 
           {section === "providers" ? (

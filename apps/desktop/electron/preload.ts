@@ -290,6 +290,10 @@ contextBridge.exposeInMainWorld("piApp", {
     ipcRenderer.invoke(desktopIpc.getDshWebStatus, mode) as Promise<DshWebStatus>,
   getDsBotInstalled: () =>
     ipcRenderer.invoke(desktopIpc.getDsBotInstalled) as Promise<boolean>,
+  getDshOurFreeModelStatus: () =>
+    ipcRenderer.invoke(desktopIpc.getDshOurFreeModelStatus) as Promise<import("../src/ipc").DshOurFreeModelStatus>,
+  setDshOurFreeModelConfig: (input: import("../src/ipc").SetDshOurFreeModelConfigInput) =>
+    ipcRenderer.invoke(desktopIpc.setDshOurFreeModelConfig, input) as Promise<import("../src/ipc").DshOurFreeModelStatus>,
   startDshWeb: (mode?: "harness" | "bot") =>
     ipcRenderer.invoke(desktopIpc.startDshWeb, mode) as Promise<DshWebStatus>,
   launchDshWeb: (mode?: "harness" | "bot") =>

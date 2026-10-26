@@ -44,8 +44,15 @@ import { ensurePathForGuiLaunch } from "./ensure-path";
 import { seedBundledExtensions } from "./seed-extensions";
 import {
   DshWebService,
+  ensureHarnessProfile,
+  resolveActiveDeepSeekKey,
   syncDshDeepSeekCredential,
 } from "./dsh-web-service";
+import {
+  DSH_FREE_MODEL_ARCHIVE,
+  getDshFreeModelStatus,
+  setDshFreeModelConfig,
+} from "./dsh-our-free-model";
 import { TregService } from "./treg-service";
 import { humanizeUpdateError } from "./update-version";
 import type { DesktopAppState, SelectedTranscriptRecord, ThemeMode } from "../src/desktop-state";
@@ -1277,11 +1284,17 @@ app.setAboutPanelOptions({
 
 const configuredUserDataDir = process.env.PI_APP_USER_DATA_DIR?.trim() || app.getPath("userData").replace(/\/pi$/, "/pi-deepseek");
 app.setPath("userData", configuredUserDataDir);
+const freeModelArchivePath = path.join(
+  app.isPackaged ? process.resourcesPath : path.join(app.getAppPath(), "resources"),
+  "extensions",
+  DSH_FREE_MODEL_ARCHIVE,
+);
 
 const dshHarnessService = new DshWebService({
   runtimeRoot: path.join(configuredUserDataDir, "harness"),
   profile: "taosi-harness",
   title: "DeepSeek Harness",
+  freeModelArchivePath,
 });
 
 const dsBotService = new DshWebService({
@@ -1471,6 +1484,34 @@ app.whenReady().then(async () => {
     resolveDshService(mode).getStatus(),
   );
   ipcMain.handle(desktopIpc.getDsBotInstalled, () => dshHarnessService.checkDsBotInstalled());
+  ipcMain.handle(desktopIpc.getDshOurFreeModelStatus, () => getDshFreeModelStatus({ archivePath: freeModelArchivePath }));
+  ipcMain.handle(desktopIpc.setDshOurFreeModelConfig, async (_event, input) => {
+    const previous = await getDshFreeModelStatus({ archivePath: freeModelArchivePath });
+    if (previous.enabled === input?.enabled && previous.mode === input?.mode) return previous;
+    const current = await dshHarnessService.getStatus();
+    if (current.state === "starting" || current.state === "installing" || current.state === "launching") {
+      throw new Error("DeepSeek Harness 正在启动，请稍后再修改免费模型设置。");
+    }
+    const restart = current.state === "running" && current.managed;
+    if (restart) await dshHarnessService.stop();
+    try {
+      await ensureHarnessProfile();
+      const result = await setDshFreeModelConfig(input, {
+        archivePath: freeModelArchivePath,
+        hasDeepSeekKey: Boolean(await resolveActiveDeepSeekKey()),
+      });
+      if (restart) {
+        const next = await dshHarnessService.start();
+        if (next.state === "error") throw new Error(next.message);
+      }
+      return result;
+    } catch (error) {
+      if (restart && (await dshHarnessService.getStatus()).state === "idle") {
+        await dshHarnessService.start();
+      }
+      throw error;
+    }
+  });
   ipcMain.handle(desktopIpc.startDshWeb, (_event, mode?: "harness" | "bot") =>
     resolveDshService(mode).start(),
   );

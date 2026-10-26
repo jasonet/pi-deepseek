@@ -19,6 +19,25 @@ indeterminate progress bar for npm, and a bounded rolling diagnostic log.
 - Taosi uses its own `taosi-harness` profile, leaving user-created `harness` and `web` profiles untouched. DeepSeek Bot runs as a separate service using the existing `web` profile.
 - `PI_APP_DSH_WEB_URL` is an explicit, loopback-only external-service override. The app connects/reconnects but does not install, patch, or kill the external server. Such servers must support embedded authentication themselves.
 
+## Optional Third-Party Free Models (local 3.0.18)
+
+Settings > DeepSeek Harness can opt into `dsh-our-free-model` for Taosi's
+`taosi-harness` profile only. It is off by default. Automatic mode keeps the
+official DeepSeek default when a configured key exists and selects the plugin's
+`kilo-auto/free` route otherwise; Free priority selects that route explicitly.
+DSH's own saved session model and custom default configuration still take
+precedence. Changing the setting restarts only a running, Taosi-managed DSH.
+
+The offline archive is packed from the local MIT-licensed source checkout at
+`/Users/tfwl/Sites/Github/dsh-our-free-model`, commit
+`38e0a9437e3a37c8c1a030c165de8cf8c7c0b7e8`, version `2.5.9`. Its bundled
+SHA-256 is `a0f36ccd8bae41138a9ea48927905a795b4dc3c9944dda977958c0810378a385`.
+Taosi verifies these bytes before installation. The profile owns a local
+`file:` dependency and one bundle reference; its patch only overrides the
+plugin's distribution mode to `managed`, avoiding a duplicate loader. Other
+DSH profiles are not edited. The third-party free route can be unavailable or
+rate-limited, and the upstream may log prompts; do not send sensitive data.
+
 ## Pojia Source and Adaptation
 
 The supplied `pojia-next` checkout is a prompt-patching utility, not a replacement

@@ -5,7 +5,6 @@ import { parseArgs } from "node:util";
 
 const ROOT_DIR = path.resolve(import.meta.dirname, "..");
 const DESKTOP_DIR = path.join(ROOT_DIR, "apps/desktop");
-const RELEASE_DIR = path.join(DESKTOP_DIR, "release");
 
 function readJson(file) {
   return JSON.parse(fs.readFileSync(file, "utf8"));
@@ -139,6 +138,25 @@ export function previousBuiltVersion(latestVersion, gitTags, desktopDir = DESKTO
     .sort((a, b) => compareSemver(b, a))[0];
 }
 
+export function findBuiltMacApp(latestVersion, desktopDir = DESKTOP_DIR, readVersion = readMacAppVersion) {
+  if (!fs.existsSync(desktopDir)) return null;
+  const names = fs.readdirSync(desktopDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && (entry.name === `release-${latestVersion}` || entry.name.startsWith(`release-${latestVersion}-`)))
+    .map((entry) => entry.name).sort().reverse();
+  names.push("release");
+  for (const name of names) {
+    const app = path.join(desktopDir, name, "mac-arm64", "Taosi.app");
+    if (fs.existsSync(app) && readVersion(app) === latestVersion) return app;
+  }
+  return null;
+}
+
+function readMacAppVersion(app) {
+  try {
+    return execFileSync("plutil", ["-extract", "CFBundleShortVersionString", "raw", "-o", "-", path.join(app, "Contents/Info.plist")], { encoding: "utf8" }).trim();
+  } catch { return undefined; }
+}
+
 function getDirSize(dirPath) {
   let size = 0;
   try {
@@ -233,15 +251,12 @@ async function main() {
   }
 
   // App sync check
-  const sourceApp = path.join(RELEASE_DIR, "mac-arm64", "Taosi.app");
-  const altSourceApp = path.join(DESKTOP_DIR, `release-${latestVersion}`, "mac-arm64", "Taosi.app");
-  const appPath = fs.existsSync(sourceApp) ? sourceApp : (fs.existsSync(altSourceApp) ? altSourceApp : null);
+  const appPath = findBuiltMacApp(latestVersion);
 
   console.log("\n[Application Sync Status (/Applications)]");
   if (appPath) {
     console.log(`Latest packaged app located at: ${path.relative(ROOT_DIR, appPath)}`);
-    console.log(`To install/update to /Applications/Taosi.app for manual verification:`);
-    console.log(`  rm -rf /Applications/Taosi.app && cp -R "${appPath}" /Applications/Taosi.app`);
+    console.log("For manual installation, close the running app and preserve the previous bundle before replacing it.");
   } else {
     console.log(`Latest app package not found for version ${latestVersion}. Run 'pnpm --filter @pi-gui/desktop run package' first.`);
   }

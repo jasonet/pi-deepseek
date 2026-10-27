@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { planRetention, previousBuiltVersion } from "./manage-release-retention.mjs";
+import { findBuiltMacApp, planRetention, previousBuiltVersion } from "./manage-release-retention.mjs";
 
 async function main() {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "retention-test-"));
@@ -52,6 +52,12 @@ async function main() {
     previousVersion: previousBuiltVersion("3.0.16", ["3.0.8"], tempDir), desktopDir: tempDir });
   assert.ok(localPlan.toKeep.some((item) => item.path.endsWith("Taosi-3.0.15-mac-arm64.app")));
   assert.equal(previousBuiltVersion("3.0.15", ["3.0.8", "3.0.16"], tempDir), "3.0.8");
+  const stale = path.join(releaseDir, "mac-arm64/Taosi.app");
+  const latest = path.join(tempDir, "release-3.0.2-final/mac-arm64/Taosi.app");
+  fs.mkdirSync(stale, { recursive: true });
+  fs.mkdirSync(latest, { recursive: true });
+  assert.equal(findBuiltMacApp("3.0.2", tempDir, (app) => app === latest ? "3.0.2" : "3.0.1"), latest);
+  assert.equal(findBuiltMacApp("3.0.3", tempDir, () => "3.0.2"), null);
   fs.rmSync(tempDir, { recursive: true, force: true });
   console.log("manage-release-retention tests passed successfully.");
 }

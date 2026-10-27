@@ -1,0 +1,8 @@
+.trading-settings::backdrop { background: #0005; }
+.trading-settings { width: min(520px, 100%); max-height: 85vh; overflow: auto; padding: 24px; background: var(--surface, #fff); color: var(--text, #222); border: 1px solid var(--border, #ddd); border-radius: 8px; box-shadow: 0 12px 40px #0003; }
+.trading-settings h2 { margin: 0 0 16px; font-size: 18px; }
+.trading-settings__row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--border, #ddd); font-size: 13px; }
+.trading-settings__row select { max-width: 100%; min-height: 30px; }
+.trading-settings__actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; }
+.trading-error { position: absolute; top: 52px; right: 16px; z-index: 10; max-width: min(420px, 80%); padding: 10px; background: var(--surface, #fff); color: #b42318; border: 1px solid #b42318; border-radius: 6px; font-size: 12px; }
+.dsh-web__toolbar { position: relative; }

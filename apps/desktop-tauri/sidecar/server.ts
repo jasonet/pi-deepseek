@@ -153,7 +153,8 @@ const dsBotService = new DshWebService({
   externalUrl: process.env.PI_APP_DS_BOT_WEB_URL?.trim() || undefined,
 });
 
-function resolveDshService(mode?: "harness" | "bot"): DshWebService {
+function resolveDshService(mode?: "harness" | "bot" | "trading"): DshWebService {
+  if (mode === "trading") throw new Error("DSH Trading is not available in the Tauri build.");
   return mode === "bot" ? dsBotService : dshHarnessService;
 }
 const tregService = new TregService();

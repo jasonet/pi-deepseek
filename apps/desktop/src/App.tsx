@@ -154,7 +154,7 @@ function isEventInsideTerminal(event: globalThis.KeyboardEvent): boolean {
 }
 
 function canTogglePrimarySidebar(view: AppView | undefined): boolean {
-  return view === "threads" || view === "new-thread" || view === "deepseek-harness" || view === "deepseek-bot";
+  return view === "threads" || view === "new-thread" || view === "deepseek-harness" || view === "deepseek-bot" || view === "dsh-trading";
 }
 
 function useRunningLabel(startedAt: string | undefined) {
@@ -3101,6 +3101,10 @@ export default function App() {
         ) : snapshot.activeView === "deepseek-bot" ? (
           <Suspense fallback={<ViewFallback />}>
             <DeepSeekHarnessView key="deepseek-bot" api={api} mode="bot" />
+          </Suspense>
+        ) : snapshot.activeView === "dsh-trading" ? (
+          <Suspense fallback={<ViewFallback />}>
+            <DeepSeekHarnessView key="dsh-trading" api={api} mode="trading" />
           </Suspense>
         ) : snapshot.activeView === "new-thread" ? (
           rootWorkspaceOptions.length > 0 ? (

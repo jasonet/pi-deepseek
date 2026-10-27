@@ -9,7 +9,7 @@ import { type Document, isMap, isScalar, parseDocument } from "yaml";
 
 import type { DshWebProgress, DshWebStatus } from "../src/ipc";
 import { withDshFileLock } from "./dsh-file-lock";
-import { dshEnvironment, dshOutputLines, ensureDshRuntime, sanitizeDshLog, stopDshProcess } from "./dsh-managed-runtime";
+import { dshEnvironment, dshOutputLines, ensureDshRuntime, isCredentialEnvironmentName, sanitizeDshLog, stopDshProcess } from "./dsh-managed-runtime";
 import { prepareDshFreeModel } from "./dsh-our-free-model";
 
 const DSH_PROBE_TIMEOUT_MS = 2_000;
@@ -56,6 +56,10 @@ export class DshWebService {
     readonly profile?: string;
     readonly title?: string;
     readonly freeModelArchivePath?: string;
+    readonly dshHome?: string;
+    readonly workingDirectory?: string;
+    readonly isolateCredentials?: boolean;
+    readonly childEnvironment?: Readonly<Record<string, string>>;
   }) {}
 
   private get title(): string {
@@ -126,7 +130,7 @@ export class DshWebService {
   }
 
   private get externalUrl(): string | undefined {
-    if (this.options.externalUrl) return this.options.externalUrl;
+    if (this.options.externalUrl !== undefined) return this.options.externalUrl || undefined;
     if (this.options.profile === "web") {
       return process.env.PI_APP_DS_BOT_WEB_URL?.trim() || undefined;
     }
@@ -160,13 +164,13 @@ export class DshWebService {
     signal.throwIfAborted();
     this.status = { ...this.status, state: "launching", phase: "service", progress: undefined };
     this.report({ line: "同步本机 DeepSeek 凭据" });
-    const syncResult = await (this.options.syncCredentials ?? syncDshDeepSeekCredential)().catch(() => {
+    const syncResult = await (this.options.syncCredentials ?? syncDshDeepSeekCredential)({ dshHome: this.options.dshHome }).catch(() => {
       this.report({ line: "凭据同步未完成，可在设置中配置自己的 DeepSeek API Key。" });
       return undefined;
     });
     signal.throwIfAborted();
     const profile = this.options.profile ?? "taosi-harness";
-    const dshHome = resolveUserPath(process.env.DSH_HOME, join(homedir(), ".dsh"));
+    const dshHome = resolveUserPath(this.options.dshHome ?? process.env.DSH_HOME, join(homedir(), ".dsh"));
     if (profile === "taosi-harness") {
       await ensureHarnessProfile(dshHome);
     }
@@ -182,8 +186,15 @@ export class DshWebService {
       });
     }
 
-    const child = spawn(runtime.node, [runtime.cli, profile, "--host", "127.0.0.1", "--port", "0", "--no-open"], {
-      env: dshEnvironment(runtime.node, activeApiKey), cwd: homedir(), detached: process.platform !== "win32",
+    const environment = dshEnvironment(runtime.node, activeApiKey);
+    if (this.options.isolateCredentials) {
+      for (const name of Object.keys(environment)) {
+        if (name !== "DEEPSEEK_API_KEY" && isCredentialEnvironmentName(name)) delete environment[name];
+      }
+    }
+    const child = spawn(runtime.node, [...(runtime.nodeArgs ?? []), runtime.cli, profile, "--host", "127.0.0.1", "--port", "0", "--no-open"], {
+      env: { ...environment, ...this.options.childEnvironment, DSH_HOME: dshHome },
+      cwd: this.options.workingDirectory ?? this.options.dshHome ?? homedir(), detached: process.platform !== "win32",
       windowsHide: true, stdio: ["ignore", "pipe", "pipe"],
     });
     this.childProcess = child;

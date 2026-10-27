@@ -160,6 +160,11 @@ export function Topbar(props: TopbarProps) {
             <span className="topbar__separator">/</span>
             <span className="topbar__session">DeepSeek Harness</span>
           </>
+        ) : activeView === "dsh-trading" ? (
+          <>
+            <span className="topbar__separator">/</span>
+            <span className="topbar__session">DSH Trading</span>
+          </>
         ) : activeView === "deepseek-bot" ? (
           <>
             <span className="topbar__separator">/</span>

@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import deepseekLogo from "../resources/providers/deepseek.png";
+import tradingLogo from "../resources/trading/icon.png";
+import { TradingControls } from "./trading-controls";
 import { RefreshIcon } from "./icons";
-import type { DshWebStatus, PiDesktopApi } from "./ipc";
+import type { DshWebMode, DshWebStatus, PiDesktopApi } from "./ipc";
 
 interface DeepSeekHarnessViewProps {
   readonly api: PiDesktopApi;
-  readonly mode?: "harness" | "bot";
+  readonly mode?: DshWebMode;
 }
 
 const PHASES = [
@@ -27,9 +29,14 @@ function statusLabel(status: DshWebStatus): string {
 
 export function DeepSeekHarnessView({ api, mode = "harness" }: DeepSeekHarnessViewProps) {
   const isBot = mode === "bot";
-  const title = isBot ? "DeepSeek Bot" : "DeepSeek Harness";
+  const isTrading = mode === "trading";
+  const title = isTrading ? "DSH Trading" : isBot ? "DeepSeek Bot" : "DeepSeek Harness";
+  const testPrefix = isTrading ? "dsh-trading" : isBot ? "ds-bot" : "dsh-web";
+  const phases = isTrading ? [["runtime", "运行环境"], ["dependencies", "安装交易组件"], ["pojia", "配置工作区"], ["service", "启动服务"]] as const : PHASES;
+  const frameRef = useRef<HTMLIFrameElement>(null);
   const [status, setStatus] = useState<DshWebStatus>({ state: "starting" });
   const [frameLoaded, setFrameLoaded] = useState(false);
+  const [frameGeneration, setFrameGeneration] = useState(0);
   const mounted = useRef(false);
   const epoch = useRef(0);
   const logsRef = useRef<HTMLPreElement>(null);
@@ -74,18 +81,19 @@ export function DeepSeekHarnessView({ api, mode = "harness" }: DeepSeekHarnessVi
     if (logsRef.current) logsRef.current.scrollTop = logsRef.current.scrollHeight;
   }, [status.logs]);
 
-  const phaseIndex = PHASES.findIndex(([phase]) => phase === status.phase);
+  const phaseIndex = phases.findIndex(([phase]) => phase === status.phase);
   return (
-    <section className="dsh-web" data-testid={status.state === "running" ? (isBot ? "ds-bot-surface" : "dsh-web-surface") : undefined}>
+    <section className="dsh-web" data-testid={status.state === "running" ? `${testPrefix}-surface` : undefined}>
       <header className="dsh-web__toolbar">
-        <img className="dsh-web__logo" src={deepseekLogo} alt="" />
+        <img className="dsh-web__logo" src={isTrading ? tradingLogo : deepseekLogo} alt="" />
         <strong>{title}</strong>
-        <span className="dsh-web__edition">{status.managed === false ? "外部服务" : isBot ? "DS Bot" : "标准版"}</span>
+        <span className="dsh-web__edition">{status.managed === false ? "外部服务" : isTrading ? "独立工作区" : isBot ? "DS Bot" : "标准版"}</span>
         <span className="dsh-web__connection" role="status">
           {busy ? <span className="dsh-web__spinner" aria-hidden="true" /> : <span className={status.state === "running" ? "dsh-web__dot dsh-web__dot--running" : "dsh-web__dot"} />}
           {statusLabel(status)}
-          {status.state === "running" ? <code data-testid={isBot ? "ds-bot-port" : "dsh-web-port"}>127.0.0.1:{status.port}</code> : null}
+          {status.state === "running" ? <code data-testid={`${testPrefix}-port`}>127.0.0.1:{status.port}</code> : null}
         </span>
+        {isTrading ? <TradingControls api={api} frame={frameRef} frameGeneration={frameGeneration} url={status.state === "running" ? status.url : undefined} /> : null}
         <button className="button button--ghost dsh-web__restart" type="button"
           title={status.managed === false ? `重新连接 ${title} 服务` : `重启 ${title} 服务`}
           aria-label={status.managed === false ? `重新连接 ${title} 服务` : `重启 ${title} 服务`}
@@ -94,13 +102,13 @@ export function DeepSeekHarnessView({ api, mode = "harness" }: DeepSeekHarnessVi
       {status.state === "running" ? (
         <div className="dsh-web__content">
           {!frameLoaded ? <div className="dsh-web__frame-loading" aria-live="polite">{`正在载入 ${title}`}</div> : null}
-          <iframe allow="clipboard-read; clipboard-write" className="dsh-web__frame"
-            data-testid={isBot ? "ds-bot-frame" : "dsh-web-frame"} key={status.url} onLoad={() => setFrameLoaded(true)}
+          <iframe ref={frameRef} allow="clipboard-read; clipboard-write" className="dsh-web__frame"
+            data-testid={`${testPrefix}-frame`} key={status.url} onLoad={() => { setFrameLoaded(true); setFrameGeneration((value) => value + 1); }}
             sandbox="allow-downloads allow-forms allow-modals allow-popups allow-same-origin allow-scripts"
             src={status.url} title={title} />
         </div>
       ) : (
-        <div className="dsh-web__setup" data-testid={status.state === "error" ? (isBot ? "ds-bot-error" : "dsh-web-error") : (isBot ? "ds-bot-loading" : "dsh-web-loading")}>
+        <div className="dsh-web__setup" data-testid={`${testPrefix}-${status.state === "error" ? "error" : "loading"}`}>
           <div className="dsh-web__setup-heading">
             {busy ? <span className="dsh-web__spinner" aria-hidden="true" /> : null}
             <h1>{status.state === "error" ? `${title} 未运行` : status.state === "installing" ? "正在安装运行环境" : `正在启动 ${title}`}</h1>
@@ -108,7 +116,7 @@ export function DeepSeekHarnessView({ api, mode = "harness" }: DeepSeekHarnessVi
           {status.managed !== false && busy ? (
             <>
               <ol className="dsh-web__phases">
-                {PHASES.map(([phase, label], index) => <li key={phase} data-current={phase === status.phase} data-complete={index < phaseIndex}>
+                {phases.map(([phase, label], index) => <li key={phase} data-current={phase === status.phase} data-complete={index < phaseIndex}>
                   <span>{index < phaseIndex ? "✓" : index + 1}</span>{label}
                 </li>)}
               </ol>

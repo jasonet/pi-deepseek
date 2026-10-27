@@ -171,6 +171,8 @@ export const desktopIpc = {
   getOpenDesignStatus: "pi-gui:get-open-design-status",
   installOpenDesign: "pi-gui:install-open-design",
   getDshWebStatus: "pi-gui:get-dsh-web-status",
+  getTradingPreferences: "pi-gui:get-trading-preferences",
+  setTradingPreferences: "pi-gui:set-trading-preferences",
   getDsBotInstalled: "pi-gui:get-ds-bot-installed",
   getDshOurFreeModelStatus: "pi-gui:get-dsh-our-free-model-status",
   setDshOurFreeModelConfig: "pi-gui:set-dsh-our-free-model-config",
@@ -312,6 +314,13 @@ export interface OpenDesignStatus {
   readonly webReachable?: boolean;
   readonly version?: string;
   readonly message?: string;
+}
+
+export type DshWebMode = "harness" | "bot" | "trading";
+export interface TradingPreferences {
+  readonly autoPrepareExample: boolean;
+  readonly example: "overview" | "crypto" | "us" | "cn";
+  readonly examplePrepared: boolean;
 }
 
 export interface DshWebProgress {
@@ -549,14 +558,17 @@ export interface PiDesktopApi {
   setSkipAutoTitle(enabled: boolean): Promise<DesktopAppState>;
   getOpenDesignStatus(): Promise<OpenDesignStatus>;
   installOpenDesign(): Promise<{ ok: boolean; message: string }>;
-  getDshWebStatus(mode?: "harness" | "bot"): Promise<DshWebStatus>;
+  readonly supportsDshTrading?: boolean;
+  getTradingPreferences?(): Promise<TradingPreferences>;
+  setTradingPreferences?(input: Partial<TradingPreferences>): Promise<TradingPreferences>;
+  getDshWebStatus(mode?: DshWebMode): Promise<DshWebStatus>;
   getDsBotInstalled(): Promise<boolean>;
   getDshOurFreeModelStatus(): Promise<DshOurFreeModelStatus>;
   setDshOurFreeModelConfig(input: SetDshOurFreeModelConfigInput): Promise<DshOurFreeModelStatus>;
-  startDshWeb(mode?: "harness" | "bot"): Promise<DshWebStatus>;
-  launchDshWeb(mode?: "harness" | "bot"): Promise<DshWebStatus>;
-  stopDshWeb(mode?: "harness" | "bot"): Promise<DshWebStatus>;
-  restartDshWeb(mode?: "harness" | "bot"): Promise<DshWebStatus>;
+  startDshWeb(mode?: DshWebMode): Promise<DshWebStatus>;
+  launchDshWeb(mode?: DshWebMode): Promise<DshWebStatus>;
+  stopDshWeb(mode?: DshWebMode): Promise<DshWebStatus>;
+  restartDshWeb(mode?: DshWebMode): Promise<DshWebStatus>;
   getTregStatus(): Promise<TregStatus>;
   saveTregSettings(settings: SaveTregSettingsInput): Promise<TregStatus>;
   installTregHarnessPlugin(): Promise<{ ok: boolean; message: string }>;

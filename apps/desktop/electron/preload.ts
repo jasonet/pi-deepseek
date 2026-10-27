@@ -3,6 +3,7 @@ import { PRELOAD_DEV_RELOAD_MARKER } from "./dev-reload-preload-probe";
 import {
   desktopIpc,
   type DshWebStatus,
+  type DshWebMode,
   type DesktopNotificationPermissionStatus,
   type DesktopSystemPermissionsState,
   type DesktopUpdateStatus,
@@ -286,7 +287,10 @@ contextBridge.exposeInMainWorld("piApp", {
     ipcRenderer.invoke(desktopIpc.getOpenDesignStatus) as Promise<OpenDesignStatus>,
   installOpenDesign: () =>
     ipcRenderer.invoke(desktopIpc.installOpenDesign) as Promise<{ ok: boolean; message: string }>,
-  getDshWebStatus: (mode?: "harness" | "bot") =>
+  supportsDshTrading: true,
+  getTradingPreferences: () => ipcRenderer.invoke(desktopIpc.getTradingPreferences),
+  setTradingPreferences: (input: Partial<import("../src/ipc").TradingPreferences>) => ipcRenderer.invoke(desktopIpc.setTradingPreferences, input),
+  getDshWebStatus: (mode?: DshWebMode) =>
     ipcRenderer.invoke(desktopIpc.getDshWebStatus, mode) as Promise<DshWebStatus>,
   getDsBotInstalled: () =>
     ipcRenderer.invoke(desktopIpc.getDsBotInstalled) as Promise<boolean>,
@@ -294,13 +298,13 @@ contextBridge.exposeInMainWorld("piApp", {
     ipcRenderer.invoke(desktopIpc.getDshOurFreeModelStatus) as Promise<import("../src/ipc").DshOurFreeModelStatus>,
   setDshOurFreeModelConfig: (input: import("../src/ipc").SetDshOurFreeModelConfigInput) =>
     ipcRenderer.invoke(desktopIpc.setDshOurFreeModelConfig, input) as Promise<import("../src/ipc").DshOurFreeModelStatus>,
-  startDshWeb: (mode?: "harness" | "bot") =>
+  startDshWeb: (mode?: DshWebMode) =>
     ipcRenderer.invoke(desktopIpc.startDshWeb, mode) as Promise<DshWebStatus>,
-  launchDshWeb: (mode?: "harness" | "bot") =>
+  launchDshWeb: (mode?: DshWebMode) =>
     ipcRenderer.invoke(desktopIpc.launchDshWeb, mode) as Promise<DshWebStatus>,
-  stopDshWeb: (mode?: "harness" | "bot") =>
+  stopDshWeb: (mode?: DshWebMode) =>
     ipcRenderer.invoke(desktopIpc.stopDshWeb, mode) as Promise<DshWebStatus>,
-  restartDshWeb: (mode?: "harness" | "bot") =>
+  restartDshWeb: (mode?: DshWebMode) =>
     ipcRenderer.invoke(desktopIpc.restartDshWeb, mode) as Promise<DshWebStatus>,
   getTregStatus: () =>
     ipcRenderer.invoke(desktopIpc.getTregStatus) as Promise<TregStatus>,

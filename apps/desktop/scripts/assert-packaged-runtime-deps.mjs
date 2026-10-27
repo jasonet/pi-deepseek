@@ -43,6 +43,7 @@ const requiredPackages = [
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const desktopDir = path.resolve(scriptDir, "..");
+const releaseDir = path.resolve(desktopDir, process.env.PI_APP_VERIFY_RELEASE_DIR?.trim() || "release");
 const packagePlatform = (process.env.PI_APP_PACKAGE_PLATFORM ?? process.platform).trim().toLowerCase();
 const asarPath = resolveAsarPath(desktopDir, packagePlatform);
 const notificationHelperPath =
@@ -97,7 +98,6 @@ function resolveAsarPath(desktopDir, packagePlatform) {
   }
 
   if (packagePlatform === "linux") {
-    const releaseDir = path.join(desktopDir, "release");
     const unpackedAsarPath = readdirSync(releaseDir, { withFileTypes: true })
       .filter((entry) => entry.isDirectory() && /^linux(?:-[\w]+)?-unpacked$/.test(entry.name))
       .map((entry) => path.join(releaseDir, entry.name, "resources", "app.asar"))
@@ -111,14 +111,13 @@ function resolveAsarPath(desktopDir, packagePlatform) {
   }
 
   if (packagePlatform === "win32" || packagePlatform === "windows" || packagePlatform === "win") {
-    return path.join(desktopDir, "release", "win-unpacked", "resources", "app.asar");
+    return path.join(releaseDir, "win-unpacked", "resources", "app.asar");
   }
 
   throw new Error(`Unsupported packaged runtime dependency target: ${packagePlatform}`);
 }
 
 function resolveMacAppPath(desktopDir, ...segments) {
-  const releaseDir = path.join(desktopDir, "release");
   const appBundlePath = ["mac-arm64", "mac"]
     .map((directoryName) => path.join(releaseDir, directoryName, "Taosi.app"))
     .find((candidatePath) => existsSync(candidatePath));

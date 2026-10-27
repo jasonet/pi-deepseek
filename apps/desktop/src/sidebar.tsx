@@ -27,6 +27,7 @@ import { useT } from "./i18n";
 import fxEngineIcon from "../resources/engines/fx.png";
 import piEngineIcon from "../resources/engines/pi.png";
 import deepseekLogo from "../resources/providers/deepseek.png";
+import tradingLogo from "../resources/trading/icon.png";
 
 const SESSION_ENGINE_DETAILS = {
   fx: { icon: fxEngineIcon, label: "fx" },
@@ -175,6 +176,13 @@ export function Sidebar(props: SidebarProps) {
             <img className="sidebar__nav-logo" src={deepseekLogo} alt="" />
             <span>{t("sidebar.deepseekHarness")}</span>
           </button>
+          {api.supportsDshTrading ? (
+            <button type="button" className={`sidebar__nav-item ${activeView === "dsh-trading" ? "sidebar__nav-item--active" : ""}`}
+              data-testid="open-dsh-trading" onClick={() => onSetActiveView("dsh-trading")}>
+              <img className="sidebar__nav-logo" src={tradingLogo} alt="" />
+              <span>DSH Trading</span>
+            </button>
+          ) : null}
           {isDsBotInstalled ? (
             <button
               className={`sidebar__nav-item ${activeView === "deepseek-bot" ? "sidebar__nav-item--active" : ""}`}

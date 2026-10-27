@@ -1,0 +1,6 @@
+- id: workspace-controller
+  config:
+    documentsDirectory: "__TAOSI_RESEARCH_ROOT__"
+- insert:
+    - id: taosi-trading-bridge
+      name: '@taosi/dsh-trading-bridge'

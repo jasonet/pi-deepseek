@@ -41,6 +41,8 @@ import {
 } from "./connect-phone-install";
 import { configureLogger, logError, logInfo } from "./logger";
 import { ensurePathForGuiLaunch } from "./ensure-path";
+import { ensureTradingRuntime } from "./dsh-trading-runtime";
+import { readTradingPreferences, saveTradingPreferences } from "./dsh-trading-preferences";
 import { seedBundledExtensions } from "./seed-extensions";
 import {
   DshWebService,
@@ -60,6 +62,7 @@ import {
   desktopCommands,
   desktopIpc,
   getDesktopCommandFromShortcut,
+  type DshWebMode,
   type DesktopUpdateStatus,
   type OpenDesignStatus,
 } from "../src/ipc";
@@ -829,7 +832,7 @@ async function installDesktopUpdate(): Promise<void> {
   updateInstallRequestCount += 1;
   if (process.env.PI_APP_TEST_MODE) return;
   await store.flushPersistence().catch(() => undefined);
-  await Promise.all([dshHarnessService.shutdown(), dsBotService.shutdown()]).catch(() => undefined);
+  await Promise.all([dshHarnessService.shutdown(), dsBotService.shutdown(), tradingService.shutdown()]).catch(() => undefined);
   quittingAfterStoreFlush = true;
   safeAutoUpdater()?.quitAndInstall(false, true);
 }
@@ -1290,6 +1293,24 @@ const freeModelArchivePath = path.join(
   DSH_FREE_MODEL_ARCHIVE,
 );
 
+const tradingHome = path.join(configuredUserDataDir, "dsh-trading");
+const tradingService = new DshWebService({
+  runtimeRoot: path.join(configuredUserDataDir, "trading-runtime"),
+  dshHome: tradingHome,
+  workingDirectory: path.join(tradingHome, "research"),
+  isolateCredentials: true,
+  profile: "trading-web",
+  title: "DSH Trading",
+  externalUrl: "",
+  childEnvironment: { DSH_DESKTOP_SHELL_PID: String(process.pid) },
+  install: (root, signal, report) => ensureTradingRuntime(root, signal, report, {
+    resources: path.join(app.isPackaged ? process.resourcesPath : path.join(app.getAppPath(), "resources"), "trading"),
+    nodeRoot: path.join(configuredUserDataDir, "harness"),
+    dshHome: tradingHome,
+    parentOrigin: !app.isPackaged && process.env.ELECTRON_RENDERER_URL ? new URL(process.env.ELECTRON_RENDERER_URL).origin : "file",
+  }),
+});
+
 const dshHarnessService = new DshWebService({
   runtimeRoot: path.join(configuredUserDataDir, "harness"),
   profile: "taosi-harness",
@@ -1304,8 +1325,11 @@ const dsBotService = new DshWebService({
   externalUrl: process.env.PI_APP_DS_BOT_WEB_URL?.trim() || undefined,
 });
 
-function resolveDshService(mode?: "harness" | "bot"): DshWebService {
-  return mode === "bot" ? dsBotService : dshHarnessService;
+function resolveDshService(mode?: DshWebMode): DshWebService {
+  if (mode === "trading") return tradingService;
+  if (mode === "bot") return dsBotService;
+  if (mode === undefined || mode === "harness") return dshHarnessService;
+  throw new Error("Unknown DSH service");
 }
 
 const shouldRequestSingleInstanceLock = !process.env.PI_APP_TEST_MODE;
@@ -1480,7 +1504,9 @@ app.whenReady().then(async () => {
       return { ok: false, message: e.message };
     }
   });
-  ipcMain.handle(desktopIpc.getDshWebStatus, (_event, mode?: "harness" | "bot") =>
+  ipcMain.handle(desktopIpc.getTradingPreferences, () => readTradingPreferences(tradingHome));
+  ipcMain.handle(desktopIpc.setTradingPreferences, (_event, input) => saveTradingPreferences(tradingHome, input));
+  ipcMain.handle(desktopIpc.getDshWebStatus, (_event, mode?: DshWebMode) =>
     resolveDshService(mode).getStatus(),
   );
   ipcMain.handle(desktopIpc.getDsBotInstalled, () => dshHarnessService.checkDsBotInstalled());
@@ -1512,16 +1538,16 @@ app.whenReady().then(async () => {
       throw error;
     }
   });
-  ipcMain.handle(desktopIpc.startDshWeb, (_event, mode?: "harness" | "bot") =>
+  ipcMain.handle(desktopIpc.startDshWeb, (_event, mode?: DshWebMode) =>
     resolveDshService(mode).start(),
   );
-  ipcMain.handle(desktopIpc.launchDshWeb, (_event, mode?: "harness" | "bot") =>
+  ipcMain.handle(desktopIpc.launchDshWeb, (_event, mode?: DshWebMode) =>
     resolveDshService(mode).launch(),
   );
-  ipcMain.handle(desktopIpc.stopDshWeb, (_event, mode?: "harness" | "bot") =>
+  ipcMain.handle(desktopIpc.stopDshWeb, (_event, mode?: DshWebMode) =>
     resolveDshService(mode).stop(),
   );
-  ipcMain.handle(desktopIpc.restartDshWeb, (_event, mode?: "harness" | "bot") =>
+  ipcMain.handle(desktopIpc.restartDshWeb, (_event, mode?: DshWebMode) =>
     resolveDshService(mode).restart(),
   );
   ipcMain.handle(desktopIpc.getTregStatus, () => tregService.getStatus());
@@ -2063,7 +2089,7 @@ app.on("window-all-closed", () => {
     terminalService = undefined;
     stopPeriodicGcHint();
     stopWeixinBridgeRuntime();
-    void Promise.all([dshHarnessService.shutdown(), dsBotService.shutdown()]);
+    void Promise.all([dshHarnessService.shutdown(), dsBotService.shutdown(), tradingService.shutdown()]);
     app.quit();
   }
 });
@@ -2082,7 +2108,7 @@ app.on("before-quit", (event) => {
   stopPeriodicGcHint();
   stopWeixinBridgeRuntime();
   if (quittingAfterStoreFlush) {
-    void Promise.all([dshHarnessService.shutdown(), dsBotService.shutdown()]);
+    void Promise.all([dshHarnessService.shutdown(), dsBotService.shutdown(), tradingService.shutdown()]);
     return;
   }
 
@@ -2092,6 +2118,7 @@ app.on("before-quit", (event) => {
     store?.flushPersistence(),
     dshHarnessService.shutdown(),
     dsBotService.shutdown(),
+    tradingService.shutdown(),
   ])
     .catch(() => undefined)
     .finally(() => {

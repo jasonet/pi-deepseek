@@ -25,6 +25,7 @@ const NODE_HASHES: Record<string, string> = {
 export interface DshRuntime {
   readonly node: string;
   readonly cli: string;
+  readonly nodeArgs?: readonly string[];
 }
 export type DshInstallReporter = (update: DshWebProgress & { readonly line?: string }) => void;
 
@@ -56,6 +57,10 @@ export function dshEnvironment(node: string, apiKey?: string): NodeJS.ProcessEnv
     env.DEEPSEEK_API_KEY = apiKey;
   }
   return env;
+}
+
+export function isCredentialEnvironmentName(name: string): boolean {
+  return /(?:API_?KEY|_KEY(?:_|$)|TOKEN|SECRET|PASSWORD|PASSWD|CREDENTIAL|^AWS_|^DSH_)/i.test(name);
 }
 
 export function sanitizeDshLog(text: string): string {
@@ -93,9 +98,9 @@ export async function stopDshProcess(child: ChildProcess): Promise<void> {
   signalGroup("SIGKILL");
 }
 
-async function runInstaller(command: string, args: string[], signal: AbortSignal, report: DshInstallReporter, env?: NodeJS.ProcessEnv): Promise<void> {
+export async function runInstaller(command: string, args: string[], signal: AbortSignal, report: DshInstallReporter, env?: NodeJS.ProcessEnv, cwd?: string): Promise<void> {
   signal.throwIfAborted();
-  const child = spawn(command, args, { env, detached: process.platform !== "win32", windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
+  const child = spawn(command, args, { env, cwd, detached: process.platform !== "win32", windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
   let tail = "";
   const onLine = (line: string) => {
     const safe = sanitizeDshLog(line);
@@ -120,6 +125,16 @@ async function runInstaller(command: string, args: string[], signal: AbortSignal
 }
 
 export async function ensureDshRuntime(root: string, signal: AbortSignal, report: DshInstallReporter): Promise<DshRuntime> {
+  const runtime = await ensureManagedRuntime(root, signal, report, false);
+  if (!runtime.cli) throw new Error("DSH runtime entrypoint is missing");
+  return { node: runtime.node, cli: runtime.cli };
+}
+
+export async function ensureDshNodeRuntime(root: string, signal: AbortSignal, report: DshInstallReporter): Promise<{ node: string; npm: string }> {
+  return ensureManagedRuntime(root, signal, report, true);
+}
+
+async function ensureManagedRuntime(root: string, signal: AbortSignal, report: DshInstallReporter, nodeOnly: boolean): Promise<{ node: string; npm: string; cli?: string }> {
   await mkdir(root, { recursive: true, mode: 0o700 });
   const lockController = new AbortController();
   const boundedSignal = AbortSignal.any([signal, lockController.signal, AbortSignal.timeout(15 * 60_000)]);
@@ -178,11 +193,13 @@ export async function ensureDshRuntime(root: string, signal: AbortSignal, report
       if (await access(nodeRoot).then(() => true, () => false)) await rename(nodeRoot, `${nodeRoot}-backup-${randomUUID()}`);
       await rename(join(staging, basename), nodeRoot);
     }
+    const npm = join(nodeRoot, npmRelative);
+    if (nodeOnly) return { node, npm };
     const runtimeRoot = join(root, `dsh-${DSH_VERSION}-pojia-${POJIA_REVISION}`);
     const cliRelative = "node_modules/@deepseek-ai/dsh/lib/bin.js";
     if (await verifyPojiaDsh(runtimeRoot) && await access(join(runtimeRoot, cliRelative)).then(() => true, () => false)) {
       report({ phase: "pojia", line: "Pojia Harness 安装校验通过" });
-      return { node, cli: join(runtimeRoot, cliRelative) };
+      return { node, npm, cli: join(runtimeRoot, cliRelative) };
     }
     const staging = join(root, `install-dsh-${randomUUID()}`);
     await mkdir(staging, { mode: 0o700 });
@@ -196,7 +213,6 @@ export async function ensureDshRuntime(root: string, signal: AbortSignal, report
       overrides: { koffi: "3.1.1", "node-pty": "1.2.0-beta.15" },
     }));
     report({ phase: "dependencies", progress: undefined, line: `安装 DeepSeek Harness ${DSH_VERSION}` });
-    const npm = join(nodeRoot, npmRelative);
     await runInstaller(node, [npm, "install", "--prefix", staging, "--strict-allow-scripts", "--no-audit", "--no-fund", "--progress=false", "--loglevel=http", `@deepseek-ai/dsh@${DSH_VERSION}`], boundedSignal, report, dshEnvironment(node));
     boundedSignal.throwIfAborted();
     report({ phase: "pojia", progress: undefined, line: "应用 Pojia DSH 指令与 persona，保留原始文件备份" });
@@ -205,7 +221,7 @@ export async function ensureDshRuntime(root: string, signal: AbortSignal, report
     // Preserve a damaged installation for diagnosis instead of silently overwriting it.
     if (await access(runtimeRoot).then(() => true, () => false)) await rename(runtimeRoot, `${runtimeRoot}-backup-${randomUUID()}`);
     await rename(staging, runtimeRoot);
-    return { node, cli: join(runtimeRoot, cliRelative) };
+    return { node, npm, cli: join(runtimeRoot, cliRelative) };
   } finally {
     await release();
   }

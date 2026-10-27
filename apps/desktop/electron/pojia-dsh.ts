@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { patchDshEmbedding } from "./dsh-embedding";
 import { isMap, parseDocument, visit } from "yaml";
 
 // DSH-only adaptation of Pojia's DshTarget. Never scans or modifies external installations.
@@ -82,10 +83,7 @@ export async function applyPojiaDsh(runtimeDir: string): Promise<void> {
   // Taosi-specific embedding adaptation, separate from Pojia's prompt changes.
   // Keep signed, HttpOnly auth and the Host/Origin fence. Partition the loopback
   // cookie by the embedding app instead of disabling Chromium's cookie security.
-  const cookieAttributes = "; HttpOnly; SameSite=Strict";
-  const connection = originals[3]!;
-  if (connection.split(cookieAttributes).length !== 2) throw new Error("DSH 嵌入式登录模块不兼容。");
-  const embeddedConnection = connection.replace(cookieAttributes, "; HttpOnly; SameSite=None; Secure; Partitioned");
+  const embeddedConnection = patchDshEmbedding(originals[3]!);
   // Validate every anchor before writing; the installer only publishes this staging directory on success.
   const patched = [patchedInstructions, ...configs, embeddedConnection];
   for (let i = 0; i < paths.length; i++) {

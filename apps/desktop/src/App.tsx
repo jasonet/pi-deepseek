@@ -675,7 +675,22 @@ export default function App() {
     rootWorkspaceOptions.find((entry) => entry.id === newThreadRootWorkspaceId) ?? rootWorkspaceOptions[0];
   const newThreadRuntime = snapshot ? getEffectiveModelRuntime(snapshot, newThreadWorkspace) : undefined;
   const newThreadPiModelOptions = useMemo(() => buildModelOptions(newThreadRuntime), [newThreadRuntime]);
-  const localNewThreadModel = newThreadPiModelOptions.find((model) => model.providerId.startsWith("custom-"));
+  const localNewThreadModel = useMemo(() => {
+    const customModels = newThreadPiModelOptions.filter((model) => model.providerId.startsWith("custom-"));
+    if (customModels.length === 0) return undefined;
+    const gemini38 = customModels.find(
+      (m) =>
+        m.modelId.toLowerCase().includes("gemini-3.8") ||
+        m.modelId.toLowerCase().includes("gemini 3.8") ||
+        m.label.toLowerCase().includes("gemini-3.8") ||
+        m.label.toLowerCase().includes("gemini 3.8"),
+    );
+    if (gemini38) return gemini38;
+    const anyGemini = customModels.find(
+      (m) => m.modelId.toLowerCase().includes("gemini") || m.label.toLowerCase().includes("gemini"),
+    );
+    return anyGemini ?? customModels[0];
+  }, [newThreadPiModelOptions]);
   const newThreadDefaultEnabled = newThreadPiModelOptions.some(
     (m) => m.providerId === newThreadRuntime?.settings.defaultProvider && m.modelId === newThreadRuntime?.settings.defaultModelId,
   );
@@ -718,9 +733,17 @@ export default function App() {
   const resolvedNewThreadModelId = newThreadBackend === "fx"
     ? newThreadFxModelId ?? newThreadFxStatus?.model ?? snapshot?.fxDefaultModel?.modelId
     : newThreadModelId ?? localNewThreadModel?.modelId ?? (newThreadDefaultEnabled ? newThreadRuntime?.settings.defaultModelId : undefined);
+  const isGeminiCustomModel = Boolean(
+    localNewThreadModel &&
+      (localNewThreadModel.modelId.toLowerCase().includes("gemini") ||
+        localNewThreadModel.label.toLowerCase().includes("gemini")),
+  );
   const resolvedNewThreadThinkingLevel = newThreadBackend === "fx"
     ? undefined
-    : newThreadThinkingLevel ?? newThreadRuntime?.settings.defaultThinkingLevel;
+    : newThreadThinkingLevel ??
+      (isGeminiCustomModel && !newThreadRuntime?.settings.defaultThinkingLevel
+        ? "xhigh"
+        : newThreadRuntime?.settings.defaultThinkingLevel ?? (isGeminiCustomModel ? "xhigh" : undefined));
   const selectedSessionModelOnboarding = deriveModelOnboardingState(selectedModelRuntime, {
     provider: resolvedSessionProvider,
     modelId: resolvedSessionModelId,

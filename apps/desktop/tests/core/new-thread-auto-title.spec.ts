@@ -100,6 +100,10 @@ test("switching away does not cancel a pending auto-title", async () => {
     });
 
     await expect(window.locator(".topbar__session")).toHaveText("Keep auto title alive after…");
+    if (await window.locator(".dual-pane").isVisible().catch(() => false)) {
+      await window.keyboard.press(process.platform === "darwin" ? "Meta+d" : "Control+d");
+      await expect(window.locator(".dual-pane")).toHaveCount(0);
+    }
     await selectSession(window, "Existing thread");
     await expect.poll(async () => (await getDesktopState(window)).selectedWorkspaceId).toBe(workspace.id);
 

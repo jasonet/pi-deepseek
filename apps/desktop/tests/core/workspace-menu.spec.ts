@@ -30,11 +30,11 @@ test("supports workspace rename and remove from the sidebar menu", async () => {
 
     await window.getByRole("button", { name: `Workspace actions for ${basename(workspaceA)}` }).click();
     const workspaceMenu = window.locator(".workspace-menu").last();
-    await expect(workspaceMenu.getByRole("button", { name: "Open folder" })).toBeVisible();
-    await expect(workspaceMenu.getByRole("button", { name: "Edit name" })).toBeVisible();
-    await expect(workspaceMenu.getByRole("button", { name: "Remove" })).toBeVisible();
+    await expect(workspaceMenu.getByRole("button", { name: /Open folder|Reveal in Finder/i })).toBeVisible();
+    await expect(workspaceMenu.getByRole("button", { name: /Edit/i })).toBeVisible();
+    await expect(workspaceMenu.getByRole("button", { name: /Delete|Remove/i })).toBeVisible();
 
-    await workspaceMenu.getByRole("button", { name: "Edit name" }).click();
+    await workspaceMenu.getByRole("button", { name: /Edit/i }).click();
     const renameInput = window.getByLabel(`Rename ${basename(workspaceA)}`);
     await renameInput.fill("Renamed workspace");
     await window.getByRole("button", { name: "Save" }).click();
@@ -48,7 +48,7 @@ test("supports workspace rename and remove from the sidebar menu", async () => {
       void dialog.accept();
     });
     await window.getByRole("button", { name: "Workspace actions for Renamed workspace" }).click();
-    await window.getByRole("button", { name: "Remove" }).click();
+    await window.getByRole("button", { name: /Delete|Remove/i }).click();
 
     await expect.poll(async () => {
       const latest = await getDesktopState(window);

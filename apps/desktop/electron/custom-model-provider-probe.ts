@@ -243,7 +243,7 @@ function readModels(payload: unknown): RuntimeCustomModelRecord[] {
     models.set(id, {
       id,
       name: readString(candidate.display_name) ?? readString(candidate.name) ?? existing?.name ?? id,
-      reasoning: existing?.reasoning === true || candidate.reasoning === true || /reason|thinking/i.test(id),
+      reasoning: existing?.reasoning === true,
       supportsImages: existing?.supportsImages === true
         || capabilities.some((capability) => /image|vision|multimodal/i.test(capability)),
       contextWindow,

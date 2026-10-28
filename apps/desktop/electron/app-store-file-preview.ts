@@ -107,13 +107,17 @@ export async function saveWorkspaceFileAs(
   await copyFile(sourcePath, destinationPath);
 }
 
+function stripWindowsExtendedPathPrefix(pathValue: string): string {
+  return pathValue.replace(/^\\\\\?\\UNC\\/i, "\\\\").replace(/^\\\\\?\\/i, "");
+}
+
 async function resolveWorkspaceFile(workspacePath: string, requestedPath: string): Promise<string> {
-  const root = await realpath(workspacePath);
+  const root = stripWindowsExtendedPathPrefix(await realpath(workspacePath));
   const normalizedRequest = normalizeRequestedPath(requestedPath);
   const candidate = path.isAbsolute(normalizedRequest)
     ? normalizedRequest
     : path.resolve(root, normalizedRequest);
-  const resolved = await realpath(candidate);
+  const resolved = stripWindowsExtendedPathPrefix(await realpath(candidate));
   const relative = path.relative(root, resolved);
   if (relative === "" || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
     throw new Error("Requested file is outside workspace");

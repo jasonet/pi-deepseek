@@ -3,7 +3,7 @@ import { access, mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { delimiter, dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import lockfile from "proper-lockfile";
-import { ensureDshNodeRuntime, isCredentialEnvironmentName, runInstaller, type DshInstallReporter, type DshRuntime } from "./dsh-managed-runtime";
+import { ensureDshNodeRuntime, isCredentialEnvironmentName, runInstaller, safeRename, type DshInstallReporter, type DshRuntime } from "./dsh-managed-runtime";
 import { patchDshEmbedding } from "./dsh-embedding";
 
 export const TRADING_REVISION = "36cc7afe1ccd2fba4d76142873ef6ea400b4128b";
@@ -60,7 +60,10 @@ export async function ensureTradingRuntime(
       await mkdir(stagingSource, { recursive: true, mode: 0o700 });
       const env = installEnvironment(node, toolchain, root);
       report({ phase: "dependencies", progress: undefined, line: "校验通过，展开固定版本 dsh-trading 源码" });
-      await runInstaller("tar", ["-xzf", archive, "-C", stagingSource], bounded, report, env);
+      const tarArgs = process.platform === "win32"
+        ? ["--force-local", "-xzf", archive, "-C", stagingSource]
+        : ["-xzf", archive, "-C", stagingSource];
+      await runInstaller("tar", tarArgs, bounded, report, env);
       report({ phase: "dependencies", line: "安装独立构建工具 pnpm 11.9.0" });
       await runInstaller(node, [npm, "install", "--prefix", toolchain, "--ignore-scripts", "--no-audit", "--no-fund", "pnpm@11.9.0"], bounded, report, env);
       const pnpm = join(toolchain, "node_modules/pnpm/bin/pnpm.cjs");
@@ -71,8 +74,8 @@ export async function ensureTradingRuntime(
       await patchEmbedding(join(stagingSource, "desktop/resources/runtime/host"));
       await writeFile(join(staging, "taosi-trading.json"), SOURCE_SHA256, { mode: 0o600 });
       bounded.throwIfAborted();
-      if (await access(runtime).then(() => true, () => false)) await rename(runtime, `${runtime}-backup-${randomUUID()}`);
-      await rename(staging, runtime);
+      if (await access(runtime).then(() => true, () => false)) await safeRename(runtime, `${runtime}-backup-${randomUUID()}`);
+      await safeRename(staging, runtime);
     }
     report({ phase: "pojia", progress: undefined, line: "初始化 Taosi 独立交易工作区，保留模拟交易与人工审批闸门" });
     await mkdir(join(options.dshHome, "research"), { recursive: true, mode: 0o700 });

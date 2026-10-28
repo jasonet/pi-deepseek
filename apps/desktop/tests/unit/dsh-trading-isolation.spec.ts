@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, realpath, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -47,7 +48,10 @@ test("profile preparation never modifies an unowned profile", async () => {
   await writeFile(join(source, "desktop/src/runtime.cjs"), "module.exports = {};\n");
   await mkdir(profile, { recursive: true });
   await writeFile(join(profile, "package.json"), '{"name":"user-owned"}\n');
-  const helper = join(process.cwd(), "apps/desktop/resources/trading/prepare-profile.cjs");
+  const helper = [
+    join(process.cwd(), "resources/trading/prepare-profile.cjs"),
+    join(process.cwd(), "apps/desktop/resources/trading/prepare-profile.cjs"),
+  ].find(existsSync) ?? join(process.cwd(), "resources/trading/prepare-profile.cjs");
   await expect(promisify(execFile)(process.execPath, [helper, source, home, root])).rejects.toThrow("not Taosi-managed");
   expect(await readFile(join(profile, "package.json"), "utf8")).toBe('{"name":"user-owned"}\n');
   await expect(readFile(join(home, ".legacy-home-migrated.json"))).rejects.toMatchObject({ code: "ENOENT" });

@@ -199,7 +199,7 @@ async function ensureBundledPackage(profile: string, archivePath: string | undef
   if (existing === VERSION) return;
   const staging = await mkdtemp(join(profile, ".free-model-stage-"));
   try {
-    await execFileAsync("tar", ["-xzf", archivePath, "-C", staging]);
+    await execFileAsync("tar", ["-xzf", archivePath, "-C", staging], { windowsHide: true });
     const candidate = join(staging, "package");
     const packageJson: unknown = JSON.parse(await readFile(join(candidate, "package.json"), "utf8"));
     if (!isRecord(packageJson) || packageJson.name !== PACKAGE || packageJson.version !== VERSION) {

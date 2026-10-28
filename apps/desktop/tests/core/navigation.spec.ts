@@ -140,23 +140,32 @@ test("switching sessions republishes the selected transcript", async () => {
     const window = await harness.firstWindow();
     await waitForWorkspaceByPath(window, workspacePath);
 
+    const transcript = window.getByTestId("transcript").first();
     await createNamedThread(window, "Thread one");
+    await expect(window.locator(".topbar__session")).toHaveText("Thread one");
     await streamAssistantDeltas(harness, window, ["alpha response"]);
-    await expect(window.getByTestId("transcript")).toContainText("alpha response");
+    await expect(transcript).toContainText("alpha response");
 
     await createNamedThread(window, "Thread two");
+    await expect(window.locator(".topbar__session")).toHaveText("Thread two");
+    await expect(transcript).not.toContainText("Loading transcript");
     await streamAssistantDeltas(harness, window, ["beta response"]);
-    await expect(window.getByTestId("transcript")).toContainText("beta response");
+    await expect(transcript).toContainText("beta response");
+
+    if (await window.locator(".dual-pane").isVisible().catch(() => false)) {
+      await window.keyboard.press(process.platform === "darwin" ? "Meta+d" : "Control+d");
+      await expect(window.locator(".dual-pane")).toHaveCount(0);
+    }
 
     await selectSession(window, "Thread one");
     await expect(window.locator(".topbar__session")).toHaveText("Thread one");
-    await expect(window.getByTestId("transcript")).toContainText("alpha response");
-    await expect(window.getByTestId("transcript")).not.toContainText("Loading transcript");
+    await expect(transcript).toContainText("alpha response");
+    await expect(transcript).not.toContainText("Loading transcript");
 
     await selectSession(window, "Thread two");
     await expect(window.locator(".topbar__session")).toHaveText("Thread two");
-    await expect(window.getByTestId("transcript")).toContainText("beta response");
-    await expect(window.getByTestId("transcript")).not.toContainText("Loading transcript");
+    await expect(transcript).toContainText("beta response");
+    await expect(transcript).not.toContainText("Loading transcript");
   } finally {
     await harness.close();
   }

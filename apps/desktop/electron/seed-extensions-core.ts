@@ -30,7 +30,7 @@ export function seedBundledExtensionsFromPath(
     try {
       mkdirSync(targetRoot, { recursive: true });
       const temporaryRoot = mkdtempSync(path.join(targetRoot, `.${id}-`));
-      const result = spawnSync("tar", ["-xzf", tarball, "-C", temporaryRoot], { stdio: "ignore" });
+      const result = spawnSync("tar", ["-xzf", tarball, "-C", temporaryRoot], { stdio: "ignore", windowsHide: true });
       if ((result.status ?? 1) === 0) {
         rmSync(target, { recursive: true, force: true });
         renameSync(path.join(temporaryRoot, id), target);
@@ -47,7 +47,7 @@ export function seedBundledExtensionsFromPath(
 }
 
 function readBundledVersion(tarball: string, id: string): string | undefined {
-  const result = spawnSync("tar", ["-xOf", tarball, `${id}/package.json`], { encoding: "utf8" });
+  const result = spawnSync("tar", ["-xOf", tarball, `${id}/package.json`], { encoding: "utf8", windowsHide: true });
   if ((result.status ?? 1) !== 0) return undefined;
   return parsePackageVersion(result.stdout);
 }

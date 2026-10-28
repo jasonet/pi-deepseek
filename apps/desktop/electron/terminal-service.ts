@@ -398,11 +398,15 @@ function clampInteger(value: number | undefined, fallback: number, min: number, 
   return Math.min(max, Math.max(min, Math.floor(value as number)));
 }
 
+function stripWindowsExtendedPathPrefix(pathValue: string): string {
+  return pathValue.replace(/^\\\\\?\\UNC\\/i, "\\\\").replace(/^\\\\\?\\/i, "");
+}
+
 function normalizeRootKey(workspacePath: string): string {
   try {
-    return realpathSync.native(workspacePath);
+    return stripWindowsExtendedPathPrefix(realpathSync.native(workspacePath));
   } catch {
-    return path.resolve(workspacePath);
+    return stripWindowsExtendedPathPrefix(path.resolve(workspacePath));
   }
 }
 

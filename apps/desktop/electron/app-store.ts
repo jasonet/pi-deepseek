@@ -3098,13 +3098,11 @@ function resolveSelectedSessionIdFromCatalog(
   ) {
     return preferredSessionId;
   }
-  let firstWorkspaceSessionId = "";
   for (const session of sessions) {
     if (session.workspaceId !== workspaceId) continue;
-    if (!firstWorkspaceSessionId) firstWorkspaceSessionId = session.sessionRef.sessionId;
     if (!session.archivedAt) return session.sessionRef.sessionId;
   }
-  return firstWorkspaceSessionId;
+  return "";
 }
 
 function resolvePrimarySessionIdFromCatalog(

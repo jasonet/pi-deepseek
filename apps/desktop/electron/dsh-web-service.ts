@@ -230,7 +230,19 @@ export class DshWebService {
       if (signal.aborted) abort();
     });
     signal.throwIfAborted();
-    if (!await probeDshWeb(url)) throw new Error(`${this.title} 已启动，但页面健康检查失败。`);
+    let probeOk = false;
+    const probeTimeout = process.platform === "win32" ? 15_000 : 8_000;
+    const deadline = Date.now() + probeTimeout;
+    while (Date.now() < deadline && !signal.aborted) {
+      if (await probeDshWeb(url, 2_500)) {
+        probeOk = true;
+        break;
+      }
+      await new Promise((r) => setTimeout(r, 400));
+    }
+    if (!probeOk && !signal.aborted) {
+      throw new Error(`${this.title} 已启动，但页面健康检查失败。`);
+    }
     signal.throwIfAborted();
     if (child.exitCode !== null || child.signalCode !== null) throw new Error(`${this.title} 服务已退出。`);
     this.status = { ...this.status, state: "running", url, port: Number(new URL(url).port), pid: child.pid };
@@ -542,7 +554,7 @@ async function ensurePrivateJsonFile(path: string): Promise<void> {
 function resolveUserPath(configuredPath: string | undefined, fallback: string): string {
   const value = configuredPath?.trim() || fallback;
   if (value === "~") return homedir();
-  if (value.startsWith("~/")) return join(homedir(), value.slice(2));
+  if (value.startsWith("~/") || value.startsWith("~\\")) return join(homedir(), value.slice(2));
   return resolve(value);
 }
 
@@ -669,9 +681,9 @@ function isNodeError(error: unknown): error is NodeJS.ErrnoException {
   return error instanceof Error && "code" in error;
 }
 
-async function probeDshWeb(url: string): Promise<boolean> {
+async function probeDshWeb(url: string, timeoutMs: number = DSH_PROBE_TIMEOUT_MS): Promise<boolean> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), DSH_PROBE_TIMEOUT_MS);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await fetch(url, { signal: controller.signal, redirect: "manual" });
     await response.body?.cancel();

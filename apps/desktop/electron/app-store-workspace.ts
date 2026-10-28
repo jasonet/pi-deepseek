@@ -20,13 +20,17 @@ function fallbackSelectionAfterWorkspaceRemoval(
 
 export async function addWorkspace(store: AppStoreInternals, path: string): Promise<DesktopAppState> {
   await store.initialize();
-  const normalizedPath = path.trim();
+  const normalizedPath = path.trim().replace(/^\\\\\?\\UNC\\/i, "\\\\").replace(/^\\\\\?\\/i, "");
   if (!normalizedPath) {
     return store.emit();
   }
   const hadNoWorkspaces = store.state.workspaces.length === 0;
 
-  const existing = store.state.workspaces.find((workspace) => workspace.path === normalizedPath);
+  const existing = store.state.workspaces.find(
+    (workspace) =>
+      workspace.path === normalizedPath ||
+      workspace.path.replace(/^\\\\\?\\UNC\\/i, "\\\\").replace(/^\\\\\?\\/i, "") === normalizedPath,
+  );
   if (existing) {
     return syncWorkspace(store, existing.id, {
       selectedWorkspaceId: existing.id,
@@ -43,8 +47,12 @@ export async function addWorkspace(store: AppStoreInternals, path: string): Prom
       await store.ensureSessionReady(firstSession.sessionRef);
     }
     if (hadNoWorkspaces) {
-      const snapshot = await store.driver.runtimeSupervisor.refreshRuntime(synced.workspace);
-      store.runtimeByWorkspace.set(synced.workspace.workspaceId, snapshot);
+      try {
+        const snapshot = await store.driver.runtimeSupervisor.refreshRuntime(synced.workspace);
+        store.runtimeByWorkspace.set(synced.workspace.workspaceId, snapshot);
+      } catch (runtimeError) {
+        console.warn(`[pi-deepseek] Initial runtime refresh warning for ${synced.workspace.path}:`, runtimeError);
+      }
     }
 
     return store.refreshState({

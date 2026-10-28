@@ -218,8 +218,10 @@ test("settings discovers and saves an OpenAI-compatible custom provider", async 
     const preferredModel = dialog.locator(".custom-provider-dialog__model", { hasText: modelId });
     const secondaryModel = dialog.locator(".custom-provider-dialog__model", { hasText: secondaryModelId });
     await expect(preferredModel.locator("input[type=checkbox]").first()).toBeChecked();
-    await expect(secondaryModel.locator("input[type=checkbox]").first()).not.toBeChecked();
+    await expect(secondaryModel.locator("input[type=checkbox]").first()).toBeChecked();
     await expect(preferredModel.getByLabel("Images")).toBeChecked();
+    await expect(preferredModel.getByLabel("Reasoning")).not.toBeChecked();
+    await secondaryModel.locator("input[type=checkbox]").first().uncheck();
     await preferredModel.getByLabel("Reasoning").check();
     await dialog.getByRole("button", { name: "Save", exact: true }).click();
 

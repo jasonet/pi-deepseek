@@ -1860,6 +1860,10 @@ function clampThinkingLevel(level: string, availableLevels: readonly string[]): 
   return availableLevels[0] ?? "off";
 }
 
+export function stripWindowsExtendedPathPrefix(pathValue: string): string {
+  return pathValue.replace(/^\\\\\?\\UNC\\/i, "\\\\").replace(/^\\\\\?\\/i, "");
+}
+
 async function createCanonicalWorkspaceRef(path: string, displayName?: string): Promise<WorkspaceRef> {
   const canonicalPath = await canonicalizePath(path);
   return createWorkspaceRef(canonicalPath, displayName);
@@ -1868,9 +1872,10 @@ async function createCanonicalWorkspaceRef(path: string, displayName?: string): 
 async function canonicalizePath(path: string): Promise<string> {
   const resolvedPath = resolve(path);
   try {
-    return await realpath(resolvedPath);
+    const real = await realpath(resolvedPath);
+    return stripWindowsExtendedPathPrefix(real);
   } catch {
-    return resolvedPath;
+    return stripWindowsExtendedPathPrefix(resolvedPath);
   }
 }
 

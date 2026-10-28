@@ -1123,7 +1123,9 @@ async function pickWorkspaceViaDialog(): Promise<DesktopAppState> {
   if (result.canceled || result.filePaths.length === 0) {
     return store.getState();
   }
-  const nextState = await store.addWorkspace(result.filePaths[0] as string);
+  const rawPath = result.filePaths[0] as string;
+  const sanitizedPath = rawPath.replace(/^\\\\\?\\UNC\\/i, "\\\\").replace(/^\\\\\?\\/i, "");
+  const nextState = await store.addWorkspace(sanitizedPath);
   if (!nextState.selectedWorkspaceId) {
     return nextState;
   }

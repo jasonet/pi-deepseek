@@ -278,7 +278,7 @@ async function runCommand(
   return new Promise((resolve) => {
     const childEnv = { ...env };
     delete childEnv.TREG_TOKEN;
-    const child = spawn(command, args, { env: childEnv, stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawn(command, args, { env: childEnv, stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
     let output = "";
     let settled = false;
     let forceTimer: NodeJS.Timeout | undefined;

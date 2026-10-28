@@ -39,11 +39,27 @@ export class GitWorktreeManager {
   }
 
   async refreshWorktrees(workspace: WorkspaceRef): Promise<WorktreeCatalogSnapshot> {
-    const repoRoot = await resolveRepositoryRoot(workspace.path);
-    const existing = await this.options.catalogStorage.worktrees.listWorktrees(workspace.workspaceId);
-    const discovered = await listGitWorktrees(repoRoot, workspace, existing.worktrees);
-    await this.options.catalogStorage.worktrees.replaceWorkspaceWorktrees(workspace.workspaceId, discovered);
-    return { worktrees: discovered.map((entry) => ({ ...entry })) };
+    try {
+      const repoRoot = await resolveRepositoryRoot(workspace.path);
+      const existing = await this.options.catalogStorage.worktrees.listWorktrees(workspace.workspaceId);
+      const discovered = await listGitWorktrees(repoRoot, workspace, existing.worktrees);
+      await this.options.catalogStorage.worktrees.replaceWorkspaceWorktrees(workspace.workspaceId, discovered);
+      return { worktrees: discovered.map((entry) => ({ ...entry })) };
+    } catch {
+      const canonical = await canonicalPath(workspace.path);
+      const primaryEntry: WorktreeCatalogEntry = {
+        worktreeId: canonical,
+        workspaceId: workspace.workspaceId,
+        path: canonical,
+        displayName: workspace.displayName?.trim() || basename(canonical) || canonical,
+        kind: "primary",
+        status: "ready",
+        createdAt: nowIso(),
+        updatedAt: nowIso(),
+      };
+      await this.options.catalogStorage.worktrees.replaceWorkspaceWorktrees(workspace.workspaceId, [primaryEntry]);
+      return { worktrees: [primaryEntry] };
+    }
   }
 
   async inspectWorkspace(workspace: WorkspaceRef): Promise<GitWorkspaceInspection> {
@@ -116,20 +132,28 @@ export class GitWorktreeManager {
 }
 
 async function resolveRepositoryRoot(workspacePath: string): Promise<string> {
-  const output = await runGit(["-C", workspacePath, "rev-parse", "--show-toplevel"]);
+  const canonical = await canonicalPath(workspacePath);
+  const output = await runGit(["-C", canonical, "rev-parse", "--show-toplevel"]);
   return canonicalPath(output.trim());
 }
 
 async function inspectGitWorkspace(workspacePath: string): Promise<GitWorkspaceInspection> {
   const canonicalPathValue = await canonicalPath(workspacePath);
-  const commonDirPath = (
-    await runGit(["-C", workspacePath, "rev-parse", "--path-format=absolute", "--git-common-dir"])
-  ).trim();
+  try {
+    const commonDirPath = (
+      await runGit(["-C", canonicalPathValue, "rev-parse", "--path-format=absolute", "--git-common-dir"])
+    ).trim();
 
-  return {
-    canonicalPath: canonicalPathValue,
-    commonDir: await canonicalPath(commonDirPath),
-  };
+    return {
+      canonicalPath: canonicalPathValue,
+      commonDir: await canonicalPath(commonDirPath),
+    };
+  } catch {
+    return {
+      canonicalPath: canonicalPathValue,
+      commonDir: canonicalPathValue,
+    };
+  }
 }
 
 async function listGitWorktrees(
@@ -268,6 +292,7 @@ async function runGit(args: readonly string[]): Promise<string> {
   const { stdout } = await execFileAsync("git", [...args], {
     encoding: "utf8",
     maxBuffer: 10 * 1024 * 1024,
+    windowsHide: true,
   });
   return stdout;
 }
@@ -276,11 +301,16 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
+export function stripWindowsExtendedPathPrefix(pathValue: string): string {
+  return pathValue.replace(/^\\\\\?\\UNC\\/i, "\\\\").replace(/^\\\\\?\\/i, "");
+}
+
 async function canonicalPath(pathValue: string): Promise<string> {
   const resolved = resolve(pathValue);
   try {
-    return await realpath(resolved);
+    const real = await realpath(resolved);
+    return stripWindowsExtendedPathPrefix(real);
   } catch {
-    return resolved;
+    return stripWindowsExtendedPathPrefix(resolved);
   }
 }

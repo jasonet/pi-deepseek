@@ -118,16 +118,26 @@ export function SettingsCustomProviders({ workspaceId }: SettingsCustomProviders
       const existing = existingModels.get(model.id);
       return existing ? {
         ...model,
-        reasoning: existing.reasoning || model.reasoning,
-        supportsImages: existing.supportsImages || model.supportsImages,
-      } : model;
+        reasoning: existing.reasoning ?? false,
+        supportsImages: existing.supportsImages ?? model.supportsImages ?? false,
+      } : {
+        ...model,
+        reasoning: false,
+      };
     });
     updateDraft({
       models: discoveredModels,
       thinkingFormat: result.thinkingFormat,
-      selectedModelIds: new Set([result.recommendedModelId]),
+      selectedModelIds: new Set(discoveredModels.map((m) => m.id)),
     });
     setStatus(result.message);
+  };
+
+  const toggleAllModels = (select: boolean) => {
+    if (!draft) return;
+    updateDraft({
+      selectedModelIds: select ? new Set(draft.models.map((m) => m.id)) : new Set(),
+    });
   };
 
   const addManualModel = () => {
@@ -331,7 +341,19 @@ export function SettingsCustomProviders({ workspaceId }: SettingsCustomProviders
 
             <div className="custom-provider-dialog__models">
               <div className="custom-provider-dialog__models-header">
-                <strong>{t("settings.providers.customDiscovered")}</strong>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <strong>{t("settings.providers.customDiscovered")}</strong>
+                  {draft.models.length > 0 ? (
+                    <button
+                      type="button"
+                      className="button button--ghost"
+                      style={{ padding: "2px 6px", fontSize: "11px", height: "auto" }}
+                      onClick={() => toggleAllModels(selectedModels.length < draft.models.length)}
+                    >
+                      {selectedModels.length === draft.models.length ? t("settings.models.deselectAll") : t("settings.models.selectAll")}
+                    </button>
+                  ) : null}
+                </div>
                 <span>{selectedModels.length}/{draft.models.length}</span>
               </div>
               <div className="custom-provider-dialog__models-list">

@@ -1454,7 +1454,8 @@ export default function App() {
     const nextWorkspaceId =
       (workspaceId &&
         (rootWorkspaceOptions.find((workspace) => workspace.id === workspaceId)?.id ||
-        (snapshot ? resolveRepoWorkspaceId(snapshot.workspaces, workspaceId) : undefined))) ||
+        (snapshot ? resolveRepoWorkspaceId(snapshot.workspaces, workspaceId) : undefined) ||
+        workspaceId)) ||
       rootWorkspace?.id ||
       visibleWorkspaces[0]?.id ||
       "";
@@ -1538,7 +1539,7 @@ export default function App() {
     const removeCommandListener = window.piApp?.onCommand?.(handleCommand);
     const removeWorkspacePickedListener = window.piApp?.onWorkspacePicked?.((workspaceId) => {
       setPendingNewThreadWorkspaceId(workspaceId);
-      resetNewThreadSurface();
+      resetNewThreadSurface(workspaceId);
     });
     const removeClipboardImageListener = window.piApp?.onClipboardImagePasted?.(handlePastedClipboardImage);
     const handleKeyDown = (event: globalThis.KeyboardEvent) => {

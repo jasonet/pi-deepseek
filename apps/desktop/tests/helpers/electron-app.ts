@@ -101,8 +101,9 @@ export async function launchDesktop(
   const normalized = Array.isArray(options) ? { initialWorkspaces: options } : options;
   const agentDir = await prepareAgentDir(userDataDir, normalized);
   const env = buildDesktopLaunchEnv(userDataDir, agentDir, normalized);
+  const args = process.platform === "linux" ? [desktopDir, "--no-sandbox"] : [desktopDir];
   const electronApp = await electron.launch({
-    args: [desktopDir],
+    args,
     cwd: desktopDir,
     env,
   });
@@ -117,7 +118,8 @@ export async function spawnDesktopProcess(
   const normalized = Array.isArray(options) ? { initialWorkspaces: options } : options;
   const agentDir = await prepareAgentDir(userDataDir, normalized);
   const env = buildDesktopLaunchEnv(userDataDir, agentDir, normalized);
-  return spawn(require("electron") as string, [desktopDir], {
+  const args = process.platform === "linux" ? [desktopDir, "--no-sandbox"] : [desktopDir];
+  return spawn(require("electron") as string, args, {
     cwd: desktopDir,
     env,
     stdio: "ignore",
@@ -153,7 +155,7 @@ async function launchDesktopExecutable(
 ): Promise<DesktopHarness> {
   const electronApp = await electron.launch({
     executablePath,
-    args: [],
+    args: process.platform === "linux" ? ["--no-sandbox"] : [],
     cwd: dirname(executablePath),
     env,
   });

@@ -49,7 +49,45 @@ export function dshOutputLines(onLine: (line: string) => void): (chunk: Buffer) 
 }
 
 export function dshEnvironment(node: string, apiKey?: string): NodeJS.ProcessEnv {
-  const env: NodeJS.ProcessEnv = { ...process.env, PATH: `${dirname(node)}${delimiter}${process.env.PATH ?? ""}` };
+  const nodeDir = dirname(node);
+  let existingPath = "";
+  for (const [key, value] of Object.entries(process.env)) {
+    if (key.toLowerCase() === "path" && typeof value === "string") {
+      existingPath = value;
+      break;
+    }
+  }
+
+  const parts = existingPath.split(delimiter).filter(Boolean);
+  if (!parts.some((p) => p.toLowerCase() === nodeDir.toLowerCase())) {
+    parts.unshift(nodeDir);
+  }
+
+  if (process.platform === "win32") {
+    const sysRoot = process.env.SystemRoot ?? process.env.windir ?? "C:\\Windows";
+    const sys32 = join(sysRoot, "System32");
+    const wbem = join(sys32, "Wbem");
+    const psDir = join(sys32, "WindowsPowerShell", "v1.0");
+    for (const sysDir of [sys32, sysRoot, wbem, psDir]) {
+      if (!parts.some((p) => p.toLowerCase() === sysDir.toLowerCase())) {
+        parts.push(sysDir);
+      }
+    }
+  }
+
+  const fullPath = parts.join(delimiter);
+  const env: NodeJS.ProcessEnv = { ...process.env };
+  delete env.Path;
+  delete env.PATH;
+  delete env.path;
+  env.PATH = fullPath;
+  if (process.platform === "win32") {
+    env.Path = fullPath;
+    if (!env.SystemRoot && !env.windir) env.SystemRoot = "C:\\Windows";
+    if (!env.COMSPEC) env.COMSPEC = join(env.SystemRoot ?? "C:\\Windows", "System32", "cmd.exe");
+    if (!env.PATHEXT) env.PATHEXT = ".COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC";
+  }
+
   delete env.ELECTRON_RUN_AS_NODE;
   delete env.NODE_OPTIONS;
   delete env.DEEPSEEK_API_KEY;
@@ -96,6 +134,57 @@ export async function stopDshProcess(child: ChildProcess): Promise<void> {
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
   signalGroup("SIGKILL");
+}
+
+export async function safeRename(source: string, destination: string, maxAttempts = 10): Promise<void> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      await rename(source, destination);
+      return;
+    } catch (err: any) {
+      if (attempt === maxAttempts || !["EPERM", "EBUSY", "EACCES"].includes(err?.code)) {
+        throw err;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 150 * attempt));
+    }
+  }
+}
+
+export async function unpackNodeArchive(
+  archivePath: string,
+  destination: string,
+  signal: AbortSignal,
+  report: DshInstallReporter,
+): Promise<void> {
+  if (process.platform === "win32") {
+    const sysRoot = process.env.SystemRoot ?? process.env.windir ?? "C:\\Windows";
+    const tarPath = join(sysRoot, "System32", "tar.exe");
+    let unzipped = false;
+    if (await access(tarPath).then(() => true, () => false)) {
+      try {
+        await runInstaller(tarPath, ["--force-local", "-xf", archivePath, "-C", destination], signal, report);
+        unzipped = true;
+      } catch (err) {
+        report({ line: `tar 解压重试 PowerShell: ${String(err)}` });
+      }
+    }
+    if (!unzipped) {
+      const psPath = join(sysRoot, "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
+      await runInstaller(
+        psPath,
+        [
+          "-NoProfile",
+          "-NonInteractive",
+          "-Command",
+          `Expand-Archive -LiteralPath '${archivePath.replace(/'/g, "''")}' -DestinationPath '${destination.replace(/'/g, "''")}' -Force`,
+        ],
+        signal,
+        report,
+      );
+    }
+    return;
+  }
+  await runInstaller("tar", ["-xf", archivePath, "-C", destination], signal, report);
 }
 
 export async function runInstaller(command: string, args: string[], signal: AbortSignal, report: DshInstallReporter, env?: NodeJS.ProcessEnv, cwd?: string): Promise<void> {
@@ -188,10 +277,10 @@ async function ensureManagedRuntime(root: string, signal: AbortSignal, report: D
       await pipeline(Readable.fromWeb(response.body as Parameters<typeof Readable.fromWeb>[0]), meter, createWriteStream(archivePath, { flags: "wx", mode: 0o600 }), { signal: boundedSignal });
       if (digest.digest("hex") !== hash) throw new Error("Node.js 下载校验失败，请重试。");
       report({ phase: "runtime", progress: undefined, line: "SHA-256 校验通过，正在解压运行环境" });
-      await runInstaller("tar", ["-xf", archivePath, "-C", staging], boundedSignal, report);
+      await unpackNodeArchive(archivePath, staging, boundedSignal, report);
       await writeFile(join(staging, basename, "taosi-runtime.sha256"), hash, { mode: 0o600 });
-      if (await access(nodeRoot).then(() => true, () => false)) await rename(nodeRoot, `${nodeRoot}-backup-${randomUUID()}`);
-      await rename(join(staging, basename), nodeRoot);
+      if (await access(nodeRoot).then(() => true, () => false)) await safeRename(nodeRoot, `${nodeRoot}-backup-${randomUUID()}`);
+      await safeRename(join(staging, basename), nodeRoot);
     }
     const npm = join(nodeRoot, npmRelative);
     if (nodeOnly) return { node, npm };
@@ -213,14 +302,40 @@ async function ensureManagedRuntime(root: string, signal: AbortSignal, report: D
       overrides: { koffi: "3.1.1", "node-pty": "1.2.0-beta.15" },
     }));
     report({ phase: "dependencies", progress: undefined, line: `安装 DeepSeek Harness ${DSH_VERSION}` });
-    await runInstaller(node, [npm, "install", "--prefix", staging, "--strict-allow-scripts", "--no-audit", "--no-fund", "--progress=false", "--loglevel=http", `@deepseek-ai/dsh@${DSH_VERSION}`], boundedSignal, report, dshEnvironment(node));
+    const installArgs = [
+      npm, "install",
+      "--prefix", staging,
+      "--strict-allow-scripts",
+      "--no-audit", "--no-fund",
+      "--progress=false",
+      "--loglevel=http",
+      `@deepseek-ai/dsh@${DSH_VERSION}`,
+    ];
+    try {
+      await runInstaller(node, installArgs, boundedSignal, report, dshEnvironment(node), staging);
+    } catch (installErr) {
+      if (process.platform === "win32") {
+        report({ line: `严格脚本安装失败，尝试宽松模式安装: ${String(installErr)}` });
+        const fallbackArgs = [
+          npm, "install",
+          "--prefix", staging,
+          "--ignore-scripts",
+          "--no-audit", "--no-fund",
+          "--progress=false",
+          `@deepseek-ai/dsh@${DSH_VERSION}`,
+        ];
+        await runInstaller(node, fallbackArgs, boundedSignal, report, dshEnvironment(node), staging);
+      } else {
+        throw installErr;
+      }
+    }
     boundedSignal.throwIfAborted();
     report({ phase: "pojia", progress: undefined, line: "应用 Pojia DSH 指令与 persona，保留原始文件备份" });
     await applyPojiaDsh(staging);
     boundedSignal.throwIfAborted();
     // Preserve a damaged installation for diagnosis instead of silently overwriting it.
-    if (await access(runtimeRoot).then(() => true, () => false)) await rename(runtimeRoot, `${runtimeRoot}-backup-${randomUUID()}`);
-    await rename(staging, runtimeRoot);
+    if (await access(runtimeRoot).then(() => true, () => false)) await safeRename(runtimeRoot, `${runtimeRoot}-backup-${randomUUID()}`);
+    await safeRename(staging, runtimeRoot);
     return { node, npm, cli: join(runtimeRoot, cliRelative) };
   } finally {
     await release();

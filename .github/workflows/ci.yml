@@ -46,7 +46,7 @@ jobs:
         run: pnpm --filter @pi-gui/desktop run test:e2e:ci:mac
 
   desktop-package-linux:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
       - uses: actions/checkout@v4

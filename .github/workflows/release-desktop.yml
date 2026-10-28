@@ -53,13 +53,13 @@ jobs:
         run: |
           case "$PLATFORMS" in
             all)
-              value='{"include":[{"platform":"macos","os":"macos-latest","args":"--mac"},{"platform":"windows","os":"windows-latest","args":"--win"},{"platform":"linux","os":"ubuntu-latest","args":"--linux"}]}'
+              value='{"include":[{"platform":"macos","os":"macos-latest","args":"--mac"},{"platform":"windows","os":"windows-latest","args":"--win"},{"platform":"linux","os":"ubuntu-22.04","args":"--linux"}]}'
               ;;
             macos-windows)
               value='{"include":[{"platform":"macos","os":"macos-latest","args":"--mac"},{"platform":"windows","os":"windows-latest","args":"--win"}]}'
               ;;
             windows-linux)
-              value='{"include":[{"platform":"windows","os":"windows-latest","args":"--win"},{"platform":"linux","os":"ubuntu-latest","args":"--linux"}]}'
+              value='{"include":[{"platform":"windows","os":"windows-latest","args":"--win"},{"platform":"linux","os":"ubuntu-22.04","args":"--linux"}]}'
               ;;
             macos)
               value='{"include":[{"platform":"macos","os":"macos-latest","args":"--mac"}]}'
@@ -68,7 +68,7 @@ jobs:
               value='{"include":[{"platform":"windows","os":"windows-latest","args":"--win"}]}'
               ;;
             linux)
-              value='{"include":[{"platform":"linux","os":"ubuntu-latest","args":"--linux"}]}'
+              value='{"include":[{"platform":"linux","os":"ubuntu-22.04","args":"--linux"}]}'
               ;;
             *)
               echo "Unsupported platforms selection: $PLATFORMS" >&2

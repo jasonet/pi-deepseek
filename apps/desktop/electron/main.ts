@@ -767,12 +767,13 @@ function configureDesktopUpdater(): void {
     });
     if (next.latestVersion) showDesktopUpdateNotification("ready", next.latestVersion);
   });
-  updater.on("error", (error: Error) => {
+  updater.on("error", (error: unknown) => {
+    const rawMessage = error instanceof Error ? error.message : String((error as any)?.message ?? error ?? "");
     setDesktopUpdateStatus({
       phase: "error",
       currentVersion: app.getVersion(),
       latestVersion: desktopUpdateStatus.latestVersion,
-      message: humanizeUpdateError(error.message),
+      message: humanizeUpdateError(rawMessage),
     });
   });
 }
@@ -827,14 +828,61 @@ async function downloadDesktopUpdate(): Promise<DesktopUpdateStatus> {
   return desktopUpdateStatus;
 }
 
+let appTeardownPromise: Promise<void> | undefined;
+
+async function performAppTeardown(): Promise<void> {
+  if (appTeardownPromise) {
+    return appTeardownPromise;
+  }
+
+  appTeardownPromise = (async () => {
+    stopAutoUpdateChecker();
+    stopNotifications?.();
+    stopNotifications = undefined;
+    notificationManager = undefined;
+    notificationPermissionService?.dispose();
+    notificationPermissionService = undefined;
+    systemPermissionService?.dispose();
+    systemPermissionService = undefined;
+    stopPruningTerminals?.();
+    stopPruningTerminals = undefined;
+    terminalService?.dispose();
+    terminalService = undefined;
+    stopPeriodicGcHint();
+    stopWeixinBridgeRuntime();
+
+    await Promise.all([
+      store?.flushPersistence(),
+      dshHarnessService.shutdown(),
+      dsBotService.shutdown(),
+      tradingService.shutdown(),
+    ]).catch(() => undefined);
+  })();
+
+  return appTeardownPromise;
+}
+
 async function installDesktopUpdate(): Promise<void> {
   if (desktopUpdateStatus.phase !== "ready") return;
   updateInstallRequestCount += 1;
   if (process.env.PI_APP_TEST_MODE) return;
-  await store.flushPersistence().catch(() => undefined);
-  await Promise.all([dshHarnessService.shutdown(), dsBotService.shutdown(), tradingService.shutdown()]).catch(() => undefined);
+
+  const updater = safeAutoUpdater();
+  if (!updater) return;
+
+  // Prevent auto-install on app quit handler from double-triggering or conflicting
+  updater.autoInstallOnAppQuit = false;
+
   quittingAfterStoreFlush = true;
-  safeAutoUpdater()?.quitAndInstall(false, true);
+  await performAppTeardown();
+
+  // Silent install and force relaunch into the updated version.
+  // Passing (true, true) ensures:
+  // - /S is added to the installer arguments so NSIS runs unattended.
+  // - --force-run is added to the installer arguments.
+  // - In app-builder-lib's assistedInstaller (oneClick: false), automatic relaunch
+  //   via doStartApp only executes when ${Silent} is true (${if} ${isForceRun} ${andIf} ${Silent}).
+  updater.quitAndInstall(true, true);
 }
 
 function startAutoUpdateChecker(): void {
@@ -2076,56 +2124,27 @@ app.whenReady().then(async () => {
 });
 
 app.on("window-all-closed", () => {
+  if (quittingAfterStoreFlush) {
+    return;
+  }
   if (process.platform !== "darwin") {
-    stopNotifications?.();
-    stopNotifications = undefined;
-    notificationManager = undefined;
-    notificationPermissionService?.dispose();
-    notificationPermissionService = undefined;
-    systemPermissionService?.dispose();
-    systemPermissionService = undefined;
-    stopAutoUpdateChecker();
-    stopPruningTerminals?.();
-    stopPruningTerminals = undefined;
-    terminalService?.dispose();
-    terminalService = undefined;
-    stopPeriodicGcHint();
-    stopWeixinBridgeRuntime();
-    void Promise.all([dshHarnessService.shutdown(), dsBotService.shutdown(), tradingService.shutdown()]);
-    app.quit();
+    quittingAfterStoreFlush = true;
+    void performAppTeardown().finally(() => {
+      app.quit();
+    });
   }
 });
 
 app.on("before-quit", (event) => {
-  stopNotifications?.();
-  stopNotifications = undefined;
-  notificationManager = undefined;
-  notificationPermissionService?.dispose();
-  notificationPermissionService = undefined;
-  stopAutoUpdateChecker();
-  stopPruningTerminals?.();
-  stopPruningTerminals = undefined;
-  terminalService?.dispose();
-  terminalService = undefined;
-  stopPeriodicGcHint();
-  stopWeixinBridgeRuntime();
   if (quittingAfterStoreFlush) {
-    void Promise.all([dshHarnessService.shutdown(), dsBotService.shutdown(), tradingService.shutdown()]);
     return;
   }
 
   event.preventDefault();
   quittingAfterStoreFlush = true;
-  void Promise.all([
-    store?.flushPersistence(),
-    dshHarnessService.shutdown(),
-    dsBotService.shutdown(),
-    tradingService.shutdown(),
-  ])
-    .catch(() => undefined)
-    .finally(() => {
-      app.quit();
-    });
+  void performAppTeardown().finally(() => {
+    app.quit();
+  });
 });
 
 function resolveInitialWorkspacePaths(): readonly string[] {

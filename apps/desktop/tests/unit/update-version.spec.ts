@@ -43,6 +43,16 @@ test.describe("humanizeUpdateError", () => {
     expect(humanizeUpdateError("net::ERR_CONNECTION_RESET")).toBe("Download failed due to a network issue. Check your connection and try again.");
   });
 
+  test("humanizes file busy and signature verification errors", () => {
+    expect(humanizeUpdateError("EBUSY: resource busy or locked")).toBe(
+      "Application files are currently in use by another process. Please close all running instances and try again.",
+    );
+    expect(humanizeUpdateError("ERR_UPDATER_INVALID_SIGNATURE")).toBe(
+      "The downloaded update failed signature verification.",
+    );
+    expect(humanizeUpdateError("")).toBe("An unexpected error occurred during the update check.");
+  });
+
   test("returns original error when no pattern matches", () => {
     expect(humanizeUpdateError("Unknown error occurred")).toBe("Unknown error occurred");
   });

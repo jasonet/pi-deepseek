@@ -1,4 +1,5 @@
 import type { WebContents } from "electron";
+import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import { accessSync, chmodSync, constants, existsSync, realpathSync, statSync } from "node:fs";
 import path from "node:path";
@@ -358,13 +359,17 @@ export class TerminalService {
     session.exitSubscription?.dispose();
     session.dataSubscription = undefined;
     session.exitSubscription = undefined;
-    if (pty && process.platform !== "win32") {
-      killUnixProcessGroup(pty.pid);
-    }
-    try {
-      pty?.kill();
-    } catch {
-      // Best-effort cleanup when the child process has already exited.
+    if (pty) {
+      if (process.platform === "win32") {
+        killWindowsProcessTree(pty.pid);
+      } else {
+        killUnixProcessGroup(pty.pid);
+      }
+      try {
+        pty.kill();
+      } catch {
+        // Best-effort cleanup when the child process has already exited.
+      }
     }
     session.pty = undefined;
   }
@@ -485,6 +490,17 @@ function killUnixProcessGroup(pid: number): void {
     process.kill(pid, "SIGHUP");
   } catch {
     // Best-effort cleanup; the process may already be gone.
+  }
+}
+
+function killWindowsProcessTree(pid: number): void {
+  if (!Number.isInteger(pid) || pid <= 0) {
+    return;
+  }
+  try {
+    spawn("taskkill", ["/pid", String(pid), "/T", "/F"], { windowsHide: true });
+  } catch {
+    // Best-effort cleanup when the process has already exited.
   }
 }
 

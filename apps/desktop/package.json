@@ -24,6 +24,7 @@
     "package:all": "cross-env PI_FX_STAGE_TARGETS=darwin-arm64,darwin-x64,linux-x64 pnpm run build && electron-builder --mac --win --linux --publish never",
     "bun:package": "cross-env PI_FX_STAGE_TARGETS=darwin-arm64,darwin-x64 bun run bun:build && bun run scripts/bun-package-wrapper.mjs electron-builder --mac --publish never",
     "package:dir": "pnpm run build && electron-builder --mac --dir --publish never",
+    "package:local": "pnpm run build && node scripts/package-local-mac.mjs",
     "bun:package:dir": "cross-env PI_FX_STAGE_TARGETS=darwin-arm64,darwin-x64 bun run bun:build && bun run scripts/bun-package-wrapper.mjs electron-builder --mac --dir --publish never",
     "package:linux": "cross-env PI_FX_STAGE_TARGETS=linux-x64 pnpm run build && electron-builder --linux AppImage --publish never",
     "bun:package:linux": "cross-env PI_FX_STAGE_TARGETS=linux-x64 bun run bun:build && bun run scripts/bun-package-wrapper.mjs electron-builder --linux AppImage --publish never",

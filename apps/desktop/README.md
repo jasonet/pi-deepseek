@@ -88,6 +88,8 @@ The release workflow refuses to publish Windows assets unless `latest.yml`, the 
 
 ## macOS Updates and Signing
 
+For local macOS testing, use `pnpm --filter @pi-gui/desktop run package:local`. This selects the sole valid Apple Development identity in the keychain, or the exact identity supplied in `TAOSI_LOCAL_SIGNING_IDENTITY` when there are several. It requires signing and never falls back to ad-hoc. Keep the same identity, bundle identifiers, and installation path for later builds, including the permission helpers. The output is `release-<version>-local-dev`; it is a development build, not a public release. Moving from an existing ad-hoc install to this identity may require granting permissions once more; subsequent builds should keep a compatible designated requirement. macOS remains responsible for granting permissions.
+
 Squirrel.Mac accepts an update only when the new app satisfies the installed app's code-signing requirement. An ad-hoc signature uses the exact binary hash as that requirement, so two different ad-hoc versions cannot auto-update each other. A release ZIP that launches successfully is not enough to prove it can update an older install.
 
 The `Release Desktop (Taosi)` workflow requires a Developer ID Application certificate in the repository secrets `CSC_LINK` (base64-encoded `.p12` or a private URL) and `CSC_KEY_PASSWORD`. Set the repository variable `TAOSI_MAC_TEAM_ID` to that certificate's Apple Team ID. Packaging fails if signing credentials are absent; the release gate checks both macOS architectures for a valid Developer ID Application signature and the expected Team ID before publishing. Keep the same Team ID for future releases.

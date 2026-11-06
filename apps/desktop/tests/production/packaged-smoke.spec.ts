@@ -1,12 +1,12 @@
 import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 import {
   launchPackagedDesktop,
   makeUserDataDir,
   makeWorkspace,
   resolvePackagedAppBundle,
-  resolvePackagedAppExecutable,
+  resolveAppBundleExecutable,
 } from "../helpers/electron-app";
 import { assertPackagedAppCanStartThread } from "./packaged-smoke-assertions";
 
@@ -16,12 +16,13 @@ test("launches the packaged app bundle and starts a thread through the real UI",
   const userDataDir = await makeUserDataDir("pi-gui-packaged-user-data-");
   const workspacePath = await makeWorkspace("packaged-smoke-workspace");
   const promptText = "Packaged smoke thread";
-  const appBundlePath = await resolvePackagedAppBundle();
+  const releaseDir = resolve(__dirname, "../..", process.env.PI_APP_TEST_RELEASE_DIR?.trim() || "release");
+  const appBundlePath = await resolvePackagedAppBundle(releaseDir);
   const updateConfig = await readFile(join(appBundlePath, "Contents", "Resources", "app-update.yml"), "utf8");
   expect(updateConfig).toContain("provider: github");
   expect(updateConfig).toContain("owner: jasonet");
   expect(updateConfig).toContain("repo: pi-deepseek");
-  const expectedExecutablePath = await resolvePackagedAppExecutable();
+  const expectedExecutablePath = await resolveAppBundleExecutable(appBundlePath);
   const harness = await launchPackagedDesktop(userDataDir, {
     initialWorkspaces: [workspacePath],
     testMode: "background",

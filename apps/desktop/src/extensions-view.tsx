@@ -39,6 +39,7 @@ export function ExtensionsView({
   const t = useT();
   useEffect(() => { onRefresh(); }, []); // Auto-refresh on first open
   const [query, setQuery] = useState("");
+  const [tab, setTab] = useState<"installed" | "packages" | "prompt">("installed");
   const [selectedExtensionPath, setSelectedExtensionPath] = useState<string | undefined>();
   const extensions = runtime?.extensions ?? [];
   const filteredExtensions = useMemo(() => {
@@ -70,7 +71,7 @@ export function ExtensionsView({
 
   return (
     <section className="canvas">
-      <div className="conversation skills-view">
+      <div className="conversation skills-view extensions-view">
         <header className="view-header">
           <div>
             <div className="chat-header__eyebrow">{t("sidebar.extensions")}</div>
@@ -84,6 +85,16 @@ export function ExtensionsView({
           </div>
         </header>
 
+        <div className="extensions-tabs" role="tablist" aria-label={t("extensions.title")}>
+          {(["installed", "packages", "prompt"] as const).map((id) => (
+            <button key={id} id={`extensions-tab-${id}`} role="tab" type="button"
+              aria-selected={tab === id} aria-controls={`extensions-panel-${id}`}
+              onClick={() => setTab(id)}>
+              {t(`extensions.tab.${id}`)}
+            </button>
+          ))}
+        </div>
+        <div id="extensions-panel-installed" role="tabpanel" aria-labelledby="extensions-tab-installed" hidden={tab !== "installed"}>
         <div className="skills-toolbar">
           <input aria-label={t("extensions.search")} className="skills-search" placeholder={t("extensions.search")}
             value={query} onChange={(e) => setQuery(e.target.value)} />
@@ -94,9 +105,13 @@ export function ExtensionsView({
             {filteredExtensions.length === 0 ? (
               <ExtensionsEmptyState message={t("extensions.refreshHint")} />
             ) : (
-              filteredExtensions.map((ext) => (
+              [true, false].map((mcp) => {
+                const group = filteredExtensions.filter((ext) => isMCPExtension(ext) === mcp);
+                return group.length > 0 ? <section className="extensions-group" key={String(mcp)}>
+                  <h2>{t(mcp ? "extensions.group.mcp" : "extensions.group.other")} <span>{group.length}</span></h2>
+                  {group.map((ext) => (
                 <button className={`skill-card ${selectedExtension?.path === ext.path ? "skill-card--active" : ""}`}
-                  key={ext.path} type="button" onClick={() => setSelectedExtensionPath(ext.path)}>
+                  key={ext.path} type="button" aria-pressed={selectedExtension?.path === ext.path} onClick={() => setSelectedExtensionPath(ext.path)}>
                   <span className="skill-card__title-row">
                     <span className="skill-card__title">{ext.displayName}</span>
                     <span className={`skill-card__badge ${ext.enabled ? "skill-card__badge--enabled" : ""}`}>
@@ -105,13 +120,14 @@ export function ExtensionsView({
                   </span>
                   <span className="skill-card__description">{ext.sourceInfo.scope} · {ext.sourceInfo.origin}</span>
                   <span className="skill-card__meta">
-                    <span>{ext.sourceInfo.source}</span>
                     {ext.commands.length > 0 ? <span>{ext.commands.length} {t("extensions.commands")}</span> : null}
                     {ext.tools.length > 0 ? <span>{ext.tools.length} {t("extensions.tools")}</span> : null}
                     {ext.diagnostics.length > 0 ? <span>{ext.diagnostics.length} {t("extensions.issues")}</span> : null}
                   </span>
                 </button>
-              ))
+              ))}
+                </section> : null;
+              })
             )}
           </div>
 
@@ -124,6 +140,8 @@ export function ExtensionsView({
                     {selectedExtension.enabled ? t("skills.enabled") : t("skills.disabled")}
                   </span>
                 </div>
+                <details className="extensions-source" key={selectedExtension.path}>
+                <summary>{t("extensions.sourceDetails")}</summary>
                 <div className="skill-detail__meta-list">
                   <DetailItem label={t("extensions.scope")} value={selectedExtension.sourceInfo.scope} />
                   <DetailItem label={t("extensions.origin")} value={selectedExtension.sourceInfo.origin} />
@@ -132,25 +150,23 @@ export function ExtensionsView({
                     <DetailItem label={t("extensions.baseDir")} value={selectedExtension.sourceInfo.baseDir} mono />
                   ) : null}
                 </div>
+                </details>
                 <div className="skill-detail__actions">
                   <button className="button button--secondary" type="button" onClick={() => onOpenExtensionFolder(selectedExtension.path)}>
                     {t("skills.openFolder")}
                   </button>
-                  <button className="button button--secondary" type="button" onClick={() => onToggleExtension(selectedExtension.path, !selectedExtension.enabled)}>
-                    {selectedExtension.enabled ? t("skills.disable") : t("skills.enable")}
-                  </button>
-                  {isMCPExtension(selectedExtension) ? (
-                    <button className="button button--secondary" style={{ color: "#f85149", borderColor: "#f85149" }} type="button" onClick={() => onToggleExtension(selectedExtension.path, false)}>
-                      🔌 {t("extensions.disconnectMCP")}
-                    </button>
-                  ) : null}
+                  <label className="extensions-enable">
+                    <input type="checkbox" role="switch" checked={selectedExtension.enabled}
+                      onChange={(event) => onToggleExtension(selectedExtension.path, event.target.checked)} />
+                    {t("skills.enable")}
+                  </label>
                 </div>
                 {selectedExtension.displayName === "Open Design" ? <OpenDesignStatusBadge /> : null}
                 <ExtensionContributionSection title={t("extensions.commands")} items={selectedExtension.commands} emptyLabel={t("extensions.noCommands")} />
                 <ExtensionCompatibilitySection commands={selectedExtension.commands} compatibilityRecords={selectedCompat} t={t} />
                 <ExtensionContributionSection title={t("extensions.tools")} items={selectedExtension.tools} emptyLabel={t("extensions.noTools")} />
-                <ExtensionContributionSection title={t("extensions.flags")} items={selectedExtension.flags} emptyLabel={t("extensions.noFlags")} />
-                <ExtensionContributionSection title={t("extensions.shortcuts")} items={selectedExtension.shortcuts} emptyLabel={t("extensions.noShortcuts")} />
+                {selectedExtension.flags.length > 0 ? <ExtensionContributionSection title={t("extensions.flags")} items={selectedExtension.flags} emptyLabel={t("extensions.noFlags")} /> : null}
+                {selectedExtension.shortcuts.length > 0 ? <ExtensionContributionSection title={t("extensions.shortcuts")} items={selectedExtension.shortcuts} emptyLabel={t("extensions.noShortcuts")} /> : null}
                 <ExtensionDiagnostics diagnostics={selectedExtension.diagnostics} t={t} />
               </>
             ) : (
@@ -158,7 +174,8 @@ export function ExtensionsView({
             )}
           </div>
         </div>
-
+        </div>
+        <div id="extensions-panel-packages" role="tabpanel" aria-labelledby="extensions-tab-packages" hidden={tab !== "packages"}>
         <PackagesSection
           onListPackages={onListPackages}
           onCheckForPackageUpdates={onCheckForPackageUpdates}
@@ -166,11 +183,13 @@ export function ExtensionsView({
           onRemovePackage={onRemovePackage}
           onUpdatePackages={onUpdatePackages}
         />
-
+        </div>
+        <div id="extensions-panel-prompt" role="tabpanel" aria-labelledby="extensions-tab-prompt" hidden={tab !== "prompt"}>
         <AppendSystemPromptSection
           onGetAppendSystemPrompt={onGetAppendSystemPrompt}
           onSetAppendSystemPrompt={onSetAppendSystemPrompt}
         />
+        </div>
       </div>
     </section>
   );

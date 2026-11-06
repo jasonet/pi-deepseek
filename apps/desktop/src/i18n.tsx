@@ -375,6 +375,12 @@ const translations: Record<Locale, Record<string, string>> = {
 
     // Extensions view
     "extensions.title": "Extensions",
+    "extensions.tab.installed": "Installed",
+    "extensions.tab.packages": "Packages",
+    "extensions.tab.prompt": "System prompt",
+    "extensions.group.mcp": "MCP integrations",
+    "extensions.group.other": "Runtime extensions",
+    "extensions.sourceDetails": "Source and file location",
     "extensions.description": "Inspect and manage extensions for {workspace}.",
     "extensions.search": "Search extensions",
     "extensions.noWorkspace": "Select a workspace to browse extensions.",
@@ -867,6 +873,12 @@ const translations: Record<Locale, Record<string, string>> = {
 
     // Extensions view
     "extensions.title": "扩展",
+    "extensions.tab.installed": "已安装",
+    "extensions.tab.packages": "包管理",
+    "extensions.tab.prompt": "系统提示词",
+    "extensions.group.mcp": "MCP 集成",
+    "extensions.group.other": "运行时扩展",
+    "extensions.sourceDetails": "来源与文件位置",
     "extensions.description": "检查和管理 {workspace} 的扩展。",
     "extensions.search": "搜索扩展",
     "extensions.noWorkspace": "选择工作区以浏览扩展。",
@@ -1755,6 +1767,12 @@ const translations: Record<Locale, Record<string, string>> = {
 
     // Extensions view
     "extensions.title": "拡張機能",
+    "extensions.tab.installed": "インストール済み",
+    "extensions.tab.packages": "パッケージ管理",
+    "extensions.tab.prompt": "システムプロンプト",
+    "extensions.group.mcp": "MCP 連携",
+    "extensions.group.other": "ランタイム拡張",
+    "extensions.sourceDetails": "ソースとファイルの場所",
     "extensions.description": "{workspace} の拡張機能を検査・管理します。",
     "extensions.search": "拡張機能を検索",
     "extensions.noWorkspace": "ワークスペースを選択して拡張機能を閲覧してください。",

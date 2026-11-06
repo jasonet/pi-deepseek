@@ -3025,6 +3025,7 @@ export default function App() {
         </div>
         <Suspense fallback={<ViewFallback />}>
             <ExtensionsView
+          key={extensionsWorkspace?.id ?? "no-workspace"}
           workspace={extensionsWorkspace}
           runtime={extensionsRuntime}
           commandCompatibility={extensionsCommandCompatibility}

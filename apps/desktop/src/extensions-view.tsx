@@ -89,6 +89,18 @@ export function ExtensionsView({
           {(["installed", "packages", "prompt"] as const).map((id) => (
             <button key={id} id={`extensions-tab-${id}`} role="tab" type="button"
               aria-selected={tab === id} aria-controls={`extensions-panel-${id}`}
+              tabIndex={tab === id ? 0 : -1}
+              onKeyDown={(event) => {
+                const tabs = ["installed", "packages", "prompt"] as const;
+                const index = tabs.indexOf(id);
+                const next = event.key === "ArrowRight" ? tabs[(index + 1) % tabs.length]
+                  : event.key === "ArrowLeft" ? tabs[(index + tabs.length - 1) % tabs.length]
+                  : event.key === "Home" ? tabs[0] : event.key === "End" ? tabs[2] : undefined;
+                if (!next) return;
+                event.preventDefault();
+                setTab(next);
+                document.getElementById(`extensions-tab-${next}`)?.focus();
+              }}
               onClick={() => setTab(id)}>
               {t(`extensions.tab.${id}`)}
             </button>
@@ -103,7 +115,7 @@ export function ExtensionsView({
         <div className="skills-layout">
           <div className="skills-grid" data-testid="extensions-list">
             {filteredExtensions.length === 0 ? (
-              <ExtensionsEmptyState message={t("extensions.refreshHint")} />
+              <ExtensionsEmptyState message={query.trim() ? t("extensions.noSearchResults") : t("extensions.refreshHint")} />
             ) : (
               [true, false].map((mcp) => {
                 const group = filteredExtensions.filter((ext) => isMCPExtension(ext) === mcp);
@@ -401,6 +413,7 @@ function AppendSystemPromptSection({
             </div>
             {file ? <div className="skill-detail__path">{file.path}</div> : null}
             <textarea
+              aria-label={label}
               className="append-system-scope__textarea"
               placeholder={t("extensions.appendSystemPlaceholder")}
               value={draft}
@@ -466,9 +479,10 @@ function ExtensionCompatibilitySection({ commands, compatibilityRecords, t }: {
 }
 
 function ExtensionsEmptyState({ message }: { readonly message: string }) {
-  return <div className="empty-state"><h2>No extensions found</h2><p>{message}</p></div>;
+  const t = useT();
+  return <div className="empty-state"><h2>{t("extensions.emptyTitle")}</h2><p>{message}</p></div>;
 }
 
 function isMCPExtension(ext: RuntimeExtensionRecord): boolean {
-  return ext.displayName?.includes("MCP") || ext.sourceInfo?.source?.includes("mcp");
+  return /mcp/i.test(ext.displayName) || /mcp/i.test(ext.sourceInfo.source);
 }

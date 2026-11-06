@@ -20,3 +20,20 @@ export {
 export type { PromptComposeContext, PromptSection } from "./system-prompt-composer.js";
 export type { GenerateThreadTitleOptions } from "./thread-title-generator.js";
 export type { SessionTranscriptAttachment, SessionTranscriptMessage, SessionTranscriptRole } from "./transcript.js";
+export {
+  XAI_CLIENT_ID,
+  XAI_AUTHORIZE_URL,
+  XAI_TOKEN_URL,
+  XAI_USERINFO_URL,
+  XAI_SCOPE,
+  buildAuthorizationUrl,
+  generatePKCE,
+  parseAuthorizationInput,
+  getOAuthProvider,
+  getOAuthProviders,
+  grokOAuthProvider,
+  registerGrokOAuthProvider,
+  registerOAuthProvider,
+  syncGrokAuthFromFx,
+  syncGrokAuthToFx,
+} from "./grok-oauth-provider.js";

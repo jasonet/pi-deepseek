@@ -83,6 +83,7 @@ const PROVIDER_PNG: Record<string, string> = {
   vercel: vercelPng,
   "vercel-ai-gateway": vercelPng,
   xai: xaiPng,
+  grok: xaiPng,
   xiaomi: xiaomiPng,
   zai: zaiPng,
   zhipu: zhipuPng,
@@ -102,6 +103,8 @@ const PROVIDER_LOGIN_PNG: Record<string, string> = {
   anthropic: anthropicLogoPng,
   "github-copilot": githubPng,
   "openai-codex": openaiPng,
+  xai: xaiPng,
+  grok: xaiPng,
 };
 
 export function providerLoginIconUrl(providerId: string): string | undefined {

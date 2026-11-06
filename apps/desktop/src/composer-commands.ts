@@ -529,7 +529,7 @@ function providerRank(provider: RuntimeProviderRecord): number {
   if (provider.hasAuth) {
     return 0;
   }
-  if (provider.id === "openai-codex" || provider.id === "anthropic") {
+  if (provider.id === "openai-codex" || provider.id === "anthropic" || provider.id === "xai" || provider.id === "grok") {
     return 1;
   }
   if (provider.oauthSupported) {

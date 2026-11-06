@@ -1236,7 +1236,11 @@ export class SessionSupervisor {
   }
 
   private resolveModel(provider: string, modelId: string) {
-    const model = this.modelRegistry?.find(provider, modelId);
+    let model = this.modelRegistry?.find(provider, modelId);
+    if (!model && (provider === "grok" || provider === "xai")) {
+      const altProvider = provider === "grok" ? "xai" : "grok";
+      model = this.modelRegistry?.find(altProvider, modelId);
+    }
     if (!model) {
       throw new Error(`Unknown model ${provider}:${modelId}`);
     }

@@ -22,6 +22,7 @@
     "e2e": "playwright test",
     "test:homebrew-tap": "node scripts/test-update-homebrew-tap.mjs",
     "test:retention": "node scripts/test-manage-release-retention.mjs",
+    "test:grok-oauth": "node scripts/test-grok-oauth.mjs",
     "verify:install-copy": "node scripts/verify-install-copy.mjs",
     "verify:homebrew-flow": "node scripts/verify-homebrew-flow.mjs",
     "release:homebrew-sync": "node scripts/release-homebrew-sync.mjs",

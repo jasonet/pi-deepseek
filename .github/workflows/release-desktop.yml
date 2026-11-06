@@ -129,10 +129,22 @@ jobs:
 
       - name: Package
         shell: bash
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
         run: |
+          signing_args=()
+          if [[ "${{ matrix.platform }}" == "macos" ]]; then
+            if [[ -z "$CSC_LINK" || -z "$CSC_KEY_PASSWORD" ]]; then
+              echo "macOS auto-update releases require CSC_LINK and CSC_KEY_PASSWORD for a Developer ID Application certificate." >&2
+              exit 1
+            fi
+            signing_args+=("-c.forceCodeSigning=true")
+          fi
           cd apps/desktop
           pnpm exec electron-builder ${{ matrix.args }} \
             --publish never \
+            "${signing_args[@]}" \
             "-c.publish.releaseType=release" \
             "-c.extraMetadata.version=${{ inputs.version }}" \
             "-c.buildVersion=${{ inputs.version }}"
@@ -154,10 +166,9 @@ jobs:
       - name: Verify macOS app signatures
         if: ${{ matrix.platform == 'macos' }}
         working-directory: apps/desktop
-        shell: bash
-        run: |
-          codesign --verify --deep --strict --verbose=2 release/mac/Taosi.app
-          codesign --verify --deep --strict --verbose=2 release/mac-arm64/Taosi.app
+        env:
+          TAOSI_EXPECTED_MAC_TEAM_ID: ${{ vars.TAOSI_MAC_TEAM_ID }}
+        run: node scripts/assert-mac-update-signatures.mjs
 
       - name: Smoke test macOS release ZIP
         if: ${{ matrix.platform == 'macos' }}

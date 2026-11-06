@@ -86,6 +86,14 @@ The installed NSIS build checks the published GitHub Release feed every four hou
 
 The release workflow refuses to publish Windows assets unless `latest.yml`, the versioned NSIS setup executable, and its `.blockmap` all exist and match. After every selected platform matrix job succeeds, the draft GitHub Release is published and marked latest.
 
+## macOS Updates and Signing
+
+Squirrel.Mac accepts an update only when the new app satisfies the installed app's code-signing requirement. An ad-hoc signature uses the exact binary hash as that requirement, so two different ad-hoc versions cannot auto-update each other. A release ZIP that launches successfully is not enough to prove it can update an older install.
+
+The `Release Desktop (Taosi)` workflow requires a Developer ID Application certificate in the repository secrets `CSC_LINK` (base64-encoded `.p12` or a private URL) and `CSC_KEY_PASSWORD`. Set the repository variable `TAOSI_MAC_TEAM_ID` to that certificate's Apple Team ID. Packaging fails if signing credentials are absent; the release gate checks both macOS architectures for a valid Developer ID Application signature and the expected Team ID before publishing. Keep the same Team ID for future releases.
+
+Users already running an ad-hoc signed release need to install the first Developer ID signed release once from the [latest GitHub release](https://github.com/jasonet/pi-deepseek/releases/latest). Quit Taosi, replace `/Applications/Taosi.app` with the new app, then relaunch. Session history and provider settings live outside the application bundle and remain in place. Later releases signed by the same Team ID can use in-app updates.
+
 Live agent tests use your existing `pi` runtime and provider auth. If local `pi` runs do not work, the `live` lane will not be meaningful either.
 
 ## Test Lanes

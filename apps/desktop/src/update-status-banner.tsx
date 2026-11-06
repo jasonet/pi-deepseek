@@ -54,9 +54,6 @@ export function UpdateStatusBanner({
             ) : null}
           </>
         ) : null}
-        {status.phase === "error" && status.message ? (
-          <div className="update-status__meta update-status__meta--error">{status.message}</div>
-        ) : null}
       </div>
       <div className="update-status__actions">
         {status.phase === "available" ? (

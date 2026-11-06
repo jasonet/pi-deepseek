@@ -20,6 +20,9 @@ export function humanizeUpdateError(message: string): string {
   if (/net::ERR_/i.test(message)) return "Download failed due to a network issue. Check your connection and try again.";
   if (/Cannot find latest-mac\.yml/i.test(message)) return "macOS update feed is temporarily unavailable on the release server. Please try again later.";
   if (/Cannot find latest\.yml/i.test(message)) return "Windows update feed is temporarily unavailable on the release server. Please try again later.";
+  if (/Code signature at URL .* did not pass validation|code failed to satisfy specified code requirement/i.test(message)) {
+    return "This macOS update has an incompatible code signature. Install the latest Taosi from the GitHub release once; your sessions will be preserved.";
+  }
   if (/ERR_UPDATER_INVALID_SIGNATURE/i.test(message)) return "The downloaded update failed signature verification.";
   return message;
 }

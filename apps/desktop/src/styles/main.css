@@ -140,15 +140,6 @@
   font-size: 10px;
 }
 
-.update-status__meta--error {
-  max-width: 330px;
-  overflow: hidden;
-  color: var(--error-ink);
-  font-family: var(--font-ui);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .update-status__actions {
   display: flex;
   align-items: center;

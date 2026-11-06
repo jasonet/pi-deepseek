@@ -50,6 +50,9 @@ test.describe("humanizeUpdateError", () => {
     expect(humanizeUpdateError("ERR_UPDATER_INVALID_SIGNATURE")).toBe(
       "The downloaded update failed signature verification.",
     );
+    expect(humanizeUpdateError("Code signature at URL file:///tmp/Taosi.app/ did not pass validation: code failed to satisfy specified code requirement(s) ")).toBe(
+      "This macOS update has an incompatible code signature. Install the latest Taosi from the GitHub release once; your sessions will be preserved.",
+    );
     expect(humanizeUpdateError("")).toBe("An unexpected error occurred during the update check.");
   });
 

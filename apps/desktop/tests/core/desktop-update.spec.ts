@@ -51,6 +51,16 @@ test("downloads an available update with progress and prompts to restart", async
     await expect(banner).toContainText("Restart Taosi to apply the update");
     await window.getByRole("button", { name: "Restart now", exact: true }).click();
     await expect.poll(() => getUpdateInstallRequestCount(harness)).toBe(1);
+
+    const signatureError = "This macOS update has an incompatible code signature. Install the latest Taosi from the GitHub release once; your sessions will be preserved.";
+    await emitTestUpdateStatus(harness, {
+      phase: "error",
+      currentVersion: "2.9.1",
+      latestVersion: "2.9.2",
+      message: signatureError,
+    });
+    await expect(banner.getByText(signatureError, { exact: true })).toHaveCount(1);
+    await expect(window.getByRole("button", { name: "Retry", exact: true })).toBeVisible();
   } finally {
     await harness.close();
   }

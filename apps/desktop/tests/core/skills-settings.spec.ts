@@ -36,6 +36,13 @@ Use this skill when the user wants a short demo workflow.
     await expect(window.getByTestId("skills-list")).toContainText("Demo Skill");
     await window.getByRole("button", { name: /Demo Skill/i }).click();
     await expect(window.locator(".skill-detail")).toContainText("/skill:demo-skill");
+    const skillEnable = window.getByRole("switch");
+    await expect(skillEnable).toBeChecked();
+    await window.locator(".skills-source summary").click();
+    await expect(window.locator(".skills-source")).toHaveAttribute("open", "");
+    await window.setViewportSize({ width: 720, height: 900 });
+    await expect(window.locator(".skills-view")).toHaveJSProperty("scrollWidth", await window.locator(".skills-view").evaluate((el) => el.clientWidth));
+    await window.setViewportSize({ width: 1440, height: 900 });
 
     await window.getByRole("button", { name: "Try", exact: true }).click();
     await expect(window.getByRole("button", { name: "Threads", exact: true })).toBeVisible();

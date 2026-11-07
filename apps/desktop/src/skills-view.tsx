@@ -76,20 +76,21 @@ export function SkillsView({ workspace, runtime, onRefresh, onOpenSkillFolder, o
         <div className="skills-layout">
           <div className="skills-grid" data-testid="skills-list">
             {filteredSkills.length === 0 ? (
-              <SkillsEmptyState message={t("skills.refreshHint")} />
+              <SkillsEmptyState message={query.trim() ? t("skills.noSearchResults") : t("skills.refreshHint")} />
             ) : (
               filteredSkills.map((skill) => (
                 <button className={`skill-card ${selectedSkill?.filePath === skill.filePath ? "skill-card--active" : ""}`}
-                  key={skill.filePath} type="button" onClick={() => setSelectedSkillPath(skill.filePath)}>
+                  key={skill.filePath} type="button" aria-pressed={selectedSkill?.filePath === skill.filePath}
+                  onClick={() => setSelectedSkillPath(skill.filePath)}>
                   <span className="skill-card__title-row">
                     <span className="skill-card__title">{titleCase(skill.name)}</span>
                     <span className={`skill-card__badge ${skill.enabled ? "skill-card__badge--enabled" : ""}`}>
                       {skill.enabled ? t("skills.enabled") : t("skills.disabled")}
                     </span>
                   </span>
-                  <span className="skill-card__description">{desc(skill)}</span>
+                  {desc(skill) ? <span className="skill-card__description">{desc(skill)}</span> : null}
                   <span className="skill-card__meta">
-                    <span>{skill.source}</span><span>{skill.slashCommand}</span>
+                    <span>{skill.slashCommand}</span>
                     {skill.disableModelInvocation ? <span>{t("skills.slashOnly")}</span> : null}
                   </span>
                 </button>
@@ -107,17 +108,23 @@ export function SkillsView({ workspace, runtime, onRefresh, onOpenSkillFolder, o
                   </span>
                 </div>
                 <p className="skill-detail__description">{desc(selectedSkill)}</p>
+                <div className="skill-detail__actions">
+                  <button className="button button--primary" type="button" onClick={() => onTrySkill(selectedSkill)}>{t("skills.try")}</button>
+                  <label className="skills-enable">
+                    <input type="checkbox" role="switch" checked={selectedSkill.enabled}
+                      onChange={(event) => onToggleSkill(selectedSkill.filePath, event.target.checked)} />
+                    {t("skills.enable")}
+                  </label>
+                  <button className="button button--secondary" type="button" onClick={() => onOpenSkillFolder(selectedSkill.filePath)}>{t("skills.openFolder")}</button>
+                </div>
                 <div className="skill-detail__meta-list">
                   <div><div className="skill-detail__meta-label">{t("skills.source")}</div><div className="skill-detail__description">{selectedSkill.source}</div></div>
-                  <div><div className="skill-detail__meta-label">{t("skills.path")}</div><div className="skill-detail__path">{selectedSkill.filePath}</div></div>
+                  {selectedSkill.baseDir ? <div><div className="skill-detail__meta-label">{t("extensions.baseDir")}</div><div className="skill-detail__path">{selectedSkill.baseDir}</div></div> : null}
                 </div>
-                <div className="skill-detail__actions">
-                  <button className="button button--secondary" type="button" onClick={() => onOpenSkillFolder(selectedSkill.filePath)}>{t("skills.openFolder")}</button>
-                  <button className="button button--secondary" type="button" onClick={() => onToggleSkill(selectedSkill.filePath, !selectedSkill.enabled)}>
-                    {selectedSkill.enabled ? t("skills.disable") : t("skills.enable")}
-                  </button>
-                  <button className="button button--primary" type="button" onClick={() => onTrySkill(selectedSkill)}>{t("skills.try")}</button>
-                </div>
+                <details className="skills-source">
+                  <summary>{t("skills.path")}</summary>
+                  <div className="skill-detail__path">{selectedSkill.filePath}</div>
+                </details>
               </>
             ) : (
               <SkillsEmptyState message={t("skills.selectHint")} />
@@ -130,5 +137,6 @@ export function SkillsView({ workspace, runtime, onRefresh, onOpenSkillFolder, o
 }
 
 function SkillsEmptyState({ message }: { readonly message: string }) {
-  return <div className="empty-state"><h2>No skills found</h2><p>{message}</p></div>;
+  const t = useT();
+  return <div className="empty-state"><h2>{t("skills.emptyTitle")}</h2><p>{message}</p></div>;
 }

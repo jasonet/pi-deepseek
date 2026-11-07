@@ -4065,6 +4065,19 @@ textarea.settings-input {
   grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1.2fr);
 }
 
+.skills-view:not(.extensions-view) .skills-layout { grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1.2fr); }
+.skills-view:not(.extensions-view) .skills-grid { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.skills-view:not(.extensions-view) .skill-card { width: 100%; border-radius: 6px; }
+.skills-view:not(.extensions-view) .skill-card--active { box-shadow: none; border-color: var(--accent); }
+.skills-view:not(.extensions-view) .skill-card__title { overflow-wrap: anywhere; min-width: 0; }
+.skills-view:not(.extensions-view) .skill-card__badge { flex-shrink: 0; }
+.skills-view:not(.extensions-view) .skill-detail { min-width: 0; border: 0; border-left: 1px solid var(--line); border-radius: 0; background: none; box-shadow: none; }
+.skills-view:not(.extensions-view) .skill-detail__slash { overflow-wrap: anywhere; }
+.skills-view:not(.extensions-view) .skills-enable { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+.skills-view:not(.extensions-view) .skills-source { padding-top: 14px; border-top: 1px solid var(--line); }
+.skills-view:not(.extensions-view) .skills-source summary { cursor: pointer; padding-bottom: 10px; }
+.skills-view:not(.extensions-view) .skill-detail__actions { flex-wrap: wrap; }
+
 .extensions-view .skills-grid,
 .extensions-group {
   display: flex;
@@ -4107,6 +4120,8 @@ textarea.settings-input {
 .extensions-view .packages-row__source { overflow-wrap: anywhere; }
 
 @media (max-width: 780px) {
+  .skills-view:not(.extensions-view) .skills-layout { grid-template-columns: minmax(0, 1fr); }
+  .skills-view:not(.extensions-view) .skill-detail { position: static; border-left: 0; border-top: 1px solid var(--line); }
   .extensions-view .skills-layout { grid-template-columns: minmax(0, 1fr); }
   .extensions-view .skill-detail { position: static; border-left: 0; border-top: 1px solid var(--line); }
   .extensions-view .packages-row { flex-wrap: wrap; }

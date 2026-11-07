@@ -356,6 +356,8 @@ const translations: Record<Locale, Record<string, string>> = {
 
     // Skills view
     "skills.title": "Skills",
+    "skills.emptyTitle": "No skills found",
+    "skills.noSearchResults": "No matching skills.",
     "skills.description": "Browse and toggle skills for {workspace}.",
     "skills.search": "Search skills",
     "skills.newSkill": "New skill",
@@ -856,6 +858,8 @@ const translations: Record<Locale, Record<string, string>> = {
 
     // Skills view
     "skills.title": "技能",
+    "skills.emptyTitle": "未找到技能",
+    "skills.noSearchResults": "没有匹配的技能。",
     "skills.description": "浏览和切换 {workspace} 的技能。",
     "skills.search": "搜索技能",
     "skills.newSkill": "新建技能",
@@ -1362,6 +1366,8 @@ const translations: Record<Locale, Record<string, string>> = {
 
     // Skills
     "skills.title": "技能",
+    "skills.emptyTitle": "找不到技能",
+    "skills.noSearchResults": "沒有符合條件的技能。",
     "skills.description": "瀏覽並切換 {workspace} 的技能。",
     "skills.search": "搜尋技能",
     "skills.newSkill": "新增技能",
@@ -1773,6 +1779,8 @@ const translations: Record<Locale, Record<string, string>> = {
 
     // Skills view
     "skills.title": "スキル",
+    "skills.emptyTitle": "スキルが見つかりません",
+    "skills.noSearchResults": "一致するスキルがありません。",
     "skills.description": "{workspace} のスキルを閲覧・切替します。",
     "skills.search": "スキルを検索",
     "skills.newSkill": "新規スキル",

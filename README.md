@@ -23,10 +23,13 @@
 | **macOS** | Apple Silicon (M1–M5) | Electron | v3.0.21 | ZIP / DMG | 165.2 MiB | [![Download](https://img.shields.io/badge/Download-arm64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.21/Taosi-3.0.21-mac-arm64.dmg) |
 | **macOS** | Intel (x64) | Electron | v3.0.21 | DMG / ZIP | 172.7 MiB | [![Download](https://img.shields.io/badge/Download-x64-%234D6BFE?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.21/Taosi-3.0.21-mac-x64.dmg) |
 | **macOS** | Apple Silicon (M1–M5) | Tauri | v3.0.21 | DMG | 187.0 MiB | [![Download](https://img.shields.io/badge/Download-arm64-%237C6BF5?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.21/Taosi-3.0.21-tauri-mac-arm64.dmg) |
+| **macOS** | Apple Silicon (M1–M5) | Pake / WKWebView（对比预览） | v3.0.21 | ZIP | 121.4 MiB | [![Download](https://img.shields.io/badge/Download-Pake_arm64-%23188A70?logo=apple)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.21/Taosi-Pake-3.0.21-darwin-arm64.zip) |
 | **Windows** | x64 | Electron | v3.0.21 | 安装版 | 144.5 MiB | [![Download](https://img.shields.io/badge/Download-Setup-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.21/Taosi-3.0.21-win-x64-setup.exe) |
 | **Windows** | x64 | Electron | v3.0.21 | 便携版 | 144.2 MiB | [![Download](https://img.shields.io/badge/Download-Portable-%234D6BFE?logo=windows)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.21/Taosi-3.0.21-win-x64-portable.exe) |
 | **Linux** | x64 | Electron | v3.0.21 | deb | 177.3 MiB | [![Download](https://img.shields.io/badge/Download-.deb-%234D6BFE?logo=ubuntu)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.21/Taosi-3.0.21-linux-amd64.deb) |
 | **Linux** | x64 | Electron | v3.0.21 | AppImage | 180.6 MiB | [![Download](https://img.shields.io/badge/Download-AppImage-%234D6BFE?logo=linux)](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.21/Taosi-3.0.21-linux-x86_64.AppImage) |
+
+Pake 对比预览版解压后为 `Taosi-Pake.app`，可与 Electron 版并存。应用占用 249.9 MiB，较 Electron 的 362.9 MiB 减少 31.1%；同格式 ZIP 从 160.7 MiB 降至 121.4 MiB（减少 24.5%）。已验证真实 Pi 回复、附件、图片粘贴和终端；本机 fx ACP 初始化仍报错，其他完整工作流待验证，详情见 [构建与验证记录](./apps/desktop-pake/README.md)。对比包为 ad hoc 签名，未经过 Apple notarization；[SHA256 校验文件](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.21/SHA256SUMS-pake-arm64.txt)。
 
 > 🚀 **v3.x / v3.0.21 重大版本汇总 / Taosi 3.x Consolidated Highlights:**
 > - **Windows / Linux 系统稳定性修复（v3.0.21）**：彻底修复 Windows 全新环境指定目录开启项目时的终端黑框弹出及长路径 `\\?\` 引发的路径解析异常；支持非 Git 目录平滑回退；修复归档最后一个会话时页面停留状态。

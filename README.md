@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <strong>Taosi 3.0 pi(pi-computer-use)/fx elegant harness GUI with DeepSeek Harness(Official) local LLM and CLIProxyAPI/EasyCLIProxyAPI OAuth</strong>
+  <strong>Taosi 3.0 pi(pi-computer-use)/fx elegant harness GUI with pojia DeepSeek Harness(Official/Dsh-bot/Dsh-Trade) local LLM and CLIProxyAPI/EasyCLIProxyAPI OAuth</strong>
 </p>
 
 <p align="center">
@@ -60,13 +60,13 @@
 
 ## 简介
 
-`Taosi`是一个支持本地模型的 AI 工程工作流的桌面客户端；
+`Taosi`是一个支持本地模型的 纯本地AI会话 工程工作流的桌面客户端；
 
-利用 Pi(pi-computer-use)/fx coding agent 充分发挥私密Agent优势（远离A社监控，撰写能力来自盗版书籍，模型升级来自监控分析优质用户对话），订阅目前首推codex，fx和CLIProxyAPI也可无缝login openai codex/grok；
+利用 Pi(pi-computer-use)/fx coding agent 充分发挥私密Agent优势（远离A社监控，其文本撰写能力来自盗版书籍，模型升级思路来自监控分析优质用户对话），订阅目前首推codex，fx和CLIProxyAPI也可无缝login openai codex/grok，配置接入自部署模型Taosi则是全私有Pi-Bot；
 
-内置了DeepSeek Harness Web UI（npx @deepseek-ai/dsh web）和computer-use；支持 macOS / Windows / Linux 三平台，为 pi和fx 会话提供深推理、无提示词的 Agent 级工程自动交互体验。
+内置了DeepSeek Harness Web UI（npx @deepseek-ai/dsh web）和computer-use, 自带pojia；支持 macOS / Windows / Linux 三平台，为 pi和fx 会话提供深推理、无提示词的 Agent 级工程自动交互体验。
 
-如果需要更全面的研究级Harness的本地模型管理Agent工程客户端，建议关注[`Playa`](https://github.com/jasonet/playa)，模型的下载，配置，调优，Beta阶段；
+如果需要更全面的研究级Harness的本地模型管理Agent工程客户端，建议关注[`Playa`](https://github.com/jasonet/playa)，模型的下载，配置，调优，Beta阶段，科研推荐 波尔；
 
 ![dual-pane](./docs/readme/dual-pane.jpg)
 
@@ -101,7 +101,7 @@ In 2.9.2, Settings → Harnesses shows fx connection state for Vercel AI Gateway
 ## 功能
 
 ### 核心基础功能
-- **本地工作区与多会话管理**：在桌面客户端中打开本地目录，按工作区管理并持久化会话状态与输入草稿。
+- **本地工作区与多本地私有会话管理**：在桌面客户端中打开本地目录，按工作区管理并持久化会话状态与输入草稿。
 - **Codex 交互时间线**：流式消息响应、单行工具执行滚屏、代码块折叠高亮与智能排版。
 - **内置模型与一键接入**：内置 DeepSeek V4 Pro 1M / Flash 1M 等主流模型，一键配置 API Key 快速启动。
 - **全球化多语言**：支持中文简体、中文繁體、日文、英文 UI，设置（Settings → Appearance）中即时切换。

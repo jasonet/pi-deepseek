@@ -24,6 +24,7 @@ import { createInterface } from "node:readline";
 import { DesktopAppStore } from "../../desktop/electron/app-store";
 import { probeCustomModelProvider } from "../../desktop/electron/custom-model-provider-probe";
 import { DshWebService, syncDshDeepSeekCredential } from "../../desktop/electron/dsh-web-service";
+import { DSH_FREE_MODEL_ARCHIVE } from "../../desktop/electron/dsh-our-free-model";
 import { TregService } from "../../desktop/electron/treg-service";
 import { seedBundledExtensionsFromPath } from "../../desktop/electron/seed-extensions-core";
 import { desktopIpc } from "../../desktop/src/ipc";
@@ -62,8 +63,8 @@ function safeStringify(value: unknown): string {
   }
 }
 
-function emitEvent(event: string, payload?: unknown): void {
-  protocolWrite(JSON.stringify({ kind: "event", event, payload }));
+export function emitEvent(event: string, payload?: unknown, sequence?: number): void {
+  protocolWrite(JSON.stringify({ kind: "event", event, payload, sequence }));
 }
 
 // ---------------------------------------------------------------------------
@@ -92,11 +93,11 @@ let composerWorkMode: "pi-agent" | "open-design" = "pi-agent";
 let skipAutoTitle = false;
 let autoUpdateEnabled = false;
 
-const runtimeLoginCallbacks = {
+export const runtimeLoginCallbacks = {
   onAuth: async ({ url }: { readonly url: string; readonly instructions?: string }) => {
     openPathOrUrl(url);
   },
-  onPrompt: async (): Promise<string | null> => null,
+  onPrompt: async (): Promise<string> => { throw new Error("Login cancelled"); },
 };
 
 function emptyTerminalSnapshot(workspaceId: string, terminalScopeId: string) {
@@ -129,25 +130,29 @@ function resolveInitialWorkspacePaths(): readonly string[] {
 }
 
 const bundledExtensionsDir = process.env.PI_BUNDLED_EXTENSIONS_DIR?.trim();
-if (bundledExtensionsDir) seedBundledExtensionsFromPath(bundledExtensionsDir);
+if (bundledExtensionsDir) seedBundledExtensionsFromPath(bundledExtensionsDir, process.env.PI_CODING_AGENT_DIR ? path.join(process.env.PI_CODING_AGENT_DIR, "extensions") : undefined);
 
-const store = new DesktopAppStore({
+export let hostWindow: any = null;
+export function setHostWindow(window: any) { hostWindow = window; }
+export const store = new DesktopAppStore({
   userDataDir: resolveUserDataDir(),
   initialWorkspacePaths: resolveInitialWorkspacePaths(),
-  getWindow: () => null,
+  getWindow: () => hostWindow,
   generateThreadTitleOverride: async () => {
     if (skipAutoTitle) return null;
     return undefined;
   },
 });
-const dshHarnessService = new DshWebService({
+export const dshHarnessService = new DshWebService({
   runtimeRoot: path.join(resolveUserDataDir(), "harness"),
+  ...(process.env.PI_SIDECAR_HOST === "pake" ? { dshHome: path.join(resolveUserDataDir(), "dsh-harness"), freeModelArchivePath: path.join(process.env.PI_APP_RESOURCES_DIR!, "extensions", DSH_FREE_MODEL_ARCHIVE) } : {}),
   profile: "taosi-harness",
   title: "DeepSeek Harness",
 });
 
-const dsBotService = new DshWebService({
+export const dsBotService = new DshWebService({
   runtimeRoot: path.join(resolveUserDataDir(), "harness"),
+  ...(process.env.PI_SIDECAR_HOST === "pake" ? { dshHome: path.join(resolveUserDataDir(), "dsh-bot") } : {}),
   profile: "web",
   title: "DeepSeek Bot",
   externalUrl: process.env.PI_APP_DS_BOT_WEB_URL?.trim() || undefined,
@@ -157,7 +162,7 @@ function resolveDshService(mode?: "harness" | "bot" | "trading"): DshWebService 
   if (mode === "trading") throw new Error("DSH Trading is not available in the Tauri build.");
   return mode === "bot" ? dsBotService : dshHarnessService;
 }
-const tregService = new TregService();
+export const tregService = new TregService();
 
 // ---------------------------------------------------------------------------
 // Open Design (pi-open-design) status + install. Ported from
@@ -208,7 +213,7 @@ function openDesignExtensionRootCandidates(): Set<string> {
   addExtensionRoot(process.env.OPEN_DESIGN_EXTENSION_ROOT?.trim());
   // Scan known workspace paths (sidecar cwd is "/", so process.cwd() is useless).
   try {
-    for (const workspace of store.getState().workspaces) {
+    for (const workspace of store.state.workspaces) {
       if (workspace.path) addRoot(workspace.path);
     }
   } catch {
@@ -426,7 +431,7 @@ async function installOpenDesign(): Promise<{ ok: boolean; message: string }> {
 // ---------------------------------------------------------------------------
 type Handler = (...args: any[]) => unknown | Promise<unknown>;
 
-const handlers: Record<string, Handler> = {
+export const handlers: Record<string, Handler> = {
   [desktopIpc.ping]: () => "pi desktop ready",
   [desktopIpc.getThemeMode]: () => themeMode,
   [desktopIpc.getResolvedTheme]: () => resolvedTheme(),
@@ -476,7 +481,7 @@ const handlers: Record<string, Handler> = {
   [desktopIpc.removeWorktree]: (input: RemoveWorktreeInput) => store.removeWorktree(input),
   [desktopIpc.syncCurrentWorkspace]: () => store.syncCurrentWorkspace(),
   [desktopIpc.selectSession]: (target: WorkspaceSessionTarget) => store.selectSession(target),
-  [desktopIpc.archiveSession]: (target: WorkspaceSessionTarget) => store.archiveSession(target),
+  [desktopIpc.archiveSession]: (target: WorkspaceSessionTarget, options?: any) => store.archiveSession(target, options),
   [desktopIpc.unarchiveSession]: (target: WorkspaceSessionTarget) => store.unarchiveSession(target),
   [desktopIpc.setActiveView]: (activeView: any) => store.setActiveView(activeView),
   [desktopIpc.setSidebarCollapsed]: (collapsed: boolean) => store.setSidebarCollapsed(collapsed),
@@ -661,6 +666,8 @@ async function dispatch(method: string, args: unknown[]): Promise<unknown> {
 // ---------------------------------------------------------------------------
 // stdin request loop.
 // ---------------------------------------------------------------------------
+export const sidecarHooks: { message?: (value: any) => boolean; shutdown?: () => Promise<void>; publish?: () => void } = {};
+
 async function handleLine(line: string): Promise<void> {
   const trimmed = line.trim();
   if (!trimmed) return;
@@ -671,6 +678,7 @@ async function handleLine(line: string): Promise<void> {
     console.warn("sidecar: dropped malformed request line", error);
     return;
   }
+  if (sidecarHooks.message?.(request)) return;
   const { id, method, args } = request;
   if (typeof id !== "number" || typeof method !== "string") {
     console.warn("sidecar: dropped request missing id/method");
@@ -688,12 +696,16 @@ async function handleLine(line: string): Promise<void> {
   }
 }
 
-async function main(): Promise<void> {
+export async function main(): Promise<void> {
   await store.initialize();
 
+  // Hosts may provide acknowledged, bounded snapshot publishers.
+  if (sidecarHooks.publish) sidecarHooks.publish();
+  else {
   // Wire state publishers, mirroring main.ts attachStatePublisher.
-  store.subscribe((state) => emitEvent("stateChanged", state));
-  store.subscribeToSelectedTranscript((payload) => {
+  store.subscribe(() => emitEvent("stateChanged", store.state));
+  store.subscribeToSelectedTranscript(() => {
+    const payload = store.getSelectedTranscriptSnapshot();
     if (!payload) return;
     let next = payload;
     const len = payload.transcript?.length ?? 0;
@@ -703,6 +715,7 @@ async function main(): Promise<void> {
     emitEvent("selectedTranscriptChanged", next);
   });
 
+  }
   emitEvent("ready");
 
   const rl = createInterface({ input: process.stdin });
@@ -710,11 +723,11 @@ async function main(): Promise<void> {
     void handleLine(line);
   });
   rl.on("close", () => {
-    void Promise.all([dshHarnessService.shutdown(), dsBotService.shutdown()]).finally(() => process.exit(0));
+    void Promise.all([dshHarnessService.shutdown(), dsBotService.shutdown(), store.flushPersistence(), sidecarHooks.shutdown?.()]).finally(() => process.exit(0));
   });
 }
 
-void main().catch((error) => {
+if (process.env.PI_SIDECAR_HOST !== "pake") void main().catch((error) => {
   console.error("sidecar fatal", error);
   process.exit(1);
 });

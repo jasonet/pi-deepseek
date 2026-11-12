@@ -47,12 +47,22 @@ export function planRetention({
   latestVersion,
   previousVersion,
   desktopDir = DESKTOP_DIR,
+  pakeDir = path.resolve(desktopDir, "../desktop-pake"),
 }) {
   const releaseDir = path.join(desktopDir, "release");
   const keepVersions = new Set([latestVersion, previousVersion]);
 
   const toKeep = [];
   const toDelete = [];
+
+  const pakeRelease = path.join(pakeDir, "release");
+  if (fs.existsSync(pakeRelease)) {
+    for (const entry of fs.readdirSync(pakeRelease, { withFileTypes: true })) {
+      if (!entry.isDirectory() || !/^\d+\.\d+\.\d+$/.test(entry.name)) continue;
+      const record = { path: path.join(pakeRelease, entry.name), reason: `Pake release v${entry.name}` };
+      (keepVersions.has(entry.name) ? toKeep : toDelete).push(record);
+    }
+  }
 
   // 1. Check release-* directories inside apps/desktop
   if (fs.existsSync(desktopDir)) {

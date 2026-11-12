@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-host-response"
+description = "Enables the host_response command without any pre-configured scope."
+commands.allow = ["host_response"]
+
+[[permission]]
+identifier = "deny-host-response"
+description = "Denies the host_response command without any pre-configured scope."
+commands.deny = ["host_response"]

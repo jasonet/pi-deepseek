@@ -45,3 +45,6 @@ docs/dev/
 apps/desktop/resources/extensions/*.tgz
 !apps/desktop/resources/extensions/dsh-our-free-model-2.5.9.tgz
 apps/desktop/resources/fx/
+
+# Generated Pake comparison build
+apps/desktop-pake/build/

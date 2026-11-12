@@ -1,0 +1,13 @@
+[package]
+name = "tauri-plugin-taosi"
+version = "0.1.0"
+edition = "2021"
+links = "tauri-plugin-taosi"
+
+[dependencies]
+tauri = "2"
+serde_json = "1"
+tokio = { version = "1", features = ["sync", "time"] }
+
+[build-dependencies]
+tauri-plugin = { version = "2", features = ["build"] }

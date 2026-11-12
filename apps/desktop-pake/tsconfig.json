@@ -1,0 +1,6 @@
+{
+  "extends": "../desktop/tsconfig.electron.json",
+  "compilerOptions": { "rootDir": "../..", "module": "ESNext", "moduleResolution": "Bundler", "noEmit": true, "composite": false },
+  "include": ["sidecar/**/*.ts", "../desktop/src/global.d.ts"],
+  "exclude": ["build", "dist", "release", "node_modules"]
+}

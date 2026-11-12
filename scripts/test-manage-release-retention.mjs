@@ -21,11 +21,14 @@ async function main() {
   fs.writeFileSync(path.join(releaseDir, "Pi-Deepseek-2.8.0-mac-arm64.dmg"), "dummy");
   fs.writeFileSync(path.join(releaseDir, ".temp0123-Pi-Deepseek-0.2.5.1-mac-arm64.dmg"), "dummy");
   fs.writeFileSync(path.join(releaseDir, "latest-mac.yml"), "dummy");
+  const pakeDir = path.join(tempDir, "pake");
+  for (const version of ["3.0.2", "3.0.1", "2.9.3"]) fs.mkdirSync(path.join(pakeDir, "release", version), { recursive: true });
 
   const plan = planRetention({
     latestVersion: "3.0.2",
     previousVersion: "3.0.1",
     desktopDir: tempDir,
+    pakeDir,
   });
 
   const keptPaths = plan.toKeep.map((k) => path.basename(k.path));
@@ -37,6 +40,8 @@ async function main() {
   assert.ok(keptPaths.includes("Taosi-3.0.2-mac-arm64.dmg"), "Should keep 3.0.2 dmg");
   assert.ok(keptPaths.includes("Taosi-3.0.2-mac-x64.dmg"), "Should keep 3.0.2 x64 dmg");
   assert.ok(keptPaths.includes("latest-mac.yml"), "Should keep latest-mac.yml");
+  assert.ok(keptPaths.includes("3.0.2") && keptPaths.includes("3.0.1"), "Should keep the latest and previous Pake releases");
+  assert.ok(deletedPaths.includes("2.9.3"), "Should prune older Pake releases");
 
   // Must delete older release and temporary files
   assert.ok(deletedPaths.includes("release-2.9.3"), "Should delete release-2.9.3");

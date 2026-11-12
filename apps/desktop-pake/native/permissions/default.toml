@@ -1,0 +1,3 @@
+[default]
+description = "Taosi local application bridge"
+permissions = ["allow-invoke", "allow-host-response", "allow-prompt"]

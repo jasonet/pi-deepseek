@@ -2,7 +2,6 @@ import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
-import { RuntimeSupervisor } from "../../../../packages/pi-sdk-driver/src/index";
 
 const extensionSource = String.raw`
 export default function packageNamedExtension(pi) {
@@ -49,6 +48,7 @@ async function writePackageExtension(packagePath: string, displayName: string, n
 }
 
 test("labels direct index extension entrypoints from package display names", async () => {
+  const { RuntimeSupervisor } = await import("../../../../packages/pi-sdk-driver/dist/index.js");
   const root = await mkdtemp(join(tmpdir(), "pi-runtime-display-name-"));
   const workspacePath = join(root, "workspace");
   const packagePath = join(root, "package-extension");

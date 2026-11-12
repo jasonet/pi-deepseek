@@ -212,6 +212,21 @@ importers:
         specifier: ^6.1.1
         version: 6.1.1(typescript@5.9.3)(vite@6.4.1(@types/node@22.19.15)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.46.1)(yaml@2.9.0))
 
+  apps/desktop-pake:
+    devDependencies:
+      '@vitejs/plugin-react':
+        specifier: ^4.3.4
+        version: 4.7.0(vite@6.4.1(@types/node@24.12.2)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.46.1)(yaml@2.9.0))
+      esbuild:
+        specifier: ^0.25.0
+        version: 0.25.12
+      vite:
+        specifier: ^6.2.0
+        version: 6.4.1(@types/node@24.12.2)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.46.1)(yaml@2.9.0)
+      vite-tsconfig-paths:
+        specifier: ^6.1.1
+        version: 6.1.1(typescript@5.9.3)(vite@6.4.1(@types/node@24.12.2)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.46.1)(yaml@2.9.0))
+
   apps/desktop-tauri:
     dependencies:
       '@tauri-apps/api':

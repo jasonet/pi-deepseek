@@ -29,6 +29,8 @@ node scripts/test-manage-release-retention.mjs
 
 构建脚本只修改 `build/pake-template` 中的副本，输出到 `release/3.0.21/`，同时生成 `latest-pake-arm64.json` 更新清单。Rust 依赖已缓存时可设置 `CARGO_NET_OFFLINE=true`。
 
+Pake 的打包与 sidecar 验证使用显式 `package:mac` / `test:sidecar` 命令；不会加入仓库通用的递归 build/test，以免要求其他平台或全新检出预先提供 macOS 运行资源。
+
 ## 数据与安装
 
 解压后将 `Taosi-Pake.app` 拖入 Applications。应用采用独立标识 `com.pi-deepseek.pake`，应用状态和 Pi 会话位于 `~/Library/Application Support/com.pi-deepseek.pake/`。首次启动会将已有 Pi 的认证、模型及设置文件复制到独立配置目录；不会迁移 Electron 的聊天历史。fx 继续复用系统已有的 fx 登录。
@@ -49,6 +51,7 @@ node scripts/test-manage-release-retention.mjs
 - `node --test apps/desktop-pake/tests/sidecar.test.mjs` 通过，覆盖打包 Node 后端、文件预览、真实 PTY、代码执行输出与偏好持久化。
 - `node scripts/test-manage-release-retention.mjs` 通过。
 - `codesign --verify --deep --strict` 通过。
+- 更新检查、真实 ZIP 下载、SHA256、应用标识与版本、签名及暂存就绪通过本地 HTTP feed 验证；没有执行安装或替换应用。
 - Electron core lane 运行 99 项，71 项通过、28 项失败，涉及设置、预览和时间线等；尚未完成失败项归因，因此不视为全量回归通过。
 
 已知限制与待验证项：

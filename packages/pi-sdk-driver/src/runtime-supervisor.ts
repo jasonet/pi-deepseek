@@ -33,6 +33,7 @@ import type {
 } from "@pi-gui/session-driver/runtime-types";
 import { NO_ENABLED_MODELS_PATTERN } from "@pi-gui/session-driver/runtime-types";
 import type { WorkspaceRef } from "@pi-gui/session-driver";
+import { registerGrokOAuthProvider } from "./grok-oauth-provider.js";
 import { createRuntimeDependencies } from "./runtime-deps.js";
 import { createSettingsManagerWithoutNpmPackages, isGlobalNpmLookupError } from "./npm-package-fallback.js";
 import { skillSlashCommand } from "./runtime-command-utils.js";
@@ -93,7 +94,7 @@ export class RuntimeSupervisor implements RuntimeResourceDriver {
     const context = await this.ensureContext(workspace);
     context.settingsManager.reload();
     this.authStorage.reload();
-    this.modelRegistry.refresh();
+    this.refreshModelRegistry();
     await context.resourceLoader.reload();
     await this.autoEnableModelsForAuthenticatedProviders(context);
     return this.buildSnapshot(context);
@@ -102,7 +103,7 @@ export class RuntimeSupervisor implements RuntimeResourceDriver {
   async login(workspace: WorkspaceRef, providerId: string, callbacks: RuntimeLoginCallbacks): Promise<RuntimeSnapshot> {
     const context = await this.ensureContext(workspace);
     await this.authStorage.login(providerId, callbacks);
-    this.modelRegistry.refresh();
+    this.refreshModelRegistry();
     await context.resourceLoader.reload();
     await this.autoEnableModelsForAuthenticatedProviders(context, [providerId]);
     return this.buildSnapshot(context);
@@ -111,7 +112,7 @@ export class RuntimeSupervisor implements RuntimeResourceDriver {
   async logout(workspace: WorkspaceRef, providerId: string): Promise<RuntimeSnapshot> {
     const context = await this.ensureContext(workspace);
     this.authStorage.logout(providerId);
-    this.modelRegistry.refresh();
+    this.refreshModelRegistry();
     await context.resourceLoader.reload();
     return this.buildSnapshot(context);
   }
@@ -126,7 +127,7 @@ export class RuntimeSupervisor implements RuntimeResourceDriver {
       throw new Error(`API key setup is not supported for ${providerId}.`);
     }
     this.authStorage.set(providerId, { type: "api_key", key: normalized });
-    this.modelRegistry.refresh();
+    this.refreshModelRegistry();
     await context.resourceLoader.reload();
     await this.autoEnableModelsForAuthenticatedProviders(context, [providerId]);
     await this.autoSetDefaultModelForFirstProvider(context, providerId);
@@ -215,7 +216,7 @@ export class RuntimeSupervisor implements RuntimeResourceDriver {
       this.authStorage.set(providerId, { type: "api_key", key: "pi-deepseek-local" });
     }
 
-    this.modelRegistry.refresh();
+    this.refreshModelRegistry();
     await context.resourceLoader.reload();
     await this.autoEnableModelsForAuthenticatedProviders(context, [providerId]);
     await this.autoSetDefaultModelForFirstProvider(context, providerId);
@@ -230,7 +231,7 @@ export class RuntimeSupervisor implements RuntimeResourceDriver {
     delete config.providers[normalizedId];
     await writeModelsJsonConfig(modelsPath, config);
     this.authStorage.remove(normalizedId);
-    this.modelRegistry.refresh();
+    this.refreshModelRegistry();
     await context.resourceLoader.reload();
     return this.buildSnapshot(context);
   }
@@ -564,8 +565,17 @@ export class RuntimeSupervisor implements RuntimeResourceDriver {
     return context;
   }
 
+  private refreshModelRegistry(): void {
+    // ModelRegistry.refresh() resets OAuth providers to pi-ai built-ins, which
+    // drops the Grok registration. Re-register before any snapshot reads it.
+    const registry = this.modelRegistry;
+    registry.refresh();
+    registerGrokOAuthProvider();
+  }
+
   private async buildSnapshot(context: RuntimeContext): Promise<RuntimeSnapshot> {
     const resolvedPaths = await this.resolveRuntimePaths(context);
+    this.refreshModelRegistry();
     const [skills, extensions, providers, models] = await Promise.all([
       this.buildSkillRecords(context, resolvedPaths.skills),
       this.buildExtensionRecords(context, resolvedPaths.extensions),
@@ -656,7 +666,6 @@ export class RuntimeSupervisor implements RuntimeResourceDriver {
   }
 
   private async buildModelRecords(): Promise<readonly RuntimeModelRecord[]> {
-    this.modelRegistry.refresh();
     const availableKeys = new Set(
       (await this.modelRegistry.getAvailable()).map((model) => `${model.provider}:${model.id}`),
     );
@@ -664,6 +673,7 @@ export class RuntimeSupervisor implements RuntimeResourceDriver {
 
     return this.modelRegistry
       .getAll()
+      .filter((model) => isGrokModel(model.provider, model.id, model.name))
       .map<RuntimeModelRecord>((model) => {
         const provider = providers.get(model.provider);
         return {
@@ -1211,6 +1221,13 @@ const DESKTOP_API_KEY_PROVIDER_IDS = new Set([
   "xai",
   "zai",
 ]);
+
+function isGrokModel(providerId: string, modelId: string, label: string): boolean {
+  const provider = providerId.toLowerCase();
+  if (provider === "xai" || provider === "grok") return true;
+  const haystack = `${modelId} ${label}`.toLowerCase();
+  return haystack.includes("grok");
+}
 
 function providerSupportsDesktopApiKeySetup(providerId: string): boolean {
   return providerId.startsWith("custom-") || DESKTOP_API_KEY_PROVIDER_IDS.has(providerId);

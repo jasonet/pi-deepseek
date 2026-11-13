@@ -673,7 +673,6 @@ export class RuntimeSupervisor implements RuntimeResourceDriver {
 
     return this.modelRegistry
       .getAll()
-      .filter((model) => isGrokModel(model.provider, model.id, model.name))
       .map<RuntimeModelRecord>((model) => {
         const provider = providers.get(model.provider);
         return {
@@ -1221,13 +1220,6 @@ const DESKTOP_API_KEY_PROVIDER_IDS = new Set([
   "xai",
   "zai",
 ]);
-
-function isGrokModel(providerId: string, modelId: string, label: string): boolean {
-  const provider = providerId.toLowerCase();
-  if (provider === "xai" || provider === "grok") return true;
-  const haystack = `${modelId} ${label}`.toLowerCase();
-  return haystack.includes("grok");
-}
 
 function providerSupportsDesktopApiKeySetup(providerId: string): boolean {
   return providerId.startsWith("custom-") || DESKTOP_API_KEY_PROVIDER_IDS.has(providerId);

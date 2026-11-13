@@ -104,7 +104,6 @@ console.log("Running Grok OAuth Integration Tests...");
     // All xai models should be unavailable before auth
     const modelsBefore = snapshotBefore.models.filter((m) => m.providerId === "xai");
     assert(modelsBefore.length > 0, "xai models should be in catalog");
-    assert(snapshotBefore.models.every((m) => m.providerId === "xai" || m.providerId === "grok" || /grok/i.test(m.modelId)), "catalog must only contain Grok models");
     assert(modelsBefore.every((m) => !m.available), "xai models must not be available without auth");
 
     // Authenticate with Grok OAuth credentials

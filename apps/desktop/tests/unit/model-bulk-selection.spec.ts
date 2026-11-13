@@ -6,7 +6,7 @@ import {
   selectLatestModelPatterns,
 } from "../../src/model-bulk-selection";
 
-test("smart selection keeps the highest latest OpenRouter release in each model family", () => {
+test("smart selection excludes Claude models and keeps the highest latest OpenRouter release in each model family", () => {
   const models = [
     model("anthropic/claude-opus-4.5", "Anthropic: Claude Opus 4.5"),
     model("anthropic/claude-opus-4.7", "Anthropic: Claude Opus 4.7"),
@@ -23,7 +23,6 @@ test("smart selection keeps the highest latest OpenRouter release in each model 
   ];
 
   expect(selectLatestModelPatterns(models)).toEqual([
-    "openrouter/anthropic/claude-opus-4.10",
     "openrouter/google/gemini-2.5-pro-preview",
     "openrouter/google/gemma-4-31b-it",
     "openrouter/meta-llama/llama-4-8b-instruct",
@@ -31,10 +30,11 @@ test("smart selection keeps the highest latest OpenRouter release in each model 
   ]);
 });
 
-test("OpenRouter bulk actions preserve selections from other providers", () => {
+test("OpenRouter bulk actions preserve selections from other providers and excludes Claude in smart mode", () => {
   const models = [
     model("anthropic/claude-opus-4.5", "Anthropic: Claude Opus 4.5"),
     model("anthropic/claude-opus-4.7", "Anthropic: Claude Opus 4.7"),
+    model("google/gemma-4-26b-it", "Google: Gemma 4 26B"),
     model("gpt-5", "GPT-5", "openai"),
   ];
   const active = models.map((entry) => `${entry.providerId}/${entry.modelId}`);
@@ -42,7 +42,7 @@ test("OpenRouter bulk actions preserve selections from other providers", () => {
   expect(buildProviderBulkSelection(models, active, "openrouter", "none")).toEqual(["openai/gpt-5"]);
   expect(buildProviderBulkSelection(models, active, "openrouter", "smart")).toEqual([
     "openai/gpt-5",
-    "openrouter/anthropic/claude-opus-4.7",
+    "openrouter/google/gemma-4-26b-it",
   ]);
 });
 

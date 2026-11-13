@@ -33,9 +33,21 @@ export function normalizeEnabledModelPatterns(patterns: readonly string[]): read
   return normalized.length > 0 ? normalized : [NO_ENABLED_MODELS_PATTERN];
 }
 
+export function isClaudeModel(model: Pick<RuntimeModelRecord, "providerId" | "modelId" | "label">): boolean {
+  if (model.providerId === "anthropic" || model.providerId === "claude") {
+    return true;
+  }
+  const id = model.modelId.toLowerCase();
+  const label = (model.label || "").toLowerCase();
+  return id.includes("claude") || label.includes("claude");
+}
+
 export function selectLatestModelPatterns(models: readonly RuntimeModelRecord[]): readonly string[] {
   const latestByFamily = new Map<string, RuntimeModelRecord>();
   for (const model of models) {
+    if (isClaudeModel(model)) {
+      continue;
+    }
     const family = modelFamily(model);
     const current = latestByFamily.get(family);
     if (!current || compareModelReleases(model, current) > 0) {

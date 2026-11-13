@@ -11,6 +11,7 @@ import {
 import { useT } from "./i18n";
 import {
   buildProviderBulkSelection,
+  isClaudeModel,
   NO_ENABLED_MODELS_PATTERN,
   normalizeEnabledModelPatterns,
   runtimeModelPattern,
@@ -45,7 +46,7 @@ export function SettingsModelsSection({
   const allImplicitlyEnabled = enabledPatterns.length === 0;
 
   const activeScopedPatterns = allImplicitlyEnabled
-    ? availableModels.map(runtimeModelPattern)
+    ? availableModels.filter((model) => !isClaudeModel(model)).map(runtimeModelPattern)
     : enabledPatterns;
   const activeScopedSet = new Set(activeScopedPatterns);
 

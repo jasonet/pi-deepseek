@@ -3220,6 +3220,75 @@
   gap: 14px;
 }
 
+/* Settings use a quieter, more spacious reading rhythm than the chat canvas. */
+.settings-view {
+  width: min(920px, 100%);
+  padding-bottom: 48px;
+}
+
+.settings-view .view-header {
+  margin-bottom: 28px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--line);
+}
+
+.settings-view .view-header__title {
+  margin-top: 7px;
+  font-size: 28px;
+  letter-spacing: -0.035em;
+}
+
+.settings-view .view-header__body {
+  max-width: 680px;
+  line-height: 1.5;
+}
+
+.settings-view .settings-grid {
+  gap: 24px;
+}
+
+.settings-view .settings-section {
+  gap: 10px;
+}
+
+.settings-view .settings-section__title {
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.settings-view .settings-section__description,
+.settings-view .settings-row__description {
+  line-height: 1.45;
+}
+
+.settings-view .settings-group {
+  border-radius: 12px;
+}
+
+.settings-view .settings-row {
+  min-height: 60px;
+  padding: 14px 18px;
+}
+
+.settings-view .settings-row__title {
+  line-height: 1.35;
+}
+
+.settings-view .settings-row__description {
+  margin-top: 3px;
+}
+
+@media (max-width: 600px) {
+  .settings-view .settings-row {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .settings-view .settings-row__control {
+    max-width: 100%;
+  }
+}
+
 .harness-settings {
   display: grid;
   gap: 18px;

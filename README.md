@@ -31,7 +31,9 @@
 
 Pake 对比预览版解压后为 `Taosi-Pake.app`，可与 Electron 版并存。应用占用 249.9 MiB，较 Electron 的 362.9 MiB 减少 31.1%；同格式 ZIP 从 160.7 MiB 降至 121.4 MiB（减少 24.5%）。已验证真实 Pi 回复、附件、图片粘贴和终端；本机 fx ACP 初始化仍报错，其他完整工作流待验证，详情见 [构建与验证记录](./apps/desktop-pake/README.md)。对比包为 ad hoc 签名，未经过 Apple notarization；[SHA256 校验文件](https://github.com/jasonet/pi-deepseek/releases/download/v3.0.21/SHA256SUMS-pake-arm64.txt)。
 
-> 🚀 **v3.x / v3.0.21 重大版本汇总 / Taosi 3.x Consolidated Highlights:**
+> 🚀 **v3.x / v3.0.22 重大版本汇总 / Taosi 3.x Consolidated Highlights:**
+> - **Windows 启动依赖修复（v3.0.22）**：打包时明确包含 Pi 工作区依赖，并在发布验证中检查模块入口，避免缺少模块导致启动失败。
+> - **MCP 目录（v3.0.22）**：在扩展界面搜索本地开源服务目录；目录不会自动安装或启动服务。
 > - **Windows / Linux 系统稳定性修复（v3.0.21）**：彻底修复 Windows 全新环境指定目录开启项目时的终端黑框弹出及长路径 `\\?\` 引发的路径解析异常；支持非 Git 目录平滑回退；修复归档最后一个会话时页面停留状态。
 > - **模型探针体验优化（v3.0.21）**：自定义模型探针测试后发现的模型默认全部勾选，推理能力默认全部不勾选，新增“全选 / 取消全选”控制。
 > - **托管 DeepSeek Harness（v3.0.17）**：首次进入时安装本地运行环境，并显示启动进度、端口与状态；支持重启，以及同步用户现有的 Pi DeepSeek 凭据。DeepSeek Bot 与 Harness 使用独立服务。

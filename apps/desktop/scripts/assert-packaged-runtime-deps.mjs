@@ -7,6 +7,9 @@ import { fileURLToPath } from "node:url";
 import { extractAll } from "@electron/asar";
 
 const requiredPackages = [
+  "@pi-gui/pi-sdk-driver",
+  "@pi-gui/session-driver",
+  "@pi-gui/catalogs",
   // Keep packaging-sensitive runtime transitive deps explicit; electron-builder
   // can omit hoisted pnpm dependencies even when local development resolves them.
   "@aws-sdk/token-providers",
@@ -132,6 +135,14 @@ function verifyRequiredPackages(extractedDir) {
 
   if (missingPackages.length > 0) {
     throw new Error(`Packaged app is missing runtime dependencies: ${missingPackages.join(", ")}`);
+  }
+  for (const name of ["pi-sdk-driver", "session-driver", "catalogs"]) {
+    const packageDir = path.join(extractedDir, "node_modules", "@pi-gui", name);
+    for (const file of ["package.json", "dist/index.js"]) {
+      if (!existsSync(path.join(packageDir, file))) {
+        throw new Error(`Packaged workspace dependency @pi-gui/${name} is missing ${file}`);
+      }
+    }
   }
 }
 

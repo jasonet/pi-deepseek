@@ -10,6 +10,16 @@ directories:
 files:
   - out/**/*
   - package.json
+  # Do not rely on platform-specific workspace symlink traversal.
+  - from: ../../packages/pi-sdk-driver
+    to: node_modules/@pi-gui/pi-sdk-driver
+    filter: ["package.json", "dist/**/*"]
+  - from: ../../packages/session-driver
+    to: node_modules/@pi-gui/session-driver
+    filter: ["package.json", "dist/**/*"]
+  - from: ../../packages/catalogs
+    to: node_modules/@pi-gui/catalogs
+    filter: ["package.json", "dist/**/*"]
   - "!node_modules/@earendil-works/pi-coding-agent/docs/**"
   - "!node_modules/@earendil-works/pi-coding-agent/examples/**"
   - "!node_modules/@earendil-works/pi-coding-agent/**/*.md"

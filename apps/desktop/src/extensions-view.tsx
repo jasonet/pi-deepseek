@@ -10,6 +10,7 @@ import type { ExtensionCommandCompatibilityRecord, WorkspaceRecord } from "./des
 import { RefreshIcon } from "./icons";
 import { useT } from "./i18n";
 import { OpenDesignStatusBadge } from "./open-design-status";
+import { McpCatalogView } from "./mcp-catalog-view";
 
 interface ExtensionsViewProps {
   readonly workspace?: WorkspaceRecord;
@@ -39,7 +40,7 @@ export function ExtensionsView({
   const t = useT();
   useEffect(() => { onRefresh(); }, []); // Auto-refresh on first open
   const [query, setQuery] = useState("");
-  const [tab, setTab] = useState<"installed" | "packages" | "prompt">("installed");
+  const [tab, setTab] = useState<"installed" | "packages" | "prompt" | "catalog">("installed");
   const [selectedExtensionPath, setSelectedExtensionPath] = useState<string | undefined>();
   const extensions = runtime?.extensions ?? [];
   const filteredExtensions = useMemo(() => {
@@ -86,25 +87,28 @@ export function ExtensionsView({
         </header>
 
         <div className="extensions-tabs" role="tablist" aria-label={t("extensions.title")}>
-          {(["installed", "packages", "prompt"] as const).map((id) => (
+          {(["installed", "packages", "prompt", "catalog"] as const).map((id) => (
             <button key={id} id={`extensions-tab-${id}`} role="tab" type="button"
               aria-selected={tab === id} aria-controls={`extensions-panel-${id}`}
               tabIndex={tab === id ? 0 : -1}
               onKeyDown={(event) => {
-                const tabs = ["installed", "packages", "prompt"] as const;
+                const tabs = ["installed", "packages", "prompt", "catalog"] as const;
                 const index = tabs.indexOf(id);
                 const next = event.key === "ArrowRight" ? tabs[(index + 1) % tabs.length]
                   : event.key === "ArrowLeft" ? tabs[(index + tabs.length - 1) % tabs.length]
-                  : event.key === "Home" ? tabs[0] : event.key === "End" ? tabs[2] : undefined;
+                  : event.key === "Home" ? tabs[0] : event.key === "End" ? tabs[tabs.length - 1] : undefined;
                 if (!next) return;
                 event.preventDefault();
                 setTab(next);
                 document.getElementById(`extensions-tab-${next}`)?.focus();
               }}
               onClick={() => setTab(id)}>
-              {t(`extensions.tab.${id}`)}
+              {id === "catalog" ? "MCP 目录" : t(`extensions.tab.${id}`)}
             </button>
           ))}
+        </div>
+        <div id="extensions-panel-catalog" role="tabpanel" aria-labelledby="extensions-tab-catalog" hidden={tab !== "catalog"}>
+          {tab === "catalog" ? <McpCatalogView /> : null}
         </div>
         <div id="extensions-panel-installed" role="tabpanel" aria-labelledby="extensions-tab-installed" hidden={tab !== "installed"}>
         <div className="skills-toolbar">
